@@ -127,9 +127,15 @@ let idleT; document.addEventListener('mousemove', ()=>{ const d=$('#deck'); if(!
 /* ---------- routing ---------- */
 let view = {name:'home', unit:S.lastUnit||1, tab:'path'};
 function go(name, unit, tab){ view = {name, unit:unit||view.unit, tab:tab||(name==='class'?'students':name==='admin'?'users':'path')}; if(name==='unit') track('unit', view.unit+':'+view.tab); if(name==='unit'){ S.lastUnit=view.unit; save(); } render(); window.scrollTo({top:0,behavior:'smooth'}); }
+const STAFF = !!ROLE_NOW && ROLE_NOW!=='student';
+const stuUI = () => ROLE_NOW==='student' || (STAFF && S.mode==='learn');   // teacher «🎓 សិស្ស» mode = preview of the student app
+const PREVIEW = () => STAFF && S.mode==='learn';
 function setMode(m){
   if(ROLE_NOW==='student') m='learn';
   S.mode=m; save(); document.body.classList.toggle('teach', m==='teach');
+  document.body.classList.toggle('stu-ui', stuUI()); document.body.classList.toggle('preview', PREVIEW());
+  if(!stuUI()){ const n=document.getElementById('stuNav'); if(n) n.remove(); }
+  if(view.name==='class'||view.name==='admin') {} else if(m==='learn' && STAFF && view.name==='unit' && !TABS_STU().some(t=>t[0]===view.tab)) view.tab='lesson';
   $('#mLearn').classList.toggle('on',m==='learn'); $('#mTeach').classList.toggle('on',m==='teach');
   const b=(m==='learn'?$('#mLearn'):$('#mTeach')); const pill=$('#mPill'); pill.style.left=b.offsetLeft+'px'; pill.style.width=b.offsetWidth+'px';
   render();
@@ -138,7 +144,8 @@ function render(){
   if(!ROLE_NOW) return;
   if(ROLE_NOW==='student' && (view.name==='class'||view.name==='admin')) view.name='home';
   if(ROLE_NOW!=='admin' && view.name==='admin') view.name='home';
-  if(ROLE_NOW==='student'){ stuNav(); if(view.name==='home') return renderStuHome(); if(view.name==='units') return renderStuUnits(); if(view.name==='exams') return Exam.studentPage(); }
+  if(stuUI() && view.name!=='class' && view.name!=='admin'){ stuNav(); if(view.name==='home') return renderStuHome(); if(view.name==='units') return renderStuUnits(); if(view.name==='exams') return PREVIEW()?renderPreviewTasks():Exam.studentPage(); if(view.name==='me' && PREVIEW()) return renderPreviewMe(); }
+  else { const n=document.getElementById('stuNav'); if(n) n.remove(); }
   view.name==='home' ? renderHome() : view.name==='class' ? Class.render(view.tab) : view.name==='me' ? Auth.renderMe() : view.name==='admin' ? Auth.renderAdmin(view.tab) : renderUnit(); }
 window.render = render;
 
@@ -162,7 +169,7 @@ const HERO_SVG = `<svg class="ill" viewBox="0 0 260 220" aria-hidden="true">
 </svg>`;
 
 /* ---------- 🎓 student (mobile-first) ---------- */
-const STU_NAV=[['home','🏠','ដើម'],['units','📚','មេរៀន'],['exams','📝','កិច្ចការ'],['me','📊','ខ្ញុំ']];
+const STU_NAV=[['home','🏠','ដើម'],['units','🗺','ផែនទី'],['exams','📝','កិច្ចការ'],['me','📊','ខ្ញុំ']];
 function stuNav(){
   let n=document.getElementById('stuNav'); if(!n){ n=document.createElement('nav'); n.id='stuNav'; document.body.appendChild(n); }
   const cur=view.name==='unit'?'units':view.name;
@@ -179,16 +186,57 @@ function renderStuHome(){
     ${window.Cloud&&Cloud.installBanner?Cloud.installBanner():''}
     ${ox.length||wp?`<button class="stu-alert" onclick="go('exams')"><span>📝</span><div><b>${[ox.length?`ប្រឡង ${ox.length}`:'',wp?`សន្លឹកលំហាត់ ${wp}`:''].filter(Boolean).join(' • ')} កំពុងរង់ចាំ</b><small>ចុចដើម្បីធ្វើ</small></div><i>›</i></button>`:''}
     <div class="stu-cont" style="--c1:${st.c1};--c2:${st.c2}">
-      <small>បន្តរៀន</small><div class="r"><div class="n">${nu}</div><div><b>${esc(u.en)}</b><span>${u.km}</span></div><div class="e">${st.icon}</div></div>
+      <small>បន្តរៀន</small><div class="r"><div class="n">${nu}</div><div><b>${esc(u.en)}</b><span>${u.km}</span></div><div class="e">${ANIMALS[nu-1]}</div></div>
       <div class="bar"><i style="width:${unitPct(u)}%"></i></div>
       <div class="b"><button class="btn white" onclick="go('unit',${nu},'lesson')">▶ បន្តរៀន</button><button class="btn ghost" onclick="go('unit',${nu},'practice')">✍️ លំហាត់</button></div>
     </div>
     <div class="stu-stats"><div><b>${knownW}</b><span>🔤 ពាក្យចេះ</span></div><div><b>${Object.values(S.sec||{}).reduce((a,x)=>a+x.length,0)}</b><span>📖 ផ្នែករៀនរួច</span></div><div><b>${passed}<small>/14</small></b><span>🏅 មេរៀនឆ្លង</span></div></div>
-    <h3 class="stu-sub">📚 មេរៀនទាំងអស់</h3>${stuUnitList()}`;
+    ${PREVIEW()?'<div class="pv-note">👀 Mode គ្រូមើលជាសិស្ស — គ្រប់មេរៀនបើកទាំងអស់</div>':''}
+    <h3 class="stu-sub">🗺 ផែនទីរៀន <button class="btn ghost sm" style="float:right" onclick="go('units')">ពេញអេក្រង់ ›</button></h3>${mapHtml()}`;
 }
 function stuUnitList(){ return `<div class="stu-units">${UNITS.map((u,i)=>{ const st=UNIT_STYLE[u.n], p=unitPct(u), q=S.quiz[u.n];
   return `<button class="stu-u" style="--c1:${st.c1};--c2:${st.c2};animation-delay:${Math.min(i,10)*0.03}s" onclick="go('unit',${u.n})"><span class="n">${u.n}</span><span class="t"><b>${esc(u.en)}</b><small>${u.km}</small><span class="bar"><i style="width:${p}%"></i></span></span><span class="s">${q>=80?'✅':st.icon}</span></button>`; }).join('')}</div>`; }
 function renderStuUnits(){ setUnitColors(2); $('#main').innerHTML=`<div class="stu-head"><h2>📚 មេរៀន</h2></div>${stuUnitList()}`; }
+
+/* ---------- 🗺 learning map & progression locks ---------- */
+const ANIMALS=['🐣','🐱','🐶','🐰','🦊','🐼','🐨','🐯','🦁','🐵','🦒','🐘','🐬','🦉'];
+const ANIMAL_KM=['កូនមាន់','ឆ្មា','ឆ្កែ','ទន្សាយ','កញ្ជ្រោង','ខ្លាឃ្មុំផេនដា','កូអាឡា','ខ្លា','សិង្ហ','ស្វា','សត្វកវែង','ដំរី','ផ្សោត','មៀម'];
+const PASS=80;
+function secsDone(n){ return ((S.sec||{})[n]||[]).length; }
+function lessonDone(n){ return secsDone(n)>=LESSONS[n].sections.length; }
+function unitPassed(n){ return lessonDone(n) && (S.quiz[n]||0)>=PASS; }
+function unitOpen(n){ return PREVIEW() || n===1 || unitPassed(n-1); }
+function secOpen(n,i){ return PREVIEW() || i===0 || ((S.sec||{})[n]||[]).includes(i-1); }
+function stars(n){ return (lessonDone(n)?1:0) + ((S.quiz[n]||0)>=PASS?1:0) + ((S.quiz[n]||0)>=100?1:0); }
+function mapHtml(){
+  const cur=nextUnit(), W=360, rowH=132;
+  const pts=UNITS.map((u,i)=>({x:[70,180,290,180][i%4], y:70+i*rowH}));
+  const path=pts.map((p,i)=>i? `C ${pts[i-1].x} ${pts[i-1].y+rowH*0.55}, ${p.x} ${p.y-rowH*0.55}, ${p.x} ${p.y}`:`M ${p.x} ${p.y}`).join(' ');
+  const H=pts[pts.length-1].y+90;
+  const doneN=UNITS.filter(u=>unitPassed(u.n)).length, curY=pts[cur-1].y;
+  return `<div class="map-wrap"><div class="map" style="height:${H}px" data-cury="${curY}">
+    <svg class="map-path" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path d="${path}" class="bg"/><path d="${path}" class="fg" style="stroke-dasharray:${doneN/13*100} 100" pathLength="100"/></svg>
+    ${UNITS.map((u,i)=>{ const p=pts[i], open=unitOpen(u.n), pass=unitPassed(u.n), isCur=u.n===cur && !pass, st=UNIT_STYLE[u.n], sN=stars(u.n);
+      return `<button class="mnode ${pass?'pass':open?'open':'lock'} ${isCur?'cur':''}" style="left:${p.x/W*100}%;top:${p.y}px;--c1:${st.c1};--c2:${st.c2};animation-delay:${i*0.05}s" onclick="Stu.unit(${u.n})">
+        ${isCur?'<span class="mstart">▶ រៀន</span>':''}
+        <span class="mcirc"><span class="ma">${open?ANIMALS[i]:'🔒'}</span>${pass?'<span class="mok">✓</span>':''}</span>
+        <span class="mlab"><b>Unit ${u.n}</b><small>${esc(u.en)}</small>${open?`<span class="mst">${'★'.repeat(sN)}<i>${'★'.repeat(3-sN)}</i></span>`:''}</span></button>`; }).join('')}
+    <div class="mflag" style="top:${H-40}px">🏆</div></div></div>`;
+}
+function renderStuUnits(){ setUnitColors(nextUnit());
+  const done=UNITS.filter(u=>unitPassed(u.n)).length;
+  $('#main').innerHTML=`<div class="stu-head"><h2>🗺 ផែនទីរៀន</h2><span class="map-prog">🏅 ${done}/14</span></div>
+    ${PREVIEW()?'<div class="pv-note">👀 Mode គ្រូមើលជាសិស្ស — គ្រប់មេរៀនបើកទាំងអស់ (សិស្សពិតត្រូវរៀនឆ្លងតាមលំដាប់)</div>':`<p class="map-tip">រៀនគ្រប់ផ្នែក ✅ ហើយធ្វើលំហាត់បាន ${PASS}% ឡើងទៅ ដើម្បីដោះសោមេរៀនបន្ទាប់ 🔓</p>`}
+    ${mapHtml()}`;
+  const m=document.querySelector('.map'); if(m) setTimeout(()=>window.scrollTo({top:Math.max(0,m.offsetTop+(+m.dataset.cury)-window.innerHeight/2),behavior:'smooth'}),250);
+}
+function renderPreviewTasks(){ setUnitColors(4);
+  const X=(window.Exam&&Exam.data())||{open:[]}, Wd=(window.WS&&WS.data())||{list:[]}, C=Class.data(), cn=id=>(C.classes.find(c=>c.id===id)||{}).name||'?';
+  $('#main').innerHTML=`<div class="stu-head"><h2>📝 កិច្ចការ</h2></div><div class="pv-note">👀 Mode គ្រូមើលជាសិស្ស — នេះជាកិច្ចការដែលកំពុងបើកឱ្យសិស្ស (គ្រប់ថ្នាក់)។ បើក/បិទ ក្នុង Mode គ្រូ → មេរៀន → 📝 ប្រឡង ឬ 📄 សន្លឹកលំហាត់</div>
+    <h3 class="stu-sub">📝 ប្រឡង</h3>${(X.open||[]).map(se=>`<div class="stu-exam" style="--c1:${UNIT_STYLE[se.n].c1}"><div class="ic">${ANIMALS[se.n-1]}</div><div class="tx"><b>Unit ${se.n} • Version ${se.ver}</b><span>🏫 ${esc(cn(se.cls))} • ${se.min?se.min+' នាទី':'គ្មានកំណត់'}</span></div></div>`).join('')||'<div class="stu-empty sm"><p>មិនមានប្រឡងកំពុងបើក</p></div>'}
+    <h3 class="stu-sub">📄 សន្លឹកលំហាត់</h3>${(Wd.list||[]).filter(a=>a.open).map(a=>`<div class="stu-exam" style="--c1:${UNIT_STYLE[a.n].c1}"><div class="ic">${a.mode==='do'?'✍️':'📖'}</div><div class="tx"><b>${esc(a.ws.title)}</b><span>🏫 ${esc(cn(a.cls))} • ${a.mode==='do'?'ធ្វើលើទូរស័ព្ទ':'សរសេរក្នុងសៀវភៅ'}</span></div></div>`).join('')||'<div class="stu-empty sm"><p>មិនមានសន្លឹកកំពុងបើក</p></div>'}`;
+}
+function renderPreviewMe(){ setUnitColors(5); $('#main').innerHTML=`<div class="stu-head"><h2>📊 ខ្ញុំ</h2></div><div class="pv-note">👀 ទំព័រនេះបង្ហាញពិន្ទុ និងវឌ្ឍនភាពរបស់សិស្សម្នាក់ៗ ពេលសិស្សចូលប្រព័ន្ធ។ ដើម្បីមើលសិស្សទាំងអស់ សូមចូល 👥 ថ្នាក់រៀន → 📊 តាមដានសិស្ស</div><div class="row" style="justify-content:center"><button class="btn teal" onclick="setMode('teach');go('class',null,'track')">📊 តាមដានសិស្ស</button></div>`; }
 
 /* ---------- 🎓 student unit: lesson cards (no slides) — phone first, roomy on PC ---------- */
 const TABS_STU = () => [['lesson','📖 មេរៀន'],['vocab','🔤 ពាក្យ'],['grammar','📐 វេយ្យាករណ៍'],['practice','✍️ លំហាត់']].concat(window.IS_WEB?[]:[['listen','🎧 ស្តាប់']]);
@@ -198,18 +246,26 @@ function renderStuUnit(u, tabs){
   $('#main').innerHTML=`<div class="su-hero" style="--c1:${st.c1};--c2:${st.c2}">
       <button class="su-nav" onclick="go('units')">‹</button>
       <div class="n">${u.n}</div><div class="t"><b>${esc(u.en)}</b><span>${u.km}</span><div class="bar"><i style="width:${unitPct(u)}%"></i></div><small>📖 ${done}/${L.sections.length} ផ្នែក • 📘 សៀវភៅ p${u.start}–${u.end}</small></div>
-      <div class="e">${st.icon}</div>
-      <div class="pn"><button ${u.n<=1?'disabled':''} onclick="go('unit',${u.n-1},'${view.tab}')">◀</button><button ${u.n>=14?'disabled':''} onclick="go('unit',${u.n+1},'${view.tab}')">▶</button></div>
+      <div class="e">${ANIMALS[u.n-1]}</div>
+      <div class="pn"><button ${u.n<=1?'disabled':''} onclick="go('unit',${u.n-1},'${view.tab}')">◀</button><button ${u.n>=14||!unitOpen(u.n+1)?'disabled':''} onclick="go('unit',${u.n+1},'${view.tab}')">▶</button></div>
     </div>
     <div class="tabs su-tabs">${tabs.map(t=>`<button class="${t[0]===view.tab?'on':''}" onclick="go('unit',${u.n},'${t[0]}')">${t[1]}</button>`).join('')}</div>
     <div id="tab"></div>`;
+  if(view.tab==='practice' && !PREVIEW() && !lessonDone(u.n)){ $('#tab').innerHTML=passBanner(u)+`<div class="stu-empty"><div style="font-size:54px">🔒</div><b>តេស្តឆ្លងវគ្គនៅចាក់សោ</b><p>រៀនផ្នែកទាំងអស់ក្នុង 📖 មេរៀន ឱ្យចប់សិន (${secsDone(u.n)}/${LESSONS[u.n].sections.length})</p><button class="btn teal" onclick="go('unit',${u.n},'lesson')">📖 ទៅរៀន</button></div>`; return; }
   ({lesson:tabLesson, vocab:tabVocab, grammar:tabGrammar, practice:tabPractice, listen:tabListen})[view.tab](u);
 }
 let openSec=null;
+function passBanner(u){
+  const n=u.n, L=LESSONS[n].sections.length, d=secsDone(n), q=S.quiz[n], pass=unitPassed(n);
+  if(pass) return `<div class="pass-b ok"><span>🏆</span><div><b>បានឆ្លង Unit ${n}!</b><small>${n<14?`Unit ${n+1} បានដោះសោ ${ANIMALS[n]}`:'អ្នកបញ្ចប់គ្រប់មេរៀនហើយ 🎉'}</small></div>${n<14?`<button class="btn sun sm" onclick="go('unit',${n+1},'lesson')">Unit ${n+1} ›</button>`:''}</div>`;
+  return `<div class="pass-b"><span>${ANIMALS[n-1]}</span><div><b>ដើម្បីឆ្លង Unit ${n}</b>
+    <small class="${d>=L?'y':''}">${d>=L?'✅':'⬜'} ១. រៀនគ្រប់ផ្នែក (${d}/${L})</small><small class="${(q||0)>=PASS?'y':''}">${(q||0)>=PASS?'✅':'⬜'} ២. ធ្វើលំហាត់បាន ${PASS}%+ (ល្អបំផុត ${q!=null?q+'%':'—'})</small></div>
+    ${d>=L?`<button class="btn sun sm" onclick="go('unit',${n},'practice')">✍️ ធ្វើតេស្ត</button>`:''}</div>`;
+}
 function tabLesson(u){
   const L=LESSONS[u.n], dn=secDone(u.n); if(openSec==null || openSec.n!==u.n){ const f=L.sections.findIndex((x,i)=>!dn.includes(i)); openSec={n:u.n, i:f<0?0:f}; }
   const say=t=>`speak(${JSON.stringify(t).replace(/"/g,'&quot;')})`;
-  $('#tab').innerHTML=`<div class="les">${L.sections.map((s,si)=>{ const K=KIND[s.k], on=openSec.i===si, ok=dn.includes(si);
+  $('#tab').innerHTML=passBanner(u)+`<div class="les">${L.sections.map((s,si)=>{ const K=KIND[s.k], on=openSec.i===si, ok=dn.includes(si);
     let body='';
     if(on){
       if(s.w&&s.w.length) body+=`<div class="les-w">${s.w.map(w=>`<button onclick="${say(w[0])}"><span class="em">${w[2]||'🔤'}</span><b>${esc(w[0])}</b><small>${esc(w[1]||'')}</small></button>`).join('')}</div>`;
@@ -223,9 +279,12 @@ function tabLesson(u){
       if(!body) body=`<p class="note">📘 សូមបើកសៀវភៅទំព័រ ${s.p} ហើយធ្វើតាមការណែនាំរបស់គ្រូ</p>`;
       body+=`<div class="les-foot"><span class="note">📘 សៀវភៅ p${s.p}</span><button class="btn ${ok?'ghost':'teal'}" onclick="Stu.done(${u.n},${si})">${ok?'✓ រៀនរួច':si<L.sections.length-1?'✅ រៀនរួច → បន្ទាប់':'✅ រៀនរួច'}</button></div>`;
     }
+    const lk=!secOpen(u.n,si);
+    if(lk) return `<div class="les-s lock"><button class="les-h" onclick="toast('🔒 រៀនផ្នែកមុនឱ្យចប់សិន')"><span class="ki">🔒</span><span class="tt"><small>${K.km}</small><b>${esc(s.t)}</b></span></button></div>`;
     return `<div class="les-s ${on?'on':''} ${ok?'ok':''}" style="--kc:${K.c||'var(--c1)'}"><button class="les-h" onclick="Stu.open(${u.n},${si})"><span class="ki">${ok?'✓':K.i}</span><span class="tt"><small>${K.km}</small><b>${esc(s.t)}</b>${on?'':`<em>${s.km}</em>`}</span><span class="ch">${on?'−':'+'}</span></button>${on?`<div class="les-b"><p class="km les-d">${s.km}</p>${body}</div>`:''}</div>`; }).join('')}</div>`;
 }
 window.Stu = {
+  unit:n=>{ if(!unitOpen(n)) return toast(`🔒 ឆ្លង Unit ${n-1} ជាមុនសិន (រៀនគ្រប់ផ្នែក + លំហាត់ ${PASS}%)`); go('unit',n,'lesson'); },
   open:(n,i)=>{ openSec={n, i: openSec&&openSec.n===n&&openSec.i===i ? -1 : i}; tabLesson(U(n)); const el=document.querySelectorAll('.les-s')[i]; if(el&&openSec.i===i) el.scrollIntoView({behavior:'smooth',block:'start'}); },
   done:(n,i)=>{ const d=secDone(n); if(!d.includes(i)){ d.push(i); track('lesson', n+':'+i); save(); } const L=LESSONS[n]; const nx=L.sections.findIndex((x,k)=>k>i&&!d.includes(k)); if(nx>=0){ openSec={n,i:nx}; renderUnit(); setTimeout(()=>{ const el=document.querySelectorAll('.les-s')[nx]; el&&el.scrollIntoView({behavior:'smooth',block:'start'}); },60); } else { toast('🎉 រៀនគ្រប់ផ្នែកហើយ! តោះធ្វើលំហាត់'); renderUnit(); } }
 };
@@ -276,7 +335,7 @@ function renderHome(){
       ${q>=80?'<span class="done-badge">✓ ឆ្លង</span>':''}
     </button>`}).join('')}</div>`;
 }
-function nextUnit(){ for(const u of UNITS){ if(ROLE_NOW==='student' ? (((S.sec||{})[u.n]||[]).length<LESSONS[u.n].sections.length || (S.quiz[u.n]||0)<80) : (S.quiz[u.n]||0)<80) return u.n; } return 14; }
+function nextUnit(){ for(const u of UNITS){ if(stuUI() ? !unitPassed(u.n) : (S.quiz[u.n]||0)<80) return u.n; } return 14; }
 
 /* ---------- unit ---------- */
 const TABS_LEARN = [['path','📚 មេរៀនតាមសៀវភៅ'],['listen','🎧 ស្តាប់'],['vocab','🔤 វាក្យសព្ទ'],['grammar','📐 វេយ្យាករណ៍'],['practice','✍️ លំហាត់'],['exam','📝 ប្រឡងបញ្ចប់មេរៀន']];
@@ -284,9 +343,9 @@ const TABS_TEACH = [['plan','📋 ផែនការបង្រៀន'],['works
 function renderUnit(){
   const u = U(view.unit), st = UNIT_STYLE[u.n];
   setUnitColors(u.n);
-  const tabs = ROLE_NOW==='student' ? TABS_STU() : TABS_LEARN.concat(S.mode==='teach'?TABS_TEACH:[]);
+  const tabs = stuUI() ? TABS_STU() : TABS_LEARN.concat(S.mode==='teach'?TABS_TEACH:[]);
   if(!tabs.find(t=>t[0]===view.tab)) view.tab=tabs[0][0];
-  if(ROLE_NOW==='student') return renderStuUnit(u, tabs);
+  if(stuUI()){ if(!unitOpen(u.n)){ toast(`🔒 សូមឆ្លង Unit ${u.n-1} ជាមុនសិន`); view={name:'units',unit:u.n,tab:'lesson'}; return render(); } return renderStuUnit(u, tabs); }
   $('#main').innerHTML = `
   <div class="uhero">
     <div class="big">${u.n}</div>
@@ -489,7 +548,8 @@ function feedback(ok,ans){
 }
 function finishQ(){
   const pct=Math.round(Q.score/Q.qs.length*100);
-  track('quiz', Q.n+':'+pct); if(S.quiz[Q.n]==null || pct>S.quiz[Q.n]){ S.quiz[Q.n]=pct; } save();
+  const wasPass=stuUI()&&unitPassed(Q.n); track('quiz', Q.n+':'+pct); if(S.quiz[Q.n]==null || pct>S.quiz[Q.n]){ S.quiz[Q.n]=pct; } save();
+  if(stuUI() && !wasPass && unitPassed(Q.n)){ setTimeout(()=>{ if(window.pageConfetti) pageConfetti(); toast(`🏆 បានឆ្លង Unit ${Q.n}!`+(Q.n<14?` Unit ${Q.n+1} ${ANIMALS[Q.n]} បានដោះសោ`:'')); },600); }
   $('#tab').innerHTML=`<div class="panel result"><div style="font-size:64px" class="pop">${pct>=80?'🏆':pct>=50?'👍':'💪'}</div><div class="score">${pct}%</div>
     <p class="km" style="font-size:18px">${pct>=80?'🎉 អស្ចារ្យ! អ្នកឆ្លងមេរៀននេះហើយ':pct>=50?'👍 ល្អ! ហាត់បន្ថែមបន្តិចទៀត':'💪 កុំបោះបង់! រៀនវាក្យសព្ទម្តងទៀត ហើយសាកល្បងម្តងទៀត'}</p>
     <p class="note">ត្រូវ ${Q.score} / ${Q.qs.length}</p>
