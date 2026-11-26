@@ -17,7 +17,7 @@ function summ(S){ const cut=dk(Date.now()-70*864e5), d={}; Object.entries((S.act
     sr += (done?1:0)+(lvn>=80?1:0)+(lvn>=95?1:0); pcs += dn/tot*0.5 + Math.min(lvn,100)/200; if(!cu && !(done&&lvn>=80)) cu=n; }
   return {cu:cu||N, sr, pc:Math.round(pcs/N*100), d, p:lv.filter(v=>v>=80).length, l:lv.length?Math.round(lv.reduce((a,b)=>a+b,0)/lv.length):0, w:Object.values(S.known||{}).reduce((a,x)=>a+x.length,0), lv:S.level||{}, r:M.t||0, rm:M.m||{}}; }
 function push(S, force){
-  if(!window.Auth||Auth.role()!=='student') return; const me=Auth.user(); if(!me||!S) return;
+  if(!window.Auth||Auth.role()!=='student'||(Auth.asStaff&&Auth.asStaff())) return; const me=Auth.user(); if(!me||!S) return;
   if(!force && Date.now()-(push.t||0)<90000) return; push.t=Date.now();
   const e={c:me.classId, s:me.studentId, ...summ(S)};
   const B=J(BK)||{}, old=B[me.id]; if(old){ const o={...old}; delete o.ts; if(JSON.stringify(o)===JSON.stringify(e)) return; }

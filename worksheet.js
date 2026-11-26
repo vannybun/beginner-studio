@@ -136,7 +136,7 @@ function grade(ws, ans){
   const A=ws.A.map((w,i)=>ans.A[i]===w[1]), B=ws.B.map((q,i)=>ans.B[i]===q.a), C=ws.C.map((w,i)=>!!ans.C[i] && normA(ans.C[i])===normA(w[1]));
   const s=[...A,...B,...C].filter(Boolean).length; return {A,B,C,s,t:total(ws)};
 }
-function submit(){
+function submit(){ if(window.Auth&&Auth.asStaff&&Auth.asStaff()) return toast('👁 គ្រូកំពុងមើល — មិនអាចដាក់ចម្លើយជំនួសសិស្សបានទេ');
   const left=total(RUN.a.ws)-count(); if(left>0 && !confirm(`នៅសល់ ${left} សំណួរមិនទាន់ឆ្លើយ។ ប្រគល់ឥឡូវ?`)) return;
   const m=me(), g=grade(RUN.a.ws, RUN.ans);
   W.results.push({id:uid(), wid:RUN.a.id, uid:m.id, sid:m.studentId, name:m.name, s:g.s, t:g.t, ts:Date.now(), ans:RUN.ans});

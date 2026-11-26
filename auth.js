@@ -33,7 +33,16 @@ function role(){ const u=user(); return u?u.role:null; }
 function progressKey(){ const u=user(); return u && u.role==='student' ? ':'+u.id : ''; }
 function log(ev, u){ u=u||user(); A.log.unshift({ts:Date.now(), uid:u?u.id:null, name:u?u.name:'—', role:u?u.role:'', ev}); A.log=A.log.slice(0,400); saveA(); }
 function login(u, keep){ u.last=Date.now(); SESSION={uid:u.id, sv:u.sv||0, ts:Date.now()}; sessionStorage.setItem(SK, JSON.stringify(SESSION)); if(u.role==='student'||keep) localStorage.setItem(KK, JSON.stringify(SESSION)); else localStorage.removeItem(KK); log('ចូលប្រព័ន្ធ', u); reload(); }
-function logout(){ log('ចាកចេញ'); { const u=user(); if(u) sessionStorage.setItem('bs-tab', u.role); } dropSession(); reload(); }
+/* 👁 staff opens a student's account without the PIN (session flag "as" = staff id; staff session kept to return) */
+const AS_BACK='bs-as-back';
+function viewAs(uid){ const st=user(), t=A.users.find(x=>x.id===uid); if(!st||st.role==='student'||!t||t.role!=='student') return;
+  const c=(classData().classes||[]).find(x=>x.id===t.classId); if(st.role!=='admin' && !(c&&canSeeClass(c))) return toast('⛔ សិស្សនេះមិនមែននៅក្នុងថ្នាក់របស់អ្នកទេ');
+  sessionStorage.setItem(AS_BACK, JSON.stringify(SESSION)); log('👁 ចូលមើលគណនីសិស្ស '+t.name, st);
+  SESSION={uid:t.id, sv:t.sv||0, ts:Date.now(), as:st.id}; sessionStorage.setItem(SK, JSON.stringify(SESSION)); reload(); }
+function asStaff(){ return SESSION&&SESSION.as ? A.users.find(x=>x.id===SESSION.as)||{name:'គ្រូ'} : null; }
+function backToStaff(){ let b=null; try{ b=JSON.parse(sessionStorage.getItem(AS_BACK)||'null'); }catch(e){}
+  sessionStorage.removeItem(AS_BACK); if(b){ SESSION=b; sessionStorage.setItem(SK, JSON.stringify(b)); } else dropSession(); reload(); }
+function logout(){ if(SESSION&&SESSION.as) return backToStaff(); log('ចាកចេញ'); { const u=user(); if(u) sessionStorage.setItem('bs-tab', u.role); } dropSession(); reload(); }
 
 /* ---------- class helpers (works with class.js data) ---------- */
 const CK='beginner-studio-class-v1';
@@ -286,7 +295,7 @@ function accountsPanel(c){
     <p class="note">សិស្សចូលប្រព័ន្ធដោយស្កេន QR លើកាត ឬវាយ Username រួច PIN ៤ ខ្ទង់ (សិស្សមើលមិនឃើញឈ្មោះសិស្សផ្សេងទេ)។ វឌ្ឍនភាព និងប្រឡងរបស់សិស្សម្នាក់ៗត្រូវបានរក្សាទុកដាច់ដោយឡែក។</p>
     ${us.length?`<div class="cl-tablewrap"><table class="cl-table"><thead><tr><th></th><th class="l">ឈ្មោះ</th><th class="l">Username</th><th>PIN</th><th>ចូលចុងក្រោយ</th><th></th></tr></thead><tbody>
     ${us.map(u=>`<tr style="${u.disabled?'opacity:.45':''}"><td>${avatarFor(u,32)}</td><td class="l"><b>${esc(u.name)}</b></td><td class="l"><code>${esc(u.username)}</code></td><td><span class="au-pin">${u.pin||'••••'}</span></td><td>${u.last?new Date(u.last).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'}):'—'}</td>
-      <td><button class="btn ghost sm" onclick="Auth.showQR('${u.id}')">📱 QR</button> <button class="btn ghost sm" onclick="Auth._rp('${u.id}','${c.id}')">🔄 PIN ថ្មី</button> <button class="btn ghost sm" onclick="Auth._tg('${u.id}','${c.id}')">${u.disabled?'✅ បើក':'⛔ បិទ'}</button></td></tr>`).join('')}</tbody></table></div>`:''}
+      <td>${u.disabled?'':`<button class="btn teal sm" onclick="Auth.viewAs('${u.id}')" title="ចូលមើលគណនីសិស្សដោយមិនចាំបាច់ PIN">👁 ចូលមើល</button> `}<button class="btn ghost sm" onclick="Auth.showQR('${u.id}')">📱 QR</button> <button class="btn ghost sm" onclick="Auth._rp('${u.id}','${c.id}')">🔄 PIN ថ្មី</button> <button class="btn ghost sm" onclick="Auth._tg('${u.id}','${c.id}')">${u.disabled?'✅ បើក':'⛔ បិទ'}</button></td></tr>`).join('')}</tbody></table></div>`:''}
   </div>`;
 }
 async function _mk(cid){ const k=await makeStudentAccounts(cid); toast(`✅ បានបង្កើតគណនី ${k} នាក់`); render(); }
@@ -403,7 +412,7 @@ function meSave(){ const u=user(), n=document.getElementById('meN').value.trim()
   const prof={name:n, latin:document.getElementById('meL').value.trim(), dob:document.getElementById('meD').value, phone:document.getElementById('meT').value.trim(), photo:EP.photo, ts:Date.now()};
   if(window.Me) Me.setProfile(prof); closeModal(); const ch=document.querySelector('.au-chip'); if(ch) ch.outerHTML=headerChip(false); toast('✅ បានរក្សាទុក — គ្រូនឹងឃើញព័ត៌មានថ្មី'); if(window.render) render(); }
 function renameUser(cid,sid,name){ const u=A.users.find(x=>x.role==='student'&&x.classId===cid&&x.studentId===sid); if(u&&name&&u.name!==name){ u.name=name; saveA(); } }
-window.Auth = { qrZip, editMe, _mePic:mePic, _meSave:meSave, _rename:renameUser, moveStudent, about, _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
+window.Auth = { viewAs, asStaff, backToStaff, qrZip, editMe, _mePic:mePic, _meSave:meSave, _rename:renameUser, moveStudent, about, _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
   editUser, delUser, backupAll, restoreAll, log, data:()=>A,
   _setup, _loginAs, _login, _pin, _recover, _doRecover, _cp, _mk, _rp, _tg, _own, _saveUser,
   _tab:r=>{ LS.tab=r; LS.stu=null; LS.pin=''; loginScreen(); }, _cls:id=>{ LS.cls=id; loginScreen(); }, _stu:id=>{ LS.stu=id; LS.pin=''; loginScreen(); } };

@@ -68,11 +68,11 @@ function unitCheck(){ if(!isStu()||typeof window.unitOpen!=='function') return; 
 function post(cid, data){ const l=L(), u=me(); if(!l||!u||!cid) return Promise.resolve();
   return l.add(['inbox_'+cid,'m'], {to:'*', ...data, from:u.id, ts:Date.now()}).catch(e=>console.warn(e)); }
 function task(cid, t, x){ return post(cid, {kind:'task', t, x:x||''}); }
-function passed(n){ const u=me(); if(!isStu()) return; post(u.classId, {to:'friends', kind:'pass', t:`បានឆ្លង Unit ${n}! 🏆`, x:'ចូលរួមអបអរសាទរ និងរៀនឱ្យទាន់គ្នា 💪'}); }
+function passed(n){ const u=me(); if(!isStu()||(Auth.asStaff&&Auth.asStaff())) return; post(u.classId, {to:'friends', kind:'pass', t:`បានឆ្លង Unit ${n}! 🏆`, x:'ចូលរួមអបអរសាទរ និងរៀនឱ្យទាន់គ្នា 💪'}); }
 
 /* ---------- 📞 call ---------- */
 let lastCall=0;
-function call(uid){ const u=me(); if(!L()) return toast('📡 ត្រូវការ Internet');
+function call(uid){ const u=me(); if(!L()) return toast('📡 ត្រូវការ Internet'); if(isStu()&&Auth.asStaff&&Auth.asStaff()) return toast('👁 គ្រូកំពុងមើល — មិនអាចហៅជំនួសសិស្សបានទេ');
   if(Date.now()-lastCall<20000) return toast('សូមរង់ចាំបន្តិច មុនហៅម្តងទៀត'); lastCall=Date.now();
   const cid = isStu()? u.classId : (window.Class&&Class._cur()&&Class._cur().id);
   post(cid, {to:uid, kind:'call', t:'call', x:''}).then(()=>toast(`📞 កំពុងហៅ ${nameOf(uid)}…`)); }

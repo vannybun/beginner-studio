@@ -30,7 +30,7 @@ function start(){
   if(isStu()) beat();
 }
 function stop(){ ST.unsub.forEach(f=>{ try{f();}catch(e){} }); ST.unsub=[]; ST.cid=null; if(ST.msgUnsub){ ST.msgUnsub(); ST.msgUnsub=null; } }
-function beat(){ const l=L(), u=me(); if(!l||!u||!isStu()||document.visibilityState!=='visible') return; l.merge(['pres_'+u.classId], {[u.id]:Date.now()}); }
+function beat(){ const l=L(), u=me(); if(!l||!u||!isStu()||(Auth.asStaff&&Auth.asStaff())||document.visibilityState!=='visible') return; l.merge(['pres_'+u.classId], {[u.id]:Date.now()}); }
 setInterval(beat, 60000); document.addEventListener('visibilitychange', beat);
 const online = uid => Date.now()-(ST.pres[uid]||0) < ONLINE;
 function rel(uid){ const m=me().id, k=pairId(m,uid);
@@ -43,7 +43,7 @@ function unread(){ const u=me(); if(!u||!isStu()) return 0; let n=0;
 function badge(){ const n=unread(); document.querySelectorAll('[data-chat-badge]').forEach(b=>{ b.textContent=n||''; b.hidden=!n; }); }
 
 /* ---------- actions ---------- */
-function addFriend(uid){ const l=L(), u=me(); if(!l) return; if(rel(uid)==='incoming') return accept(uid);
+function addFriend(uid){ const l=L(), u=me(); if(!l) return; if(Auth.asStaff&&Auth.asStaff()) return toast('👁 គ្រូកំពុងមើល'); if(rel(uid)==='incoming') return accept(uid);
   l.merge(['soc_'+ST.cid], {req:{[u.id+'>'+uid]:Date.now()}}).then(()=>toast('📨 បានផ្ញើសំណើសុំធ្វើជាមិត្ត')); }
 function accept(uid){ const l=L(), u=me(); l.merge(['soc_'+ST.cid], {fr:{[pairId(u.id,uid)]:Date.now()}}).then(()=>{ l.del(['soc_'+ST.cid],'req.'+uid+'>'+u.id); toast('🤝 ឥឡូវអ្នកជាមិត្តភក្តិហើយ!'); }); }
 function decline(uid){ const u=me(); L().del(['soc_'+ST.cid],'req.'+uid+'>'+u.id); }
@@ -109,7 +109,7 @@ function drawMsgs(){
   if(atBottom || !box.dataset.init){ box.scrollTop=box.scrollHeight; box.dataset.init=1; }
 }
 function send(x){
-  const l=L(), O=ST.open, u=me(); if(!O||O.ro) return; const inp=$('#chTxt'); const t=(x||(inp&&inp.value)||'').trim().slice(0,300); if(!t) return;
+  const l=L(), O=ST.open, u=me(); if(!O||O.ro) return; if(Auth.asStaff&&Auth.asStaff()) return toast('👁 គ្រូកំពុងមើល — មិនអាចផ្ញើសារជំនួសសិស្សបានទេ'); const inp=$('#chTxt'); const t=(x||(inp&&inp.value)||'').trim().slice(0,300); if(!t) return;
   if(!chatAllowed(O.cid)) return toast('🔕 គ្រូបានបិទឆាត');
   if(inp&&!x) inp.value='';
   const ts=Date.now(), [a,b]=O.k.split('_');

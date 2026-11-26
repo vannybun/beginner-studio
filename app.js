@@ -21,7 +21,7 @@ function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} 
 /* 💰 លុយ (រៀល) — រកបានពីការរៀន និងធ្វើលំហាត់ (សិស្សតែប៉ុណ្ណោះ; id នីមួយៗទទួលបានតែម្តង) */
 const RIEL = n => Math.round(n||0).toLocaleString('en-US')+'៛';
 function earn(id, amt, why){
-  if(!window.Auth || Auth.role()!=='student' || !(amt>0)) return 0;
+  if(!window.Auth || Auth.role()!=='student' || !(amt>0) || (Auth.asStaff&&Auth.asStaff())) return 0;
   const M=S.money=S.money||{t:0,m:{},log:[],got:{}}; M.m=M.m||{}; M.log=M.log||[]; M.got=M.got||{};
   if(M.got[id]) return 0; M.got[id]=1; amt=Math.round(amt);
   const mk=dayKey().slice(0,7); M.t=(M.t||0)+amt; M.m[mk]=(M.m[mk]||0)+amt; M.log.unshift([Date.now(),amt,why]); M.log=M.log.slice(0,150); save();
@@ -782,6 +782,7 @@ if(window.Auth && Auth.gate()){
   if(ROLE_NOW==='admin') tl.insertAdjacentHTML('afterbegin','<button class="adm-only" onclick="go(\'admin\',null,\'users\')">🛡️<span>Admin</span></button>');
   if(ROLE_NOW==='student') tl.insertAdjacentHTML('afterbegin','<button onclick="go(\'me\')">📊<span>លទ្ធផលខ្ញុំ</span></button>');
   tl.insertAdjacentHTML('beforeend', Auth.headerChip());
+  const AS=Auth.asStaff&&Auth.asStaff(); if(AS){ document.body.classList.add('viewing-as'); document.body.insertAdjacentHTML('afterbegin',`<div class="as-bar">👁 គ្រូ <b>${esc(AS.name)}</b> កំពុងមើលគណនីរបស់ <b>${esc(Auth.user().name)}</b> • មិនរាប់លុយ មិនផ្ញើសារជំនួសសិស្ស <button onclick="Auth.backToStaff()">↩ ត្រឡប់ជាគ្រូ</button></div>`); }
 }
 Deck.init();
 Book.init();

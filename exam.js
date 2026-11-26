@@ -159,6 +159,7 @@ function tab(u){
 /* ---------- in-app exam ---------- */
 let RUN=null;
 async function start(n, ver, sessId){
+  if(window.Auth&&Auth.asStaff&&Auth.asStaff()) return toast('👁 គ្រូកំពុងមើល — មិនអាចប្រឡងជំនួសសិស្សបានទេ');
   if(meStu() && window.Cloud && Cloud.refresh){ try{ await Cloud.refresh(EK); }catch(e){} reloadX(); }
   if(meStu()){ const se=(X.open||[]).find(x=>x.id===sessId && x.cls===meStu().classId); if(!se){ toast('🔒 គ្រូបានបិទប្រឡងនេះហើយ'); studentPage(); return; } if(se.once && sessDone(se,meStu())) return toast('✅ អ្នកបានប្រឡងរួចហើយ'); }
   const me=window.Auth&&Auth.user();

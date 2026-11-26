@@ -1546,3 +1546,6 @@ body.stu-ui .app-credit{margin-top:-130px;padding-bottom:110px}
 .ch-call{padding:4px 8px!important}
 .nt-yt{max-width:640px}.nt-calls .cl-av{flex:none}
 body.role-student .tools .nt-bell{display:flex!important;align-items:center;justify-content:center;padding:0}
+/* 👁 staff viewing a student account */
+.as-bar{position:sticky;top:0;z-index:3000;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;padding:8px 12px;background:#7c3aed;color:#fff;font:13px var(--kh);text-align:center}
+.as-bar button{border:0;background:#fff;color:#7c3aed;font:700 13px var(--kh);border-radius:999px;padding:5px 14px;cursor:pointer}
