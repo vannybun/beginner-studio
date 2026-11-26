@@ -33,7 +33,8 @@ function grammarItems(n, r){
   return B;
 }
 /* ---------- build an exam (deterministic per unit + version) ---------- */
-function build(n, ver){
+function build(n, ver, sp){
+  if(sp===undefined) sp=true;   // 🎤 speaking part G (in-app only); print / online files use the classic 50-point layout
   const u=UNITS[n-1], L=LESSONS[n], r=rng(hashStr('exam-'+n+'-'+ver));
   const emo = w => (u.emoji||{})[w.toLowerCase()] || (u.emoji||{})[w.toLowerCase().replace(/^(a|an|the) /,'')] || '';
   const pool = u.vocab.filter(v=>v[0] && !/[→↔\/]/.test(v[0]) && v[2]);
@@ -51,7 +52,7 @@ function build(n, ver){
   const B=grammarItems(n, r);
   parts.push({id:'B',km:'វេយ្យាករណ៍',en:'Grammar',ins:'Choose the correct answer.',insKm:'ជ្រើសចម្លើយត្រឹមត្រូវ។',pts:1,qs:shuf(B,r).slice(0,10)});
   // C — Matching (8)
-  const C=take(words,8); const right=shuf(C.map(v=>v[2]),r);
+  const C=take(words,sp?6:8); const right=shuf(C.map(v=>v[2]),r);
   parts.push({id:'C',km:'ផ្គូផ្គង',en:'Matching',ins:'Match the English words with the Khmer meanings.',insKm:'ផ្គូផ្គងពាក្យអង់គ្លេសជាមួយន័យខ្មែរ។',pts:1,
     qs:C.map(v=>({t:'match',q:v[0],a:right.indexOf(v[2])})), right});
   // D — Listening (6): hear a word / phrase, choose it
@@ -61,12 +62,20 @@ function build(n, ver){
   while(D.length<6){ const v=take(words,1)[0]; if(!v) break; const m=mcFrom(v[0],distract(v,0,3)); D.push({t:'mc',listen:true,say:clean(v[0]),...m}); }
   parts.push({id:'D',km:'ស្តាប់',en:'Listening',ins:'Listen and choose what you hear.',insKm:'ស្តាប់ ហើយជ្រើសអ្វីដែលអ្នកឮ។',pts:1,qs:D});
   // E — Writing (8): Khmer → English word
-  const E=take(words,8,v=>clean(v[0]).length<=16).map(v=>({t:'write',q:v[2],em:emo(v[0]),a:clean(v[0])}));
+  const E=take(words,sp?6:8,v=>clean(v[0]).length<=16).map(v=>({t:'write',q:v[2],em:emo(v[0]),a:clean(v[0])}));
   parts.push({id:'E',km:'សរសេរ',en:'Writing',ins:'Write the English word.',insKm:'សរសេរពាក្យជាភាសាអង់គ្លេស។',pts:1,qs:E});
   // F — Sentence order (4 × 2)
   const sents=[].concat(...L.grammar.map(g=>g.ex)).map(s=>s.replace(/\(.*?\)/g,'').replace(/\s*—.*$/,'').replace(/[→=].*$/,'').trim()).filter(s=>{ const k=s.split(' ').length; return k>=3&&k<=8; });
-  const F=shuf([...new Set(sents)],r).slice(0,4).map(s=>{ const ws=s.replace(/[.?!]$/,'').split(' '); let sh=shuf(ws,r); if(sh.join(' ')===ws.join(' ')) sh=sh.reverse(); return {t:'order',words:sh,a:s,end:(s.match(/[.?!]$/)||['.'])[0]}; });
+  const F=shuf([...new Set(sents)],r).slice(0,sp?3:4).map(s=>{ const ws=s.replace(/[.?!]$/,'').split(' '); let sh=shuf(ws,r); if(sh.join(' ')===ws.join(' ')) sh=sh.reverse(); return {t:'order',words:sh,a:s,end:(s.match(/[.?!]$/)||['.'])[0]}; });
   parts.push({id:'F',km:'រៀបប្រយោគ',en:'Sentence order',ins:'Put the words in the correct order.',insKm:'រៀបពាក្យឱ្យទៅជាប្រយោគត្រឹមត្រូវ។',pts:2,qs:F});
+  // G — Speaking (3 × 2): say a word • listen & repeat • read a sentence  (checked instantly by speech recognition)
+  if(sp){ const need=t=>{ const k=normA(t).split(' ').filter(w=>w&&!/^(a|an|the)$/.test(w)).length; return k<=2?100:k<=6?80:75; };
+    const w=take(words,1,v=>clean(v[0]).split(' ').length<=2&&!/[?!]/.test(v[0]))[0], ph=shuf(phr.filter(p=>p[0].split(' ').length>=2&&p[0].split(' ').length<=6),r)[0], se=shuf(sents.filter(x=>!/[?]$/.test(x)||1),r).find(x=>!F.some(f=>f.a===x))||sents[0];
+    const G=[]; if(w){ const t=clean(w[0]).replace(/^(a|an|the) /i,''); G.push({t:'speak',mode:'say',text:t,km:w[2],em:emo(w[0]),need:need(t)}); }
+    if(ph) G.push({t:'speak',mode:'repeat',text:clean(ph[0]),km:'',need:need(clean(ph[0]))});
+    if(se) G.push({t:'speak',mode:'read',text:se,km:'',need:need(se)});
+    if(G.length===3) parts.push({id:'G',km:'និយាយ',en:'Speaking',ins:'Speak into the microphone.',insKm:'ចុច 🎤 ហើយនិយាយ (សាកបាន ៣ ដង • យកលើកល្អបំផុត)។',pts:2,qs:G});
+    else { C.length&&0; } }
   const total=parts.reduce((a,p)=>a+p.pts*p.qs.length,0);
   return {n, ver, id:`U${n}${ver}`, title:`Unit ${n} Test — ${u.en}`, km:u.km, parts, total};
 }
@@ -78,6 +87,7 @@ function score(ex, ans){
       if(q.t==='mc'||q.t==='match') ok = a!==undefined && a!==null && +a===q.a;
       else if(q.t==='write') ok = a && normA(a)===normA(q.a);
       else if(q.t==='order') ok = a && normA(a)===normA(q.a);
+      else if(q.t==='speak') ok = a!=null && a!=='' && +a>=q.need;
       if(ok) ps+=p.pts; });
     by[p.id]=ps; s+=ps; });
   return {s, by, pct: Math.round(s/ex.total*100)};
@@ -179,7 +189,7 @@ function begin(n, ver, sessId){
   if(!name) return toast('សូមជ្រើស ឬវាយឈ្មោះសិស្ស');
   closeModal();
   const se=sessId?(X.open||[]).find(x=>x.id===sessId):null;
-  RUN={ex:build(n,ver), ans:{}, name, sid:s?s.id:null, t0:Date.now(), part:0, sess:sessId||null, min:se?se.min:X.settings.minutes};
+  RUN={ex:build(n,ver,!!(window.Voice&&Voice.ok())), ans:{}, name, sid:s?s.id:null, t0:Date.now(), part:0, sess:sessId||null, min:se?se.min:X.settings.minutes};
   const el=document.createElement('div'); el.id='exam'; document.body.appendChild(el); document.body.classList.add('exam-open');
   el.innerHTML = examShell(RUN.ex, name, false);
   wireExam(el, RUN, ()=>finish());
@@ -195,6 +205,7 @@ function examShell(ex, name, online){
     <h2><span>${p.id}</span>${p.km} • ${p.en} <small>${p.qs.length*p.pts} ពិន្ទុ</small></h2><p class="ex-ins">${p.insKm} <i>${p.ins}</i></p>${p.id==='D'?`<div class="ex-audio">🔊 បើកសំឡេងទូរស័ព្ទ (Volume) រួចចុច <b>🔊 Listen</b> — ស្តាប់បានច្រើនដង។ <button class="ex-play" data-say="Hello! Can you hear me?">▶ សាកល្បងសំឡេង</button><small>មិនឮ? សូមបើកតាម Google Chrome (មិនមែនក្នុង Telegram ឬ Facebook)</small></div>`:''}
     ${p.id==='C'?`<div class="ex-match">${p.qs.map((q,i)=>`<div class="ex-mrow"><b>${i+1}. ${esc(q.q)}</b><select data-p="C" data-i="${i}"><option value="">—</option>${p.right.map((r,k)=>`<option value="${k}">${String.fromCharCode(97+k)}. ${esc(r)}</option>`).join('')}</select></div>`).join('')}</div>`:
     p.qs.map((q,i)=>{
+      if(q.t==='speak') return `<div class="ex-q ex-sp" data-p="${p.id}" data-i="${i}"><div class="qq"><span class="n">${i+1}</span><b>${['🗣 និយាយពាក្យនេះជាអង់គ្លេស','🎧 ស្តាប់ ហើយនិយាយតាម','📖 អានប្រយោគនេះឱ្យឮៗ'][['say','repeat','read'].indexOf(q.mode)]}</b></div>${window.Voice?Voice.card('ex'+p.id+i, {...q, noSkip:true, exam:true}, r=>{ if(window.Exam&&Exam._sp) Exam._sp(p.id,i,r); }):''}</div>`;
       if(q.t==='mc') return `<div class="ex-q" data-p="${p.id}" data-i="${i}"><div class="qq"><span class="n">${i+1}</span>${q.listen?`<button class="ex-play" data-say="${esc(q.say)}">🔊 Listen</button>`:`${q.em?`<span class="em">${q.em}</span>`:''}<span class="${q.km?'km':''}">${esc(q.qKm?q.q+' • '+q.qKm:q.q).replace('_____','<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>')}</span>${q.say&&!q.listen?`<button class="ex-say" data-say="${esc(q.say)}">🔊</button>`:''}`}</div>
         <div class="oo">${q.opts.map((o,k)=>`<label class="${q.kmOpts?'km':''}"><input type="radio" name="${p.id}${i}" value="${k}"><span>${String.fromCharCode(65+k)}</span>${esc(o)}</label>`).join('')}</div></div>`;
       if(q.t==='write') return `<div class="ex-q" data-p="${p.id}" data-i="${i}"><div class="qq"><span class="n">${i+1}</span>${q.em?`<span class="em">${q.em}</span>`:''}<span class="km">${esc(q.q)}</span></div><input class="ex-in" data-p="${p.id}" data-i="${i}" autocomplete="off" spellcheck="false" placeholder="English…"></div>`;
@@ -225,7 +236,7 @@ function wireExam(root, run, onSubmit){
   });
   root.addEventListener('input',e=>{ const t=e.target; if(t.classList.contains('ex-in')) set(t.dataset.p,+t.dataset.i,t.value); });
   ex.parts.forEach((p,pi)=>{ if(p.id==='F') p.qs.forEach((q,i)=>drawOrd(i)); });
-  prog();
+  run._set=set; prog();
 }
 function finish(force){
   if(!RUN) return;
@@ -251,8 +262,9 @@ function resultHtml(ex, ans, sc, name, online, code){
     let mine='—', right='', ok=false;
     if(q.t==='mc'){ mine=a!=null&&a!==''?q.opts[a]:'—'; right=q.opts[q.a]; ok=+a===q.a&&a!==null&&a!==undefined&&a!==''; }
     else if(q.t==='match'){ mine=a!=null?p.right[a]:'—'; right=p.right[q.a]; ok=+a===q.a&&a!=null; }
+    else if(q.t==='speak'){ mine=a!=null&&a!==''?a+'%':'—'; right=q.text+' (≥'+q.need+'%)'; ok=a!=null&&a!==''&&+a>=q.need; }
     else { mine=a||'—'; right=q.a; ok=a&&normA(a)===normA(q.a); }
-    const qtxt = q.t==='match'?q.q : q.listen?'🔊 '+q.say : q.t==='order'?q.words.join(' / ') : (q.qKm?q.q:q.q);
+    const qtxt = q.t==='speak'?'🎤 '+q.text : q.t==='match'?q.q : q.listen?'🔊 '+q.say : q.t==='order'?q.words.join(' / ') : (q.qKm?q.q:q.q);
     return `<div class="ex-rr ${ok?'ok':'no'}"><span>${ok?'✅':'❌'}</span><div><div class="km">${i+1}. ${esc(qtxt)}</div><small>${ok?esc(mine):`<s>${esc(mine)}</s> → <b>${esc(right)}</b>`}</small></div></div>`; }).join('')}</div>`).join('')}
   </div>`;
 }
@@ -279,7 +291,7 @@ function keyHtml(ex){
 }
 function print(n, which){
   const vs = which==='AB'?['A','B']:[which];
-  $('#printArea').innerHTML = vs.map(v=>{ const ex=build(n,v); return paper(ex,X.settings.school)+`<div class="pbreak"></div>`+keyHtml(ex); }).join('<div class="pbreak"></div>');
+  $('#printArea').innerHTML = vs.map(v=>{ const ex=build(n,v,false); return paper(ex,X.settings.school)+`<div class="pbreak"></div>`+keyHtml(ex); }).join('<div class="pbreak"></div>');
   const st=document.createElement('style'); st.textContent='@page{size:A4 portrait;margin:12mm}'; document.head.appendChild(st);
   document.body.classList.add('printing-cert');
   const done=()=>{ st.remove(); document.body.classList.remove('printing-cert'); window.removeEventListener('afterprint',done); };
@@ -294,7 +306,7 @@ function b64e(s){ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-'
 function b64d(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; return decodeURIComponent(escape(atob(s))); }
 function online(n, ver){
   if(!window.EXAM_FONT_CSS && window.IS_WEB){ const sc=document.createElement('script'); sc.src='exam-font.js'; sc.onload=()=>online(n,ver); sc.onerror=()=>{ window.EXAM_FONT_CSS=' '; online(n,ver); }; document.head.appendChild(sc); toast('⏳ កំពុងរៀបចំ…'); return; }
-  const ex=build(n,ver);
+  const ex=build(n,ver,false);
   const hide = b64e(JSON.stringify(ex)).split('').reverse().join('');
   const css = EXAM_CSS;
   const html = `<!DOCTYPE html><html lang="km"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(ex.title)} • Version ${ver}</title>
@@ -445,6 +457,7 @@ const EXAM_CSS = `
 `;
 const st=document.createElement('style'); st.textContent=EXAM_CSS; document.head.appendChild(st);
 
-window.Exam = { grammarPool:n=>grammarItems(n,Math.random).map(q=>({q:q.q,qKm:q.qKm,o:q.opts,a:q.a})), studentPage, openSess, closeSess, reload:reloadX, build, score, tab, start, begin, quit, print, online, importCodes, doImport, toScores, doScores, csv, clear,
+window.Exam = { _sp:(pid,i,r)=>{ if(!RUN||!RUN._set) return; const cur=+((RUN.ans[pid]||{})[i])||0; RUN._set(pid,i,Math.max(cur,r.best||r.pct||0)); const q=document.querySelector(`#exam .ex-q[data-p="${pid}"][data-i="${i}"]`); if(q) q.classList.add('answered');
+    if(r.pass||r.tries>=3){ const m=document.querySelector(`#vc-ex${pid}${i} .vc-mic`); if(m) m.innerHTML=r.pass?'<small>✅ បានរក្សាទុក</small>':'<small>🔒 អស់ឱកាស ៣ ដងហើយ — រក្សាទុកលទ្ធផលល្អបំផុត '+Math.max(cur,r.best||0)+'%</small>'; } }, grammarPool:n=>grammarItems(n,Math.random).map(q=>({q:q.q,qKm:q.qKm,o:q.opts,a:q.a})), studentPage, openSess, closeSess, reload:reloadX, build, score, tab, start, begin, quit, print, online, importCodes, doImport, toScores, doScores, csv, clear,
   setting:(k,v)=>{ X.settings[k]=v; saveX(); }, data:()=>X };
 })();

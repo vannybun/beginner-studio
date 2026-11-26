@@ -48,7 +48,14 @@ function build(n, si){
   if(!out.length && (s.k==='open'||s.k==='read'||s.k==='listen'||s.k==='speak'||s.k==='write')){
     const ws=pick(s.w||L.sections.flatMap(x=>x.w||[]),3); ws.forEach(w=>out.push(mcWord(n,w)));
   }
-  return shuf(out).slice(0,MAX);
+  const res=shuf(out).slice(0,MAX);
+  /* 🎤 Unit 4+ : one speaking item per section (only where the device can recognise speech) */
+  if(n>=4 && window.Voice && Voice.ok()){ const sec={...L, sections:[s]}, ph=(s.ph||[]).map(p=>({text:clean(p[0]).replace(/^[A-Z][a-z]*:\s*/,''), km:p[1]||''})).filter(x=>/[a-z]/i.test(x.text)&&!/[\/…_]/.test(x.text)&&words(x.text).length>=2&&words(x.text).length<=9);
+    const ex=(s.g||[]).flatMap(gi=>(L.grammar[gi]||{}).ex||[]).map(e=>({text:clean(e).replace(/\s*[—=→].*$/,''), km:''})).filter(x=>words(x.text).length>=3&&words(x.text).length<=9&&!/[\/…_]/.test(x.text));
+    const pickOne=pick(ph,1)[0]||pick(ex,1)[0];
+    if(pickOne) res.push({t:'speak', mode:Math.random()<.5?'read':'repeat', text:pickOne.text, km:pickOne.km, skipAfter:3});
+    else { const w=pick((s.w||[]).filter(w=>w[0]&&w[1]&&!/[\/→]/.test(w[0])),1)[0]; if(w) res.push({t:'speak', mode:'say', text:clean(w[0]).replace(/^(a|an|the) /i,''), km:w[1], em:w[2]||'', skipAfter:3}); } }
+  return res;
 }
 
 /* ---------- state ---------- */
@@ -72,6 +79,10 @@ function block(n, si){
 function itemHtml(n,si,it,i,E){
   const st=E.st[i], k=key(n,si), say=t=>`speak(${JSON.stringify(t).replace(/"/g,'&quot;')})`;
   const head=`<div class="lex-q"><span class="no ${st.ok?'ok':''}">${st.ok?'✓':i+1}</span><div>${it.q}${it.say?` <button class="lex-say" onclick="${say(it.say)}">🔊</button>`:''}${it.hint&&!st.ok?`<small class="km lex-hint">${esc(it.hint)}</small>`:''}</div></div>`;
+  if(it.t==='speak'){
+    return `<div class="lex-i lex-sp ${st.ok?'done':''}" data-i="${i}"><div class="lex-q"><span class="no ${st.ok?'ok':''}">${st.ok?'✓':i+1}</span><div><b>🎤 លំហាត់និយាយ</b></div></div>
+      ${st.ok?`<div class="lex-fb">✅ ${esc(it.text)} <button class="lex-say" onclick="${say(it.text)}">🔊</button>${st.pct!=null?` • ${st.pct}%`:''}</div>`:Voice.card(`lx${k}-${i}`, it, r=>spoke(k,i,r))}</div>`;
+  }
   if(it.t==='mc'){
     return `<div class="lex-i ${st.ok?'done':''}" data-i="${i}">${head}<div class="lex-o ${it.km?'km':''}">${it.opts.map((o,j)=>`<button class="${st.ok&&o===it.a?'right':''}" ${st.ok?'disabled':''} onclick="LEX.mc('${k}',${i},${j},this)">${esc(o)}</button>`).join('')}</div>
       ${st.ok&&(it.full||it.sayAns)?`<div class="lex-fb">✅ ${esc(it.full||it.a)} <button class="lex-say" onclick="${say(it.full||it.a)}">🔊</button></div>`:''}</div>`;
@@ -96,6 +107,9 @@ function mc(k,i,j,btn){
   if(ok){ rerender(k); if(it.sayAns||it.full) speak(it.full||it.a); }
   else { btn.classList.add('wrong'); btn.disabled=true; const el=btn.closest('.lex-i'); el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
 }
+function spoke(k,i,r){ const E=CUR[k], st=E.st[i]; if(st.ok) return;
+  if(r.pass||r.skip){ st.pct=r.best; if(r.skip&&st.first===null) st.first=false; mark(k,i,true); setTimeout(()=>rerender(k), r.skip?0:1400); }
+  else { st.tries++; if(st.first===null) st.first=false; } }
 function tile(k,i,t){ const E=CUR[k]; (E.sel[i]=E.sel[i]||[]).push(t); rerender(k); }
 function untile(k,i,p){ CUR[k].sel[i].splice(p,1); rerender(k); }
 function clearT(k,i){ CUR[k].sel[i]=[]; rerender(k); }

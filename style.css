@@ -1630,3 +1630,74 @@ body.role-student .tools .nt-bell{display:flex!important;align-items:center;just
   .lx-grid{grid-template-columns:repeat(4,1fr);gap:6px}
   .lx-t{padding:10px 2px 8px;border-radius:14px}.lx-t span{font-size:24px}.lx-t b{font-size:11px}
 }
+/* 🎤 speaking card */
+.vc{border:1.5px solid #e2e8f0;border-radius:18px;padding:14px;background:linear-gradient(180deg,#fff,#f8fafc);margin:8px 0;text-align:center}
+.vc.passed{border-color:#86efac;background:linear-gradient(180deg,#fff,#f0fdf4)}
+.vc-ins{font-size:13.5px;color:#64748b;margin-bottom:6px}
+.vc-text{font:600 22px/1.35 system-ui,'Segoe UI',sans-serif;color:#0f172a;margin:4px 0}
+.vc-text.hide{color:#94a3b8;letter-spacing:4px}
+.vc-km{font-size:14px;color:#64748b}
+.vc-say-q{display:flex;align-items:center;justify-content:center;gap:10px;font-size:22px;font-weight:700;margin:4px 0}
+.vc-em{font-size:40px}
+.vc-big{display:flex;gap:8px;justify-content:center;margin:6px 0}
+.vc-say{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 10px;font:inherit;font-size:14px;cursor:pointer;vertical-align:middle}
+.vc-big .vc-say{font-size:16px;padding:8px 16px;background:#eef2ff;border-color:#c7d2fe}
+.vc-mic{display:flex;flex-direction:column;align-items:center;gap:6px;margin:10px 0 2px}
+.vc-mic small{color:#64748b;font-size:13px;min-height:18px}
+.vc-btn{width:74px;height:74px;border-radius:50%;border:0;background:linear-gradient(135deg,#ef4444,#db2777);color:#fff;font-size:32px;cursor:pointer;box-shadow:0 10px 24px -8px rgba(219,39,119,.6);position:relative;transition:transform .15s}
+.vc-btn:active{transform:scale(.94)}
+.vc.on .vc-btn::before,.vc.on .vc-btn::after{content:'';position:absolute;inset:-8px;border-radius:50%;border:3px solid #f43f5e;animation:vcPulse 1.2s infinite}
+.vc.on .vc-btn::after{animation-delay:.6s}
+@keyframes vcPulse{from{transform:scale(.9);opacity:.9}to{transform:scale(1.5);opacity:0}}
+.vc-res:empty{display:none}
+.vc-score{display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;border-radius:14px;margin-top:8px}
+.vc-score.ok{background:#dcfce7}.vc-score.no{background:#fef2f2}
+.vc-score>b{font-size:26px;min-width:64px;text-align:center}.vc-score.ok>b{color:#15803d}.vc-score.no>b{color:#dc2626}
+.vc-score small{display:block;color:#475569;margin-top:2px}
+.vc-paint{font:600 17px/1.4 system-ui,sans-serif}
+.vc-paint .vg{color:#15803d}.vc-paint .vh{color:#d97706}.vc-paint .vb{color:#dc2626;text-decoration:underline wavy}
+.vc-msg{margin-top:8px;padding:8px 10px;border-radius:12px;background:#f1f5f9;font-size:14px;text-align:left}
+.vc-msg.ok{background:#dcfce7;color:#166534}.vc-msg.warn{background:#fff7ed;color:#9a3412}
+.vc-help{margin-top:8px;padding:10px 12px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;text-align:left;font-size:13.5px}
+.vc-help ul{margin:6px 0 8px;padding-left:18px}.vc-help li{margin:3px 0}
+.vc-help .row{gap:6px;flex-wrap:wrap}
+.lex-sp .vc{margin-top:6px}
+.ex-sp .vc{margin:8px 0 4px}
+/* 💼👑 ឱកាសក្លាយជាសេដ្ឋី / ជំទាវ */
+.rich{border-radius:24px;overflow:hidden;background:#0f172a;color:#f8fafc;box-shadow:var(--sh)}
+.rich-hero{display:flex;gap:16px;align-items:center;padding:22px;background:radial-gradient(circle at 15% 20%,#7c3aed 0,transparent 55%),radial-gradient(circle at 90% 0,#f59e0b55 0,transparent 50%),linear-gradient(135deg,#1e1b4b,#0f172a)}
+.rich-hero h2{margin:0 0 4px;font-size:26px;background:linear-gradient(90deg,#fde68a,#f59e0b);-webkit-background-clip:text;background-clip:text;color:transparent}
+.rich-hero p{margin:2px 0;color:#cbd5e1}.rich-hero b{color:#fde68a}
+.rich-pv{font-size:13px;background:#ffffff14;padding:6px 10px;border-radius:10px;margin-top:6px!important}
+.rich-ic{font-size:58px;filter:drop-shadow(0 6px 14px rgba(245,158,11,.5))}
+.rich-body{display:grid;grid-template-columns:230px 1fr;gap:18px;padding:18px 22px 22px}
+.rich-ladder{display:flex;flex-direction:column;gap:4px}
+.rich-ladder div{display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:10px;background:#1e293b;font-family:system-ui,sans-serif}
+.rich-ladder div span{width:22px;color:#94a3b8;font-weight:700}.rich-ladder div b{flex:1;color:#fbbf24}
+.rich-ladder div.safe{border:1px solid #f59e0b66}
+.rich-ladder div.got{background:linear-gradient(90deg,#16a34a,#15803d)}.rich-ladder div.got b,.rich-ladder div.got span{color:#fff}
+.rich-ladder i{font-style:normal}
+.rich-info h4{margin:14px 0 6px;color:#fde68a}
+.rich-me{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rich-me div{background:#1e293b;border-radius:14px;padding:10px;text-align:center}
+.rich-me b{display:block;font-size:20px;color:#fbbf24;font-family:system-ui,var(--kh)}.rich-me small{color:#94a3b8;font-size:12px}
+.rich-rules{margin:0 0 14px;padding-left:18px;color:#cbd5e1;font-size:14px;line-height:1.7}
+.rich .btn.ghost{background:#ffffff14;color:#f8fafc;border-color:#ffffff33}
+.rich .vc-msg.warn{color:#9a3412}
+.rich.play{padding:14px 16px 18px}
+.rich-top{display:flex;align-items:center;gap:10px}
+.rich-step{flex:1;font-size:17px}.rich-step b{color:#fde68a;font-size:22px}
+.rich-prize{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-weight:800;padding:6px 14px;border-radius:999px;font-family:system-ui,var(--kh)}
+.rich-dots{display:flex;gap:5px;margin:12px 0}
+.rich-dots i{flex:1;height:7px;border-radius:9px;background:#334155}.rich-dots i.ok{background:#22c55e}.rich-dots i.cur{background:#fbbf24;box-shadow:0 0 10px #fbbf24}
+.rich-mode{text-align:center;color:#fde68a;font-weight:700;margin:4px 0}
+.rich .vc{color:#0f172a}
+.rich-tries{text-align:center;font-size:20px;letter-spacing:4px;margin:6px 0}
+.rich-help{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.rich-ok{margin-top:10px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:12px;border-radius:16px;background:#14532d}
+.rich-ok b{font-size:18px}.rich-ok span{color:#fde68a;font-weight:800;font-size:18px;font-family:system-ui,var(--kh)}
+.rich.end{text-align:center;padding:30px 20px}
+.rich.end h2{color:#fde68a}.rich.end .note{color:#94a3b8}
+.rich.win{background:radial-gradient(circle at 50% 0,#f59e0b66,transparent 60%),#0f172a}
+.rich-big{font-size:80px;animation:pop .6s var(--spring)}
+@media(max-width:760px){.rich-body{grid-template-columns:1fr;padding:14px}.rich-ladder{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;order:2}.rich-ladder div{flex-direction:column;gap:0;padding:6px 2px;text-align:center}.rich-ladder div b{font-size:11px}.rich-ladder div i{display:none}.rich-hero{padding:16px}.rich-hero h2{font-size:21px}.rich-ic{font-size:44px}.vc-text{font-size:19px}}

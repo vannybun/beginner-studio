@@ -43,6 +43,7 @@ function walletInfo(){ const W=myMoney();
       <div><span>📝 ប្រឡងបញ្ចប់មេរៀន</span><b>≤3,000៛</b></div>
       <div><span>🏁 ឆ្លងកម្រិត (≥80%)</span><b>5,000៛</b></div>
       <div><span>🏆 រៀនចប់ Unit មួយ</span><b>10,000៛</b></div>
+      <div><span>${window.Rich?Rich.label():'💰'} លំហាត់និយាយ ១០ ជាន់ (ក្នុង Unit នីមួយៗ)</span><b>≤10,000៛</b></div>
       <div class="minus"><span>❌ អវត្តមានឥតច្បាប់ (ម្តង)</span><b>−4,000៛</b></div>
       <div class="minus"><span>📝 អវត្តមានមានច្បាប់ / មកយឺត</span><b>គ្រូសម្រេច</b></div></div>
     <h4>📜 ប្រវត្តិថ្មីៗ</h4><div class="wal-log">${W.log.slice(0,25).map(([t,a,w])=>`<div class="${a<0?'minus':''}"><span>${esc(w)}<small>${new Date(t).toLocaleDateString('en-GB')}</small></span><b>${sRIEL(a)}</b></div>`).join('')||'<p class="note">មិនទាន់មាន — ចាប់ផ្តើមរៀនដើម្បីរកលុយ!</p>'}</div>
@@ -322,7 +323,7 @@ function renderPreviewTasks(){ setUnitColors(4);
 function renderPreviewMe(){ setUnitColors(5); $('#main').innerHTML=`<div class="stu-head"><h2>📊 ខ្ញុំ</h2></div><div class="pv-note">👀 ទំព័រនេះបង្ហាញពិន្ទុ និងវឌ្ឍនភាពរបស់សិស្សម្នាក់ៗ ពេលសិស្សចូលប្រព័ន្ធ។ ដើម្បីមើលសិស្សទាំងអស់ សូមចូល 👥 ថ្នាក់រៀន → 📊 តាមដានសិស្ស</div><div class="row" style="justify-content:center"><button class="btn teal" onclick="setMode('teach');go('class',null,'track')">📊 តាមដានសិស្ស</button></div>`; }
 
 /* ---------- 🎓 student unit: lesson cards (no slides) — phone first, roomy on PC ---------- */
-const TABS_STU = () => [['lesson','📖 មេរៀន'],['vocab','🔤 ពាក្យ'],['grammar','📐 វេយ្យាករណ៍'],['practice','✍️ លំហាត់']].concat(window.IS_WEB?[]:[['listen','🎧 ស្តាប់']]);
+const TABS_STU = () => [['lesson','📖 មេរៀន'],['vocab','🔤 ពាក្យ'],['grammar','📐 វេយ្យាករណ៍'],['practice','✍️ លំហាត់'],['rich',window.Rich?Rich.label():'💰']].concat(window.IS_WEB?[]:[['listen','🎧 ស្តាប់']]);
 function secDone(n){ S.sec=S.sec||{}; return S.sec[n]=S.sec[n]||[]; }
 function renderStuUnit(u, tabs){
   const st=UNIT_STYLE[u.n], L=LESSONS[u.n], done=secDone(u.n).length;
@@ -335,7 +336,7 @@ function renderStuUnit(u, tabs){
     <div class="tabs su-tabs">${tabs.map(t=>`<button class="${t[0]===view.tab?'on':''}" onclick="go('unit',${u.n},'${t[0]}')">${t[1]}</button>`).join('')}</div>
     <div id="tab"></div>`;
   if(view.tab==='practice' && !PREVIEW() && !lessonDone(u.n)){ $('#tab').innerHTML=passBanner(u)+`<div class="stu-empty"><div style="font-size:54px">🔒</div><b>លំហាត់នៅចាក់សោ</b><p>រៀនផ្នែកទាំងអស់ក្នុង 📖 មេរៀន ឱ្យចប់សិន (${secsDone(u.n)}/${LESSONS[u.n].sections.length})</p><button class="btn teal" onclick="go('unit',${u.n},'lesson')">📖 ទៅរៀន</button></div>`; return; }
-  ({lesson:tabLesson, vocab:tabVocab, grammar:tabGrammar, practice:tabPractice, listen:tabListen})[view.tab](u);
+  ({lesson:tabLesson, vocab:tabVocab, grammar:tabGrammar, practice:tabPractice, listen:tabListen, rich:u=>Rich.tab(u)})[view.tab](u);
 }
 let openSec=null;
 function passBanner(u){
@@ -424,7 +425,7 @@ function renderHome(){
 function nextUnit(){ if(stuUI()&&!PREVIEW()){ const o=UNITS.filter(u=>unitOpen(u.n)&&!unitPassed(u.n)); if(o.length) return o[o.length-1].n; } for(const u of UNITS){ if(stuUI() ? !unitPassed(u.n) : (S.quiz[u.n]||0)<80) return u.n; } return 14; }
 
 /* ---------- unit ---------- */
-const TABS_LEARN = [['path','📚 មេរៀនតាមសៀវភៅ'],['listen','🎧 ស្តាប់'],['vocab','🔤 វាក្យសព្ទ'],['grammar','📐 វេយ្យាករណ៍'],['practice','✍️ លំហាត់'],['exam','📝 ប្រឡងបញ្ចប់មេរៀន']];
+const TABS_LEARN = [['path','📚 មេរៀនតាមសៀវភៅ'],['listen','🎧 ស្តាប់'],['vocab','🔤 វាក្យសព្ទ'],['grammar','📐 វេយ្យាករណ៍'],['practice','✍️ លំហាត់'],['rich','💰 សេដ្ឋី/ជំទាវ'],['exam','📝 ប្រឡងបញ្ចប់មេរៀន']];
 const TABS_TEACH = [['plan','📋 ផែនការបង្រៀន'],['worksheet','📄 សន្លឹកលំហាត់']];
 function renderUnit(){
   const u = U(view.unit), st = UNIT_STYLE[u.n];
@@ -450,7 +451,7 @@ function renderUnit(){
   </div>
   <div class="tabs">${tabs.map(t=>`<button class="${t[0]===view.tab?'on':''}" onclick="go('unit',${u.n},'${t[0]}')">${t[1]}</button>`).join('')}</div>
   <div id="tab"></div>`;
-  ({path:tabPath, listen:tabListen, vocab:tabVocab, grammar:tabGrammar, practice:tabPractice, plan:tabPlan, worksheet:u=>WS.teacherTab(u), exam:Exam.tab})[view.tab](u);
+  ({rich:u=>Rich.tab(u), path:tabPath, listen:tabListen, vocab:tabVocab, grammar:tabGrammar, practice:tabPractice, plan:tabPlan, worksheet:u=>WS.teacherTab(u), exam:Exam.tab})[view.tab](u);
 }
 
 /* lesson path: sections in book order */
@@ -563,7 +564,8 @@ const QTYPES = [
   ['km2en','🇰🇭','ខ្មែរ → អង់គ្លេស','មើលពាក្យខ្មែរ ជ្រើសពាក្យអង់គ្លេស'],
   ['pic','🖼️','រូបភាព → ពាក្យ','មើលរូប ជ្រើសពាក្យត្រឹមត្រូវ'],
   ['listen','🎧','ស្តាប់ហើយជ្រើស','ស្តាប់សំឡេង ជ្រើសពាក្យដែលឮ'],
-  ['spell','⌨️','សរសេរប្រកប','មើលខ្មែរ/ស្តាប់ ហើយវាយពាក្យ']
+  ['spell','⌨️','សរសេរប្រកប','មើលខ្មែរ/ស្តាប់ ហើយវាយពាក្យ'],
+  ['speak','🎤','និយាយ','ស្តាប់ អាន ហើយនិយាយឱ្យត្រូវ — ពិនិត្យភ្លាមៗ']
 ];
 function levelSize(n){ const u=U(n), w=vocabPool(u).length, g=(window.Exam&&Exam.grammarPool)?Exam.grammarPool(n).length:u.quiz.length, sc=LESSONS[n].sections.length; return Math.max(25, Math.min(100, Math.round(w*0.9 + g + sc))); }
 function tabPractice(u){
@@ -609,7 +611,9 @@ function startLevel(n){
 function startQuiz(n,type){
   const u=U(n); let qs=[];
   const gq = q=>({kind:'mc',prompt:q.q,opts:shuffle(q.o),ans:q.o[q.a]});
-  if(type==='grammar') qs=shuffle(u.quiz).map(gq);
+  if(type==='speak'){ if(!window.Voice||!Voice.ok()) return modal(`<h3>🎤 លំហាត់និយាយ</h3><p class="km">ឧបករណ៍/កម្មវិធីរុករកនេះមិនស្គាល់សំឡេងទេ។ សូមបើកកម្មវិធីនេះក្នុង <b>Google Chrome</b> (Android/កុំព្យូទ័រ) ឬ <b>Safari</b> (iPhone) ហើយភ្ជាប់អ៊ីនធឺណិត។</p>`);
+    qs=Voice.items(n,[['say',3],['repeat',3],['read',2]]).map(x=>({kind:'speak', item:{...x, skipAfter:3}, ans:x.text})); }
+  else if(type==='grammar') qs=shuffle(u.quiz).map(gq);
   else if(type==='mix'){ qs=shuffle(u.quiz).slice(0,4).map(gq); ['en2km','km2en','pic','listen','spell','pic'].forEach(t=>qs.push(makeVocabQ(u,t))); qs=shuffle(qs); }
   else { const seen=new Set(); let guard=0; while(qs.length<10 && guard++<300){ const q=makeVocabQ(u,type); if(!seen.has(q.ans)){seen.add(q.ans);qs.push(q);} } }
   Q={n,type,qs,i:0,score:0,locked:false};
@@ -624,6 +628,8 @@ function showQ(){
     const pr = q.emoji ? `<span class="em">${q.emoji}</span>What's this?` : q.audio ? `<button class="btn teal xl" onclick="speak(${attr(q.audio)})">🔊 ស្តាប់ម្តងទៀត</button>` : esc(q.prompt).replace('___','<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>');
     body=`<div class="qprompt ${q.kmPrompt?'kmq':''}">${pr} ${q.speakIt?`<button class="spk" onclick="speak(${attr(q.speakIt)})">🔊</button>`:''}</div>
       <div class="opts">${q.opts.map((o,k)=>`<button class="opt ${q.kmOpts?'kmo':''}" data-o="${esc(o)}" onclick="answer(this)">${String.fromCharCode(65+k)}. ${esc(o)}</button>`).join('')}</div>`;
+ } else if(q.kind==='speak'){
+    body=Voice.card('pq'+Q.i+'_'+Date.now()%1e6, q.item, r=>{ if(Q.locked) return; if(r.pass){ Q.locked=true; Q.score++; feedback(true,q.ans); } else if(r.skip||r.tries>=3){ Q.locked=true; feedback(false,q.ans); } });
   } else {
     body=`<div class="qprompt kmq">${esc(q.prompt)} <button class="spk" onclick="speak(${attr(q.audio)})">🔊</button></div>
       <div class="spell"><input id="spIn" autocomplete="off" placeholder="type in English…" onkeydown="if(event.key==='Enter')checkSpell()"><button class="btn teal" onclick="checkSpell()">✓</button></div>`;

@@ -18,14 +18,16 @@ const letter = i => String.fromCharCode(97+i);
 
 /* ---------- build a sheet (stored as plain content so every student gets the same sheet) ---------- */
 function poolOf(u){ return u.vocab.filter(v=>v[0]&&v[2]&&!/[→↔\/]/.test(v[0])); }
-function make(n, nA, nB, nC){
+function make(n, nA, nB, nC, nD){
   const u=UNITS[n-1], pool=shuf(poolOf(u));
   const A=pool.slice(0,nA).map(v=>[v[0],v[2]]);
   const C=pool.slice(nA, nA+nC).map(v=>[v[2],v[0]]);
   const B=shuf((window.Exam&&Exam.grammarPool)?Exam.grammarPool(n):u.quiz.map(q=>({q:q.q,o:q.o,a:q.a}))).slice(0,nB);
-  return {n, title:`Unit ${n}: ${u.en}`, km:u.km, A, Am:shuf(A.map((_,i)=>i)), B, C};
+  const D=nD&&window.Voice?Voice.items(n,[['say',Math.ceil(nD/3)],['repeat',Math.ceil(nD/3)],['read',nD]]).slice(0,nD).map(x=>({mode:x.mode,text:x.text,km:x.km||'',em:x.em||'',need:Voice.need(x.text)})):[];
+  return {n, title:`Unit ${n}: ${u.en}`, km:u.km, A, Am:shuf(A.map((_,i)=>i)), B, C, D};
 }
-const total = ws => ws.A.length+ws.B.length+ws.C.length;
+const total = (ws,noD) => ws.A.length+ws.B.length+ws.C.length+(noD?0:(ws.D||[]).length);
+const DM={say:'🗣 និយាយជាអង់គ្លេស',repeat:'🎧 ស្តាប់ ហើយនិយាយតាម',read:'📖 អានឱ្យឮៗ'};
 
 /* ---------- paper / read-only rendering ---------- */
 function paper(ws, key){
@@ -34,14 +36,16 @@ function paper(ws, key){
     ${ws.A.length?`<h2>A. Match the words. ផ្គូផ្គងពាក្យអង់គ្លេសជាមួយអត្ថន័យខ្មែរ</h2><table>${ws.A.map((w,i)=>`<tr><td style="width:50%">${i+1}. ${esc(w[0])} ____</td><td class="km">${letter(i)}. ${esc(ws.A[ws.Am[i]][1])}</td></tr>`).join('')}</table>`:''}
     ${ws.B.length?`<h2>B. Choose the correct answer. គូសរង្វង់ចម្លើយត្រឹមត្រូវ</h2><table>${ws.B.map((q,i)=>`<tr><td>${i+1}. ${esc(q.q).replace(/_{3,}/,'________')}</td><td style="width:45%">${q.o.map((o,j)=>letter(j)+') '+esc(o)).join('&nbsp;&nbsp;&nbsp;')}</td></tr>`).join('')}</table>`:''}
     ${ws.C.length?`<h2>C. Write the English word. សរសេរពាក្យជាភាសាអង់គ្លេស</h2><table>${ws.C.map((w,i)=>`<tr><td class="km" style="width:50%">${i+1}. ${esc(w[0])}</td><td>_________________________</td></tr>`).join('')}</table>`:''}
+    ${(ws.D||[]).length?`<h2>D. Speaking. និយាយ (គ្រូស្តាប់ ហើយដាក់ពិន្ទុ)</h2><table>${ws.D.map((d,i)=>`<tr><td style="width:40%">${i+1}. ${d.mode==='say'?`<span class="km">${esc(d.em||'')} ${esc(d.km)}</span> → ________`:d.mode==='repeat'?`🎧 Listen and repeat: <i>«${esc(d.text)}»</i> <small>(គ្រូអាន សិស្សនិយាយតាម)</small>`:esc(d.text)}</td><td>${d.mode==='read'?'Read aloud. ☐':'☐'}</td></tr>`).join('')}</table>`:''}
     ${key?`<div class="pbreak"></div><h1>Answer key — ${esc(ws.title)}</h1>
       ${ws.A.length?`<h2>A</h2><p>${ws.A.map((w,i)=>`${i+1}–${letter(ws.Am.indexOf(i))}`).join(', ')}</p>`:''}
       ${ws.B.length?`<h2>B</h2><p>${ws.B.map((q,i)=>`${i+1}. ${esc(q.o[q.a])}`).join(' • ')}</p>`:''}
-      ${ws.C.length?`<h2>C</h2><p>${ws.C.map((w,i)=>`${i+1}. ${esc(w[1])}`).join(' • ')}</p>`:''}`:''}</div>`;
+      ${ws.C.length?`<h2>C</h2><p>${ws.C.map((w,i)=>`${i+1}. ${esc(w[1])}`).join(' • ')}</p>`:''}
+      ${(ws.D||[]).length?`<h2>D</h2><p>${ws.D.map((d,i)=>`${i+1}. ${esc(d.text)}`).join(' • ')}</p>`:''}`:''}</div>`;
 }
 
 /* ---------- teacher tab ---------- */
-let CUR=null, SEL={A:10,B:6,C:6};
+let CUR=null, SEL={A:10,B:6,C:6,D:3};
 const OPTS=(arr,sel)=>arr.map(v=>`<option ${v===sel?'selected':''}>${v}</option>`).join('');
 function classes(){ const C=(window.Class&&Class.data())||{classes:[]}; return C.classes.filter(c=>!window.Auth||!Auth.user()||Auth.canSeeClass(c)); }
 function teacherTab(u){
@@ -53,6 +57,7 @@ function teacherTab(u){
       <label class="km">A. ផ្គូផ្គងពាក្យ<select id="wsA">${OPTS(As, Math.min(SEL.A,maxA))}</select></label>
       <label class="km">B. វេយ្យាករណ៍<select id="wsB">${OPTS(Bs, Math.min(SEL.B,gp))}</select></label>
       <label class="km">C. សរសេរពាក្យ<select id="wsC">${OPTS(Cs, SEL.C)}</select></label>
+      <label class="km">D. 🎤 និយាយ<select id="wsD">${OPTS([0,2,3,4,5,6,8,10], SEL.D)}</select></label>
       <button class="btn teal" onclick="WS.gen(${u.n})">🔄 បង្កើតថ្មី</button>
     </div>
     <p class="note">មានពាក្យសរុប ${maxA} • សំណួរវេយ្យាករណ៍ ${gp} • រាល់ពេលចុច «បង្កើតថ្មី» បានសន្លឹកខុសគ្នា</p>
@@ -80,7 +85,7 @@ function assignRow(a, cs){
     <button class="btn sm ghost" onclick="WS.toggle('${a.id}')">${a.open?'⛔ បិទ':'🔓 បើកវិញ'}</button>
     <button class="btn sm ghost" onclick="WS.del('${a.id}')">🗑</button></div>`;
 }
-function gen(n){ SEL={A:+$('#wsA').value, B:+$('#wsB').value, C:+$('#wsC').value}; CUR=make(n, +$('#wsA').value, +$('#wsB').value, +$('#wsC').value); $('#wsPrev').innerHTML=paper(CUR, true); }
+function gen(n){ SEL={A:+$('#wsA').value, B:+$('#wsB').value, C:+$('#wsC').value, D:+$('#wsD').value}; CUR=make(n, SEL.A, SEL.B, SEL.C, SEL.D); $('#wsPrev').innerHTML=paper(CUR, true); }
 function print(){ $('#printArea').innerHTML=paper(CUR, $('#wsKey').checked); window.print(); }
 function send(){
   if(!CUR || !total(CUR)) return toast('សូមជ្រើសចំនួនសំណួរ');
@@ -121,24 +126,29 @@ async function openA(id){
   if(a.mode==='view') return viewA(a);
   if(a.once && doneOf(a)) return review(id);
   const ws=a.ws, kmOpts=shuf(ws.A.map(w=>w[1]));
-  RUN={a, ans:{A:{},B:{},C:{}}};
+  RUN={a, ans:{A:{},B:{},C:{},D:{}}};
   shell(`<div class="wr-top"><button onclick="WS.close()">✕</button><div><b>${esc(ws.title)}</b><small>${total(ws)} សំណួរ</small></div><span id="wrCnt">0/${total(ws)}</span></div>
     <div class="wr-body">
     ${ws.A.length?`<h3>A. ផ្គូផ្គងពាក្យ <small>Match the words</small></h3>${ws.A.map((w,i)=>`<div class="wr-q"><b>${i+1}. ${esc(w[0])}</b><button class="wr-say" onclick="speak(${JSON.stringify(w[0]).replace(/"/g,'&quot;')})">🔊</button><select onchange="WS.ans('A',${i},this.value)"><option value="">— ជ្រើសអត្ថន័យ —</option>${kmOpts.map(k=>`<option>${esc(k)}</option>`).join('')}</select></div>`).join('')}`:''}
     ${ws.B.length?`<h3>B. ជ្រើសចម្លើយត្រឹមត្រូវ <small>Choose the correct answer</small></h3>${ws.B.map((q,i)=>`<div class="wr-q"><b>${i+1}. ${esc(q.q)}</b>${q.qKm?`<small>${esc(q.qKm)}</small>`:''}<div class="wr-opts">${q.o.map((o,j)=>`<button data-b="${i}" onclick="WS.pick(${i},${j},this)">${letter(j)}. ${esc(o)}</button>`).join('')}</div></div>`).join('')}`:''}
     ${ws.C.length?`<h3>C. សរសេរពាក្យអង់គ្លេស <small>Write the English word</small></h3>${ws.C.map((w,i)=>`<div class="wr-q"><b>${i+1}. ${esc(w[0])}</b><input autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="English…" oninput="WS.ans('C',${i},this.value)"></div>`).join('')}`:''}
+    ${(ws.D||[]).length?`<h3>D. 🎤 និយាយ <small>Speaking — ចុច 🎤 ហើយនិយាយ</small></h3>${window.Voice&&Voice.ok()?'':'<p class="note">⚠️ ឧបករណ៍នេះមិនស្គាល់សំឡេង — ផ្នែកនេះមិនរាប់ពិន្ទុទេ (ប្រើ Chrome ឬ Safari ដើម្បីធ្វើផ្នែកនេះ)</p>'}${ws.D.map((d,i)=>`<div class="wr-q"><b>${i+1}. ${DM[d.mode]}</b>${window.Voice?Voice.card('wsD'+i, {...d, noSkip:true, exam:true}, r=>WS._sp(i,r)):''}</div>`).join('')}`:''}
     <button class="btn teal wr-submit" onclick="WS.submit()">✅ ប្រគល់ ហើយមើលពិន្ទុ</button></div>`);
 }
-function count(){ const r=RUN.ans, k=Object.values(r.A).filter(Boolean).length+Object.keys(r.B).length+Object.values(r.C).filter(v=>v.trim()).length; const el=$('#wrCnt'); if(el) el.textContent=k+'/'+total(RUN.a.ws); return k; }
+function count(){ const r=RUN.ans, k=Object.values(r.A).filter(Boolean).length+Object.keys(r.B).length+Object.values(r.C).filter(v=>v.trim()).length+(VOK()?Object.keys(r.D||{}).length:0); const el=$('#wrCnt'); if(el) el.textContent=k+'/'+total(RUN.a.ws); return k; }
+const VOK=()=>!!(window.Voice&&Voice.ok());
+function spD(i,r){ if(!RUN) return; const cur=+RUN.ans.D[i]||0; RUN.ans.D[i]=Math.max(cur,r.best||r.pct||0); count();
+  if(r.pass||r.tries>=3){ const m=document.querySelector(`#vc-wsD${i} .vc-mic`); if(m) m.innerHTML=r.pass?'<small>✅ បានរក្សាទុក</small>':'<small>🔒 អស់ឱកាស ៣ ដង — រក្សាទុក '+RUN.ans.D[i]+'%</small>'; } }
 function ans(p,i,v){ RUN.ans[p][i]=v; count(); }
 function pick(i,j,btn){ RUN.ans.B[i]=j; document.querySelectorAll(`[data-b="${i}"]`).forEach(b=>b.classList.toggle('on',b===btn)); count(); }
 function grade(ws, ans){
   const A=ws.A.map((w,i)=>ans.A[i]===w[1]), B=ws.B.map((q,i)=>ans.B[i]===q.a), C=ws.C.map((w,i)=>!!ans.C[i] && normA(ans.C[i])===normA(w[1]));
-  const s=[...A,...B,...C].filter(Boolean).length; return {A,B,C,s,t:total(ws)};
+  const noD=ans.noD, D=noD?[]:(ws.D||[]).map((d,i)=>(ans.D||{})[i]!=null&&+(ans.D||{})[i]>=d.need);
+  const s=[...A,...B,...C,...D].filter(Boolean).length; return {A,B,C,D,s,t:total(ws,noD)};
 }
 function submit(){ if(window.Auth&&Auth.asStaff&&Auth.asStaff()) return toast('👁 គ្រូកំពុងមើល — មិនអាចដាក់ចម្លើយជំនួសសិស្សបានទេ');
-  const left=total(RUN.a.ws)-count(); if(left>0 && !confirm(`នៅសល់ ${left} សំណួរមិនទាន់ឆ្លើយ។ ប្រគល់ឥឡូវ?`)) return;
-  const m=me(), g=grade(RUN.a.ws, RUN.ans);
+  const left=total(RUN.a.ws,!VOK())-count(); if(left>0 && !confirm(`នៅសល់ ${left} សំណួរមិនទាន់ឆ្លើយ។ ប្រគល់ឥឡូវ?`)) return;
+  if(!VOK()) RUN.ans.noD=1; const m=me(), g=grade(RUN.a.ws, RUN.ans);
   W.results.push({id:uid(), wid:RUN.a.id, uid:m.id, sid:m.studentId, name:m.name, s:g.s, t:g.t, ts:Date.now(), ans:RUN.ans});
   saveW(); if(typeof track==='function') track('worksheet', RUN.a.n+':'+Math.round(g.s/g.t*100));
   if(window.earn&&g.t) earn(`ws:${RUN.a.id}`, Math.min(2000, Math.round(g.s/g.t*10)*200), `សន្លឹកលំហាត់ (${g.s}/${g.t})`);
@@ -152,6 +162,7 @@ function showResult(a, ans, g){
     ${ws.A.length?`<h3>A</h3>${ws.A.map((w,i)=>row(g.A[i], esc(w[0]), ans.A[i], w[1])).join('')}`:''}
     ${ws.B.length?`<h3>B</h3>${ws.B.map((q,i)=>row(g.B[i], esc(q.q), ans.B[i]!=null?q.o[ans.B[i]]:'', q.o[q.a])).join('')}`:''}
     ${ws.C.length?`<h3>C</h3>${ws.C.map((w,i)=>row(g.C[i], esc(w[0]), ans.C[i], w[1])).join('')}`:''}
+    ${(ws.D||[]).length&&!ans.noD?`<h3>D 🎤</h3>${ws.D.map((d,i)=>row(g.D[i], '🎤 '+esc(d.mode==='say'?d.km:d.text), (ans.D||{})[i]!=null?(ans.D||{})[i]+'%':'—', d.text+' (≥'+d.need+'%)')).join('')}`:''}
     ${show?'':'<p class="note">🔒 គ្រូមិនបានបើកឱ្យមើលចម្លើយត្រឹមត្រូវទេ</p>'}
     <button class="btn teal wr-submit" onclick="WS.close()">✔ រួចរាល់</button></div>`);
 }
@@ -164,5 +175,5 @@ function viewA(a){
 }
 function wrote(id){ const a=W.list.find(x=>x.id===id), m=me(); W.results.push({id:uid(), wid:id, uid:m.id, sid:m.studentId, name:m.name, s:0, t:total(a.ws), ts:Date.now(), wrote:true}); saveW(); toast('✅ បានប្រាប់គ្រូហើយ'); close(); }
 
-window.WS = { teacherTab, gen, print, send, toggle, del, results, studentSection, pending, open:openA, close, ans, pick, submit, review, wrote, reload:load, key:WK, data:()=>W };
+window.WS = { _sp:spD, teacherTab, gen, print, send, toggle, del, results, studentSection, pending, open:openA, close, ans, pick, submit, review, wrote, reload:load, key:WK, data:()=>W };
 })();
