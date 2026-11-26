@@ -11,8 +11,11 @@ let T='busy', MON=null;
 
 /* ---- the student's own summary → shared board (small, synced) ---- */
 function summ(S){ const cut=dk(Date.now()-70*864e5), d={}; Object.entries((S.act&&S.act.d)||{}).forEach(([k,v])=>{ if(k>=cut) d[k]=v; });
-  const lv=Object.values(S.level||{}), M=S.money||{};
-  return {d, p:lv.filter(v=>v>=80).length, l:lv.length?Math.round(lv.reduce((a,b)=>a+b,0)/lv.length):0, w:Object.values(S.known||{}).reduce((a,x)=>a+x.length,0), lv:S.level||{}, r:M.t||0, rm:M.m||{}}; }
+  const lv=Object.values(S.level||{}), M=S.money||{}, L=window.LESSONS||{}, N=Object.keys(L).length||14;
+  let cu=0, sr=0, pcs=0;
+  for(let n=1;n<=N;n++){ const tot=(L[n]&&L[n].sections.length)||1, dn=Math.min(tot,((S.sec||{})[n]||[]).length), lvn=(S.level||{})[n]||0, done=dn>=tot;
+    sr += (done?1:0)+(lvn>=80?1:0)+(lvn>=95?1:0); pcs += dn/tot*0.5 + Math.min(lvn,100)/200; if(!cu && !(done&&lvn>=80)) cu=n; }
+  return {cu:cu||N, sr, pc:Math.round(pcs/N*100), d, p:lv.filter(v=>v>=80).length, l:lv.length?Math.round(lv.reduce((a,b)=>a+b,0)/lv.length):0, w:Object.values(S.known||{}).reduce((a,x)=>a+x.length,0), lv:S.level||{}, r:M.t||0, rm:M.m||{}}; }
 function push(S, force){
   if(!window.Auth||Auth.role()!=='student') return; const me=Auth.user(); if(!me||!S) return;
   if(!force && Date.now()-(push.t||0)<90000) return; push.t=Date.now();
@@ -26,7 +29,7 @@ function rows(c){
   const B=J(BK)||{}, users=(window.Auth&&Auth.data().users)||[], staff=window.Auth&&Auth.role()!=='student';
   return c.students.map(s=>{ const u=users.find(x=>x.role==='student'&&x.classId===c.id&&x.studentId===s.id); let e=u&&B[u.id];
     const P=staff&&u&&J('beginner-studio-v1:'+u.id); if(P) e=summ(P);
-    return {s, uid:u&&u.id, e:e||{d:{},p:0,l:0,w:0,lv:{},r:0,rm:{}}}; });
+    return {s, uid:u&&u.id, e:e||{d:{},p:0,l:0,w:0,lv:{},r:0,rm:{},cu:1,sr:0,pc:0}}; });
 }
 function weekRange(off){ const n=new Date(); n.setHours(12,0,0,0); const dow=(n.getDay()+6)%7; const a=new Date(n.getTime()-(dow+7*off)*864e5); return [dk(a), dk(a.getTime()+6*864e5)]; }
 function monthKey(off){ const n=new Date(); const d=new Date(n.getFullYear(), n.getMonth()-off, 15); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
@@ -99,5 +102,5 @@ function unit(n){ UNIT=n; redraw(); }
 function month(m){ MON=m; redraw(); }
 function redraw(){ if(target) target(); }
 function share(k){ Class._share(k); redraw(); }
-window.Rank={ riel, sub, unit, push, page, stuPage, set, month, share, _target:f=>{ target=f; }, key:BK };
+window.Rank={ summ, rows, riel, sub, unit, push, page, stuPage, set, month, share, _target:f=>{ target=f; }, key:BK };
 })();

@@ -1457,3 +1457,17 @@ body.stu-ui .app-credit{margin-top:-130px;padding-bottom:110px}
 .me-ph img{width:100%;height:100%;object-fit:cover}.me-ph span{font:800 44px var(--kh);color:#0369a1}
 .me-f{display:flex;flex-direction:column;gap:4px;margin:8px 0;font:13px var(--kh);color:#475569}.me-f input{font-size:15px}
 .stu-edit{display:block;margin-top:2px;border:0;background:none;padding:0;color:#0f766e;font:600 12px var(--kh);cursor:pointer;text-decoration:underline}
+.ex-audio{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px;padding:10px 14px;border-radius:14px;background:#ecfeff;border:1px dashed #67e8f9;font:13.5px var(--kh);color:#155e75}
+.ex-audio small{flex-basis:100%;color:#64748b;font-size:12px}
+/* 👥 classmates on map */
+.mppl{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;border:0;background:rgba(255,255,255,.9);padding:3px 6px 3px 3px;border-radius:999px;box-shadow:0 4px 12px #0f172a22;cursor:pointer;z-index:3;animation:mpop .5s both}
+.mppl>span{display:block;margin-right:-9px;border-radius:50%;box-shadow:0 0 0 2px #fff}.mppl>span:last-of-type{margin-right:0}
+.mppl>span.me{box-shadow:0 0 0 3px #f59e0b;z-index:2}.mppl .cl-av{display:block}
+.mppl em{font:700 11px var(--kh);font-style:normal;color:#475569;margin-left:6px}
+.map-cls{border:0;border-radius:999px;padding:6px 12px;background:#fff;box-shadow:0 1px 4px #0001;font:600 12.5px var(--kh);cursor:pointer}
+.mwho{text-align:center;font-family:var(--kh)}.mwho .cl-av{margin:0 auto}.mwho h3{margin:8px 0 0}.mwho h3 em{color:#ea580c;font-style:normal;font-size:.7em}.mwho>small{color:#64748b}
+.mwho-at{margin:10px 0 6px;font-size:14.5px}.mwho-bar{height:10px;border-radius:999px;background:#e2e8f0;overflow:hidden;margin:0 10px}.mwho-bar i{display:block;height:100%;background:linear-gradient(90deg,#14b8a6,#22c55e);border-radius:999px}
+.mwho-st{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:14px 0}.mwho-st div{background:#f8fafc;border-radius:12px;padding:8px 4px;display:flex;flex-direction:column}.mwho-st b{font-size:16px;color:#0f172a}.mwho-st b small{color:#94a3b8;font-size:11px}.mwho-st span{font-size:11.5px;color:#64748b}
+.mwho-list{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto}.mwho-list button{display:flex;align-items:center;gap:10px;border:0;background:#f8fafc;border-radius:14px;padding:6px 10px;text-align:left;cursor:pointer;font-family:var(--kh)}
+.mwho-list button.me{background:#fffbeb;outline:2px solid #fcd34d}.mwho-list span{display:flex;flex-direction:column}.mwho-list small{color:#64748b;font-size:12px}
+@media(max-width:520px){.mwho-st{grid-template-columns:repeat(2,1fr)}}

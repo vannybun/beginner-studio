@@ -82,6 +82,7 @@ function loadVoices(){ voices = (speechSynthesis.getVoices()||[]).filter(v => /^
 if ('speechSynthesis' in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 function pickVoice(){ return voices.find(v=>v.name===S.voice) || voices.find(v=>/en-GB/i.test(v.lang)) || voices[0]; }
 function speak(text, rate){
+  if(window.TTS) return TTS.say(text, rate || S.rate || 0.9);
   if(!('speechSynthesis' in window)) return toast('កុំព្យូទ័រនេះមិនមានសំឡេង TTS');
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(clean(text));
@@ -255,13 +256,34 @@ function mapHtml(){
         ${isCur?'<span class="mstart">▶ រៀន</span>':''}
         <span class="mcirc"><span class="ma">${open?ANIMALS[i]:'🔒'}</span>${pass?'<span class="mok">✓</span>':''}</span>
         <span class="mlab"><b>Unit ${u.n}</b><small>${esc(u.en)}</small>${open?`<span class="mst">${'★'.repeat(sN)}<i>${'★'.repeat(3-sN)}</i></span>`:''}</span></button>`; }).join('')}
+    ${mapPeople(pts,W)}
     <div class="mflag" style="top:${H-40}px">🏆</div></div></div>`;
 }
+/* 👥 classmates on the map: who is at which unit, %, stars, money */
+function mapClass(){ try{ if(PREVIEW()&&window.Class) return Class._cur(); const me=Auth.user(); return (JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===me.classId); }catch(e){ return null; } }
+function mapRows(){ const c=mapClass(); if(!c||!window.Rank) return []; const me=Auth.user(), R=Rank.rows(c);
+  if(me&&me.role==='student'){ const mine=R.find(r=>r.s.id===me.studentId); if(mine){ mine.e={...mine.e,...Rank.summ(S)}; mine.me=true; if(S.profile&&S.profile.photo) mine.s={...mine.s,photo:S.profile.photo}; } }
+  return R; }
+function mapPeople(pts,W){ const R=mapRows(); if(!R.length) return '';
+  return UNITS.map((u,i)=>{ const here=R.filter(r=>(r.e.cu||1)===u.n).sort((a,b)=>(b.me?1:0)-(a.me?1:0)||(b.e.pc||0)-(a.e.pc||0)); if(!here.length) return '';
+    const p=pts[i], right=p.x<=180, show=here.slice(0,4);
+    return `<button class="mppl ${right?'r':'l'}" style="left:calc(${p.x/W*100}% ${right?'+':'-'} 70px);top:${p.y-18}px" onclick="event.stopPropagation();mapWho(${u.n})">${show.map(r=>`<span class="${r.me?'me':''}">${Class._avatar(r.s,30)}</span>`).join('')}${here.length>4?`<em>+${here.length-4}</em>`:''}</button>`; }).join(''); }
+function mapWho(n, sid){ const R=mapRows(), list=n?R.filter(r=>(r.e.cu||1)===n):R; const one=sid?R.find(r=>r.s.id===sid):(list.length===1?list[0]:null);
+  if(one){ const e=one.e, u=U(e.cu||1);
+    return modal(`<div class="mwho">${Class._avatar(one.s,96)}<h3>${esc(one.s.name)}${one.me?' <em>(ខ្ញុំ)</em>':''}</h3>${one.s.latin?`<small>${esc(one.s.latin)}</small>`:''}
+      <div class="mwho-at">${ANIMALS[(e.cu||1)-1]} កំពុងរៀន <b>Unit ${e.cu||1}</b> — ${esc(u.en)}</div>
+      <div class="mwho-bar"><i style="width:${e.pc||0}%"></i></div>
+      <div class="mwho-st"><div><b>${e.pc||0}%</b><span>📈 រៀនបាន</span></div><div><b>${e.sr||0}<small>/${UNITS.length*3}</small></b><span>⭐ ផ្កាយ</span></div><div><b>${RIEL(e.r)}</b><span>💰 លុយ</span></div><div><b>${e.p||0}</b><span>🏁 Unit ឆ្លង</span></div></div>
+      ${n?`<button class="btn ghost sm" onclick="mapWho(${n})">‹ ត្រឡប់</button>`:''}</div>`); }
+  modal(`<h3>${n?`${ANIMALS[n-1]} អ្នកនៅ Unit ${n} (${list.length})`:'👥 មិត្តរួមថ្នាក់'}</h3><div class="mwho-list">${list.map(r=>`<button onclick="mapWho(${n||0},'${r.s.id}')" class="${r.me?'me':''}">${Class._avatar(r.s,40)}<span><b>${esc(r.s.name)}${r.me?' (ខ្ញុំ)':''}</b><small>Unit ${r.e.cu||1} • ${r.e.pc||0}% • ⭐${r.e.sr||0} • 💰${RIEL(r.e.r)}</small></span></button>`).join('')}</div>`);
+}
+window.mapWho=mapWho;
 function renderStuUnits(){ setUnitColors(nextUnit());
   const done=UNITS.filter(u=>unitPassed(u.n)).length;
-  $('#main').innerHTML=`<div class="stu-head"><h2>🗺 ផែនទីរៀន</h2><span class="map-prog">🏅 ${done}/14</span></div>
+  $('#main').innerHTML=`<div class="stu-head"><h2>🗺 ផែនទីរៀន</h2><div class="row" style="gap:6px"><button class="map-cls" onclick="mapWho(0)">👥 មិត្តរួមថ្នាក់</button><span class="map-prog">🏅 ${done}/14</span></div></div>
     ${PREVIEW()?'<div class="pv-note">👀 Mode គ្រូមើលជាសិស្ស — គ្រប់មេរៀនបើកទាំងអស់ (សិស្សពិតត្រូវរៀនឆ្លងតាមលំដាប់)</div>':`<p class="map-tip">រៀនគ្រប់ផ្នែក ✅ ហើយធ្វើ 🏁 លំហាត់ឆ្លងកម្រិត បាន ${PASS}% ឡើងទៅ ដើម្បីដោះសោមេរៀនបន្ទាប់ 🔓</p>`}
     ${mapHtml()}`;
+  if(window.Cloud&&Cloud.refresh&&window.Rank&&Date.now()-(renderStuUnits.t||0)>20000){ renderStuUnits.t=Date.now(); Rank.push(S,true); Promise.all([Cloud.refresh(Rank.key),Cloud.refresh('beginner-studio-class-v1')]).then(r=>{ if((r[0]||r[1])&&view.name==='units'){ const w=document.querySelector('.map-wrap'); if(w) w.outerHTML=mapHtml(); } }).catch(()=>{}); }
   const m=document.querySelector('.map'); if(m) setTimeout(()=>window.scrollTo({top:Math.max(0,m.offsetTop+(+m.dataset.cury)-window.innerHeight/2),behavior:'smooth'}),250);
 }
 function renderPreviewTasks(){ setUnitColors(4);
@@ -458,7 +480,7 @@ function tabVocab(u){
   const head = `<div class="row" style="justify-content:space-between;margin-bottom:14px">
       <div class="row"><button class="btn ${vMode==='cards'?'':'ghost'} sm" onclick="vMode='cards';tabVocab(U(${u.n}))">🖼 កាតរូបភាព</button>
       <button class="btn ${vMode==='flash'?'':'ghost'} sm" onclick="vMode='flash';tabVocab(U(${u.n}))">🃏 កាតបង្វិល</button>
-      <button class="btn ghost sm" onclick="speakAll(${u.n})">🔊 អានទាំងអស់</button><button class="btn ghost sm" onclick="speechSynthesis.cancel()">⏹</button></div>
+      <button class="btn ghost sm" onclick="speakAll(${u.n})">🔊 អានទាំងអស់</button><button class="btn ghost sm" onclick="window.TTS?TTS.stop():speechSynthesis.cancel()">⏹</button></div>
       <div class="note">📒 Wordlist សៀវភៅ p${u.wl} — ${u.vocab.length} ពាក្យ (គ្រប់ពាក្យ) • ចេះ ${known.size} • ចុចកាត = ស្តាប់</div>
       <button class="btn ghost sm" onclick="openBook(1,${u.wl})">📘 Wordlist p${u.wl}</button></div>`;
   if(vMode==='cards'){
@@ -489,7 +511,7 @@ function tabVocab(u){
 }
 function flashMove(d){ const u=U(view.unit); fIdx=(fIdx+d+u.vocab.length)%u.vocab.length; tabVocab(u); }
 function markKnown(n,i,on){ const w=U(n).vocab[i][0]; const set=new Set(S.known[n]||[]); on?set.add(w):set.delete(w); S.known[n]=[...set]; save(); if(vMode==='cards') tabVocab(U(n)); }
-function speakAll(n){ const words=U(n).vocab.map(v=>v[0]); let i=0; speechSynthesis.cancel(); (function nx(){ if(i>=words.length) return; const u=new SpeechSynthesisUtterance(clean(words[i++])); const v=pickVoice(); if(v){u.voice=v;u.lang=v.lang;} u.rate=S.rate; u.onend=()=>setTimeout(nx,600); speechSynthesis.speak(u);})(); }
+function speakAll(n){ const words=U(n).vocab.map(v=>v[0]); if(window.TTS) return TTS.seq(words, S.rate); let i=0; speechSynthesis.cancel(); (function nx(){ if(i>=words.length) return; const u=new SpeechSynthesisUtterance(clean(words[i++])); const v=pickVoice(); if(v){u.voice=v;u.lang=v.lang;} u.rate=S.rate; u.onend=()=>setTimeout(nx,600); speechSynthesis.speak(u);})(); }
 function tryMic(w){ listenWord(w,(ok,heard)=>toast(ok?'✅ ល្អណាស់! "'+heard+'"':'🔁 ព្យាយាមម្តងទៀត — ឮថា "'+heard+'"')); }
 
 function tabGrammar(u){

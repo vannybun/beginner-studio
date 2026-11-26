@@ -150,7 +150,7 @@ function open(n, startPage){
 }
 function close(){
   $('#deck').classList.remove('show'); document.body.classList.remove('deck-open');
-  speechSynthesis && speechSynthesis.cancel();
+  if(window.TTS) TTS.stop(); else if(window.speechSynthesis) speechSynthesis.cancel();
   if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
   if(window.render) window.render();
 }
