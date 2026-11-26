@@ -18,6 +18,30 @@ const ROLE_NOW = window.Auth ? Auth.role() : 'admin';
 let S = { mode:'learn', known:{}, quiz:{}, listened:{}, names:'', teams:[{n:'ក្រុម A',s:0},{n:'ក្រុម B',s:0},{n:'ក្រុម C',s:0}], voice:'', rate:0.9, lastUnit:1 };
 try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch(e){}
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+/* 💰 លុយ (រៀល) — រកបានពីការរៀន និងធ្វើលំហាត់ (សិស្សតែប៉ុណ្ណោះ; id នីមួយៗទទួលបានតែម្តង) */
+const RIEL = n => Math.round(n||0).toLocaleString('en-US')+'៛';
+function earn(id, amt, why){
+  if(!window.Auth || Auth.role()!=='student' || !(amt>0)) return 0;
+  const M=S.money=S.money||{t:0,m:{},log:[],got:{}}; M.m=M.m||{}; M.log=M.log||[]; M.got=M.got||{};
+  if(M.got[id]) return 0; M.got[id]=1; amt=Math.round(amt);
+  const mk=dayKey().slice(0,7); M.t=(M.t||0)+amt; M.m[mk]=(M.m[mk]||0)+amt; M.log.unshift([Date.now(),amt,why]); M.log=M.log.slice(0,150); save();
+  coinPop(amt, why); if(window.Rank) setTimeout(()=>Rank.push(S,true),200); return amt;
+}
+function coinPop(amt, why){ const d=document.createElement('div'); d.className='coin-pop'; d.innerHTML=`<b>+${RIEL(amt)}</b><span>💰 ${why}</span>`;
+  const n=document.querySelectorAll('.coin-pop').length; d.style.top=(80+n*62)+'px'; document.body.appendChild(d); setTimeout(()=>d.remove(),3200); }
+function walletInfo(){ const M=S.money||{}, mk=dayKey().slice(0,7);
+  modal(`<div class="wal"><div class="wal-top"><span>💰</span><small>លុយរបស់ខ្ញុំ</small><b>${RIEL(M.t)}</b><em>ខែនេះ +${RIEL((M.m||{})[mk])}</em></div>
+    <h4>🪙 របៀបរកលុយ</h4><div class="wal-how">
+      <div><span>📖 រៀនចប់ផ្នែកមួយ</span><b>500៛</b></div>
+      <div><span>✍️ លំហាត់ក្នុងផ្នែក (ត្រូវលើកទីមួយ +100៛/សំណួរ)</span><b>200៛+</b></div>
+      <div><span>🎯 លំហាត់អនុវត្ត ≥50% (ម្តង/ប្រភេទ/ថ្ងៃ)</span><b>≤1,000៛</b></div>
+      <div><span>📄 សន្លឹកលំហាត់ពីគ្រូ</span><b>≤2,000៛</b></div>
+      <div><span>📝 ប្រឡងបញ្ចប់មេរៀន</span><b>≤3,000៛</b></div>
+      <div><span>🏁 ឆ្លងកម្រិត (≥80%)</span><b>5,000៛</b></div>
+      <div><span>🏆 រៀនចប់ Unit មួយ</span><b>10,000៛</b></div></div>
+    <h4>📜 ប្រវត្តិថ្មីៗ</h4><div class="wal-log">${(M.log||[]).slice(0,20).map(([t,a,w])=>`<div><span>${esc(w)}<small>${new Date(t).toLocaleDateString('en-GB')}</small></span><b>+${RIEL(a)}</b></div>`).join('')||'<p class="note">មិនទាន់មាន — ចាប់ផ្តើមរៀនដើម្បីរកលុយ!</p>'}</div>
+    <button class="btn teal" style="width:100%;justify-content:center;margin-top:10px" onclick="closeModal();Rank.set('rich');go('rank')">💰 មើលអ្នកមានប្រចាំថ្នាក់</button></div>`); }
+window.earn=earn; window.RIEL=RIEL;
 /* ---------- 📊 activity tracking (students only) ---------- */
 const TRACKING = window.Auth && Auth.role && Auth.role()==='student';
 const dayKey = (t=new Date()) => t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
@@ -186,6 +210,7 @@ function renderStuHome(){
   const totalW=UNITS.reduce((a,x)=>a+x.vocab.length,0), knownW=UNITS.reduce((a,x)=>a+knownCount(x.n),0), passed=Object.values(S.quiz).filter(v=>v>=80).length;
   const ox=stuOpenExams(), wp=WS.pending(), first=(me.name||'').trim().split(/\s+/).slice(-1)[0];
   $('#main').innerHTML=`<div class="stu-hi"><div>${Auth.avatarFor(me,52)}</div><div><small>សួស្តី 👋</small><b>${esc(first)}</b></div>${(()=>{const cc=(window.Class&&Auth.user().classId)?(JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===Auth.user().classId):null, b=courseOf(cc); return `<span class="stu-book">${b.icon} ${esc(b.name)}</span>`;})()}</div>
+    <button class="stu-wallet" onclick="walletInfo()"><span>💰</span><div><small>លុយរបស់ខ្ញុំ</small><b>${RIEL((S.money||{}).t)}</b></div><em>ខែនេះ +${RIEL(((S.money||{}).m||{})[dayKey().slice(0,7)])}</em><i>›</i></button>
     ${window.Cloud&&Cloud.installBanner?Cloud.installBanner():''}
     ${ox.length||wp?`<button class="stu-alert" onclick="go('exams')"><span>📝</span><div><b>${[ox.length?`ប្រឡង ${ox.length}`:'',wp?`សន្លឹកលំហាត់ ${wp}`:''].filter(Boolean).join(' • ')} កំពុងរង់ចាំ</b><small>ចុចដើម្បីធ្វើ</small></div><i>›</i></button>`:''}
     <div class="stu-cont" style="--c1:${st.c1};--c2:${st.c2}">
@@ -296,7 +321,7 @@ function tabLesson(u){
 window.Stu = {
   unit:n=>{ if(!unitOpen(n)) return toast(`🔒 ឆ្លង Unit ${n-1} ជាមុនសិន (រៀនគ្រប់ផ្នែក + 🏁 លំហាត់ឆ្លងកម្រិត ${PASS}%) ឬសុំគ្រូបើកសោឱ្យ`); go('unit',n,'lesson'); },
   open:(n,i)=>{ openSec={n, i: openSec&&openSec.n===n&&openSec.i===i ? -1 : i}; tabLesson(U(n)); const el=document.querySelectorAll('.les-s')[i]; if(el&&openSec.i===i) el.scrollIntoView({behavior:'smooth',block:'start'}); },
-  done:(n,i)=>{ if(!PREVIEW() && window.LEX && !LEX.ready(n,i)) return toast('✍️ ធ្វើលំហាត់ផ្នែកនេះឱ្យត្រូវទាំងអស់សិន'); const d=secDone(n); if(!d.includes(i)){ d.push(i); track('lesson', n+':'+i); save(); } const L=LESSONS[n]; const nx=L.sections.findIndex((x,k)=>k>i&&!d.includes(k)); if(nx>=0){ openSec={n,i:nx}; renderUnit(); setTimeout(()=>{ const el=document.querySelectorAll('.les-s')[nx]; el&&el.scrollIntoView({behavior:'smooth',block:'start'}); },60); } else { toast('🎉 រៀនគ្រប់ផ្នែកហើយ! តោះធ្វើលំហាត់'); renderUnit(); } }
+  done:(n,i)=>{ if(!PREVIEW() && window.LEX && !LEX.ready(n,i)) return toast('✍️ ធ្វើលំហាត់ផ្នែកនេះឱ្យត្រូវទាំងអស់សិន'); const d=secDone(n); if(!d.includes(i)){ d.push(i); track('lesson', n+':'+i); save(); earn(`sec:${n}:${i}`, 500, `រៀនចប់ផ្នែក Unit ${n}`); } const L=LESSONS[n]; const nx=L.sections.findIndex((x,k)=>k>i&&!d.includes(k)); if(nx>=0){ openSec={n,i:nx}; renderUnit(); setTimeout(()=>{ const el=document.querySelectorAll('.les-s')[nx]; el&&el.scrollIntoView({behavior:'smooth',block:'start'}); },60); } else { toast('🎉 រៀនគ្រប់ផ្នែកហើយ! តោះធ្វើលំហាត់'); renderUnit(); } }
 };
 
 /* ---------- home ---------- */
@@ -582,6 +607,9 @@ function finishQ(){ setTimeout(()=>{ if(window.Rank) Rank.push(S,true); },300);
   const pct=Math.round(Q.score/Q.qs.length*100);
   const LV=Q.type==='level', wasPass=stuUI()&&unitPassed(Q.n); track(LV?'level':'quiz', Q.n+':'+pct);
   if(LV){ S.level=S.level||{}; if(S.level[Q.n]==null || pct>S.level[Q.n]) S.level[Q.n]=pct; } else if(S.quiz[Q.n]==null || pct>S.quiz[Q.n]){ S.quiz[Q.n]=pct; } save();
+  if(LV && pct>=80) earn(`lv:${Q.n}`, 5000, `ឆ្លងកម្រិត Unit ${Q.n}`);
+  if(!LV && pct>=50) earn(`q:${Q.n}:${Q.type}:${dayKey()}`, Math.min(1000, Math.round(pct/10)*100), `លំហាត់ Unit ${Q.n} (${pct}%)`);
+  if(stuUI() && !wasPass && unitPassed(Q.n)) earn(`unit:${Q.n}`, 10000, `រៀនចប់ Unit ${Q.n} 🎉`);
   if(stuUI() && !wasPass && unitPassed(Q.n)){ setTimeout(()=>{ if(window.pageConfetti) pageConfetti(); toast(`🏆 បានឆ្លង Unit ${Q.n}!`+(Q.n<14?` Unit ${Q.n+1} ${ANIMALS[Q.n]} បានដោះសោ`:'')); },600); }
   $('#tab').innerHTML=`<div class="panel result"><div style="font-size:64px" class="pop">${pct>=80?'🏆':pct>=50?'👍':'💪'}</div><div class="score">${pct}%</div>
     <p class="km" style="font-size:18px">${pct>=80?(LV?'🎉 អស្ចារ្យ! អ្នកឆ្លងកម្រិត Unit '+Q.n+' ហើយ':'🎉 អស្ចារ្យ! ពូកែណាស់'):pct>=50?'👍 ល្អ! ហាត់បន្ថែមបន្តិចទៀត':'💪 កុំបោះបង់! រៀនវាក្យសព្ទម្តងទៀត ហើយសាកល្បងម្តងទៀត'}</p>

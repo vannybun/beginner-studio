@@ -87,7 +87,7 @@ function refreshFoot(n,si){ const b=document.querySelector(`[data-lexfoot="${n}-
 function mark(k,i,ok){
   const E=CUR[k], st=E.st[i]; st.tries++; if(st.first===null) st.first=ok; if(ok) st.ok=true;
   if(typeof beep==='function') beep(ok);
-  if(E.st.every(x=>x.ok)){ const [n,si]=k.split('-').map(Number); const f=E.st.filter(x=>x.first).length, r=rec(n,si)||{};
+  if(E.st.every(x=>x.ok)){ const [n,si]=k.split('-').map(Number); const f=E.st.filter(x=>x.first).length, r=rec(n,si)||{}; if(!r.done && window.earn) earn(`ex:${n}:${si}`, 200+100*f, `លំហាត់ផ្នែក Unit ${n} (${f}/${E.items.length})`);
     S.ex[n][si]={done:true, t:E.items.length, last:f, best:Math.max(r.best||0,f), n:(r.n||0)+1, ts:Date.now()}; save();
     if(typeof track==='function') track('ex', n+':'+si+':'+f+'/'+E.items.length); }
 }

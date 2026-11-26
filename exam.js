@@ -232,7 +232,7 @@ function finish(force){
   if(!force && k<total && !confirm(`នៅសល់ ${total-k} សំណួរមិនទាន់ឆ្លើយ។ ប្រគល់ប្រឡងឥឡូវ?`)) return;
   clearTimeout(RUN.timer);
   const sc=score(ex,RUN.ans);
-  X.results.push({n:ex.n, ver:ex.ver, name:RUN.name, sid:RUN.sid, sess:RUN.sess, uid:(window.Auth&&Auth.user()&&Auth.role()==='student')?Auth.user().id:null, s:sc.s, t:ex.total, pct:sc.pct, by:sc.by, ts:Date.now(), via:'app', mins:Math.round((Date.now()-RUN.t0)/60000)});
+  X.results.push({n:ex.n, ver:ex.ver, name:RUN.name, sid:RUN.sid, sess:RUN.sess, uid:(window.Auth&&Auth.user()&&Auth.role()==='student')?Auth.user().id:null, s:sc.s, t:ex.total, pct:sc.pct, by:sc.by, ts:Date.now(), via:'app', mins:Math.round((Date.now()-RUN.t0)/60000)}); if(window.earn) earn(`exam:${RUN.sess||ex.n}`, Math.min(3000, Math.round(sc.pct/10)*300), `ប្រឡង Unit ${ex.n} (${sc.pct}%)`);
   saveX();
   $('#exam').innerHTML = resultHtml(ex, RUN.ans, sc, RUN.name, false);
   if(sc.pct>=80 && window.pageConfetti) pageConfetti();

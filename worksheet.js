@@ -141,6 +141,7 @@ function submit(){
   const m=me(), g=grade(RUN.a.ws, RUN.ans);
   W.results.push({id:uid(), wid:RUN.a.id, uid:m.id, sid:m.studentId, name:m.name, s:g.s, t:g.t, ts:Date.now(), ans:RUN.ans});
   saveW(); if(typeof track==='function') track('worksheet', RUN.a.n+':'+Math.round(g.s/g.t*100));
+  if(window.earn&&g.t) earn(`ws:${RUN.a.id}`, Math.min(2000, Math.round(g.s/g.t*10)*200), `សន្លឹកលំហាត់ (${g.s}/${g.t})`);
   showResult(RUN.a, RUN.ans, g);
 }
 function showResult(a, ans, g){
