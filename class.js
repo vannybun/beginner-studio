@@ -75,7 +75,7 @@ function resizePhoto(file, cb){
 }
 
 /* ---------- main render ---------- */
-const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['attend','🙋 វត្តមាន'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['notify','📣 ជូនដំណឹង'],['chat','💬 ឆាតសិស្ស'],['unlock','🔓 បើក/កាលវិភាគមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
+const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['attend','🙋 វត្តមាន'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['reward','🎁 រង្វាន់'],['notify','📣 ជូនដំណឹង'],['chat','💬 ឆាតសិស្ស'],['unlock','🔓 បើក/កាលវិភាគមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
 let tab='students';
 function render(t){ applyProfiles();
   if(t) tab=t;
@@ -101,7 +101,7 @@ function render(t){ applyProfiles();
   }
   $('#main').innerHTML = head + `<div class="tabs">${TABS.map(x=>`<button class="${x[0]===tab?'on':''}" onclick="Class.render('${x[0]}')">${x[1]}</button>`).join('')}</div><div id="clTab"></div>`;
   { const on=document.querySelector('#main .tabs .on'); if(on&&on.parentElement.scrollWidth>on.parentElement.clientWidth) on.parentElement.scrollLeft=on.offsetLeft-on.parentElement.clientWidth/2+on.offsetWidth/2; }
-  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, attend:tAttend, notify:c=>{ if(window.Notify) Notify.teacherTab($('#clTab'), c); }, chat:c=>{ if(window.Chat) Chat.teacherTab($('#clTab'), c); }, rank:c=>{ Rank._target(()=>Class.render('rank')); Rank.page($('#clTab'), c, {staff:true, head:false}); }, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
+  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, attend:tAttend, reward:tReward, notify:c=>{ if(window.Notify) Notify.teacherTab($('#clTab'), c); }, chat:c=>{ if(window.Chat) Chat.teacherTab($('#clTab'), c); }, rank:c=>{ Rank._target(()=>Class.render('rank')); Rank.page($('#clTab'), c, {staff:true, head:false}); }, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
 }
 
 /* ---------- 🔓 teacher unlocks units (for students who studied before) ---------- */
@@ -612,8 +612,9 @@ const AST = {p:['✅','មក','#16a34a'], l:['⏰','យឺត','#d97706'], e:['
 const dkey = d => { d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 const dkm = k => { const [y,m,d]=k.split('-'); return `${+d}/${+m}/${y}`; };
 let AT={d:null, m:null};
-function fines(c, sid){ const out={t:0, m:{}, log:[]}; Object.entries((c&&c.att)||{}).forEach(([d,day])=>{ const r=day&&day[sid]; const f=r?Math.round(+r.f||0):0; if(!f) return;
-    out.t+=f; const mk=d.slice(0,7); out.m[mk]=(out.m[mk]||0)+f; out.log.push([new Date(d+'T12:00:00').getTime(), -f, (r.st==='a'?'❌ អវត្តមានឥតច្បាប់':r.st==='e'?'📝 អវត្តមានមានច្បាប់':'⏰ មកយឺត')+' '+dkm(d)+(r.n?' — '+r.n:'')]); });
+function fines(c, sid){ const out={t:0, m:{}, log:[], fine:0, bonus:0}; Object.entries((c&&c.att)||{}).forEach(([d,day])=>{ const r=day&&day[sid]; const f=r?Math.round(+r.f||0):0; if(!f) return;
+    out.t+=f; out.fine+=f; const mk=d.slice(0,7); out.m[mk]=(out.m[mk]||0)+f; out.log.push([new Date(d+'T12:00:00').getTime(), -f, (r.st==='a'?'❌ អវត្តមានឥតច្បាប់':r.st==='e'?'📝 អវត្តមានមានច្បាប់':'⏰ មកយឺត')+' '+dkm(d)+(r.n?' — '+r.n:'')]); });
+  ((c&&c.bonus)||[]).forEach(b=>{ if(b.sid!==sid) return; const a=Math.round(+b.a||0); out.t-=a; out.bonus+=a; const mk=dkey(new Date(b.ts)).slice(0,7); out.m[mk]=(out.m[mk]||0)-a; out.log.push([b.ts, a, '🎁 រង្វាន់ពីគ្រូ'+(b.w?' — '+b.w:'')]); });
   out.log.sort((a,b)=>b[0]-a[0]); return out; }
 function tAttend(c){
   if(!c.students.length){ $('#clTab').innerHTML=`<div class="panel cl-empty"><p class="km">សូមបន្ថែមសិស្សជាមុនសិន</p></div>`; return; }
@@ -659,9 +660,71 @@ function attPrint(){ const c=cls(), m=AT.m||(AT.d||dkey()).slice(0,7), days=Obje
     ${c.students.map((s,i)=>{ let a=0,e=0,f=0; const cells=days.map(k=>{ const r=c.att[k][s.id]; if(!r) return '<td></td>'; if(r.st==='a') a++; if(r.st==='e') e++; f+=+r.f||0; return `<td>${L[r.st]}</td>`; }).join(''); return `<tr><td>${i+1}</td><td style="text-align:left">${esc(s.name)}</td>${cells}<td>${a||''}</td><td>${e||''}</td><td>${f?f.toLocaleString('en-US'):''}</td></tr>`; }).join('')}</tbody></table>
     <p style="font-size:11px">✓ មក • L មកយឺត • P អវត្តមានមានច្បាប់ • A អវត្តមានឥតច្បាប់ (ដក 4,000៛)</p></div>`; window.print(); }
 
+/* ---------- 🎁 rewards from the teacher's wallet (c.bonus = [{id,sid,a,w,ts,by,bn}]) ---------- */
+const TW0 = 10000000;   // every teacher/admin account starts with 10,000,000៛ (only staff see it)
+const meId = () => (window.Auth&&Auth.user()&&Auth.user().id)||'local';
+function wallet(uid){ uid=uid||meId(); let spent=0; C.classes.forEach(c=>(c.bonus||[]).forEach(b=>{ if(b.by===uid) spent+=+b.a||0; })); return {start:TW0, spent, left:TW0-spent}; }
+const rl = n => Math.round(n||0).toLocaleString('en-US')+'៛';
+let RW={sel:new Set(), a:1000, w:''};
+function reward(o){ const c=cls(); if(!c) return toast('មិនទាន់មានថ្នាក់'); o=o||{}; RW={sel:new Set(o.sids||[]), a:o.a||RW.a||1000, w:o.w||''}; rwDraw(); }
+function rwDraw(){ const c=cls(), W=wallet(), n=RW.sel.size, tot=n*RW.a;
+  const gs=(c.groups||[]).map((g,i)=>{ const N=gn(c,i); return `<button class="chip" onclick="Class._rwSet([${g.map(x=>`'${x}'`).join(',')}])">${N[0]} ${esc(N[1])}</button>`; }).join('');
+  modal(`<div class="rw"><h3>🎁 ផ្តល់រង្វាន់ (លុយ) ឱ្យសិស្ស</h3>
+    <div class="rw-wal"><span>💰 កាបូបគ្រូ</span><b>${rl(W.left)}</b><small>មានតែគ្រូទេដែលឃើញ</small></div>
+    <h4>👩‍🎓 ជ្រើសសិស្ស (${n})</h4>
+    <div class="row rw-q"><button class="chip" onclick="Class._rwSet('all')">✅ ទាំងអស់</button><button class="chip" onclick="Class._rwSet([])">✖ សម្អាត</button>${gs}</div>
+    <div class="rw-st">${c.students.map(s=>`<button class="${RW.sel.has(s.id)?'on':''}" onclick="Class._rwTog('${s.id}')">${avatar(s,34)}<span>${esc(s.name)}</span></button>`).join('')}</div>
+    <h4>💵 ចំនួនលុយ/នាក់</h4>
+    <div class="row rw-q">${[500,1000,2000,3000,5000,10000,20000].map(v=>`<button class="chip ${RW.a===v?'on':''}" onclick="Class._rwA(${v})">${v.toLocaleString('en-US')}</button>`).join('')}<input type="number" min="100" step="100" class="cl-in" style="width:110px" value="${RW.a}" onchange="Class._rwA(+this.value)">៛</div>
+    <h4>📝 មូលហេតុ</h4>
+    <div class="row rw-q">${['ឆ្លើយត្រូវ','ឈ្នះល្បែង','ខិតខំរៀន','ជួយមិត្ត','កិច្ចការផ្ទះល្អ','វត្តមានល្អ'].map(t=>`<button class="chip" onclick="document.getElementById('rwW').value='${t}'">${t}</button>`).join('')}</div>
+    <input id="rwW" class="cl-in" style="width:100%" maxlength="60" value="${esc(RW.w)}" placeholder="ឧ. ឈ្នះល្បែងទាយពាក្យ">
+    <div class="rw-foot"><span>សរុប <b>${rl(tot)}</b> • នៅសល់ ${rl(W.left-tot)}</span><button class="btn sun" ${n&&RW.a>0&&tot<=W.left?'':'disabled'} onclick="Class._rwGo()">🎁 ផ្តល់រង្វាន់</button></div></div>`);
+}
+function rwGo(){ const c=cls(), w=(document.getElementById('rwW').value||'').trim(), W=wallet(), n=RW.sel.size, a=Math.round(RW.a);
+  if(!n||!(a>0)) return; if(n*a>W.left) return toast('⚠️ លុយក្នុងកាបូបមិនគ្រប់'); c.bonus=c.bonus||[]; const ts=Date.now(), bn=uid();
+  const users=(window.Auth&&Auth.data().users)||[];
+  [...RW.sel].forEach(sid=>{ c.bonus.push({id:uid(), sid, a, w, ts, by:meId(), bn});
+    const u=users.find(x=>x.role==='student'&&x.classId===c.id&&x.studentId===sid); if(u&&window.Notify&&Notify.post) Notify.post(c.id,{to:u.id, kind:'ann', t:`🎁 គ្រូផ្តល់រង្វាន់ +${rl(a)}`, x:w?'មូលហេតុ: '+w+' 👏':'ពូកែណាស់ 👏'}); });
+  saveC(); closeModal(); toast(`🎁 បានផ្តល់ ${rl(a)} ឱ្យសិស្ស ${n} នាក់`); if(typeof beep==='function') beep(true); if(document.getElementById('clTab')&&tab==='reward') tReward(c); }
+function tReward(c){ const W=wallet(), byId=Object.fromEntries(c.students.map(s=>[s.id,s])), L=(c.bonus||[]).slice().sort((a,b)=>b.ts-a.ts);
+  const per=c.students.map(s=>[s,(c.bonus||[]).filter(b=>b.sid===s.id).reduce((t,b)=>t+(+b.a||0),0)]).filter(x=>x[1]).sort((a,b)=>b[1]-a[1]);
+  $('#clTab').innerHTML=`<div class="panel"><div class="rw-top"><div class="rw-wal big"><span>💰 កាបូបគ្រូ</span><b>${rl(W.left)}</b><small>ចាប់ផ្តើម ${rl(W.start)} • ផ្តល់រួច ${rl(W.spent)} • 🔒 មានតែគ្រូទេដែលឃើញ មិនចូលចំណាត់ថ្នាក់ជាមួយសិស្ស</small></div>
+      <button class="btn sun xl" onclick="Class.reward()">🎁 ផ្តល់រង្វាន់ឱ្យសិស្ស</button></div>
+    <p class="note">💡 លុយរង្វាន់បូកចូលកាបូបសិស្សភ្លាម (សិស្សឃើញ «🎁 រង្វាន់ពីគ្រូ») ហើយសិស្សទទួលដំណឹង។ ចុច ↩ ដើម្បីដកវិញ (លុយត្រឡប់មកកាបូបគ្រូ)។</p></div>
+  ${per.length?`<div class="panel" style="margin-top:12px"><h3 class="sec">🏅 សិស្សដែលទទួលរង្វាន់ (ថ្នាក់នេះ)</h3><div class="rw-per">${per.map(([s,a])=>`<div>${avatar(s,34)}<span>${esc(s.name)}</span><b>+${rl(a)}</b></div>`).join('')}</div></div>`:''}
+  <div class="panel" style="margin-top:12px"><h3 class="sec">📜 ប្រវត្តិ</h3>${L.length?`<div class="rw-log">${L.slice(0,80).map(b=>{ const s=byId[b.sid]; return `<div><span>${s?avatar(s,30):''}</span><div><b>${esc(s?s.name:'?')}</b><small>${new Date(b.ts).toLocaleString('en-GB',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}${b.w?' • '+esc(b.w):''}</small></div><em>+${rl(b.a)}</em>${b.by===meId()||!window.Auth||Auth.role()==='admin'?`<button class="btn ghost sm" title="ដកវិញ" onclick="Class._rwUndo('${b.id}')">↩</button>`:''}</div>`; }).join('')}</div>`:'<p class="note">មិនទាន់មាន — ចុច «🎁 ផ្តល់រង្វាន់» ឬផ្តល់ពីល្បែងសិក្សា</p>'}</div>`; }
+function rwUndo(id){ const c=cls(); if(!confirm('ដករង្វាន់នេះវិញ?')) return; c.bonus=(c.bonus||[]).filter(b=>b.id!==id); saveC(); tReward(c); toast('↩ បានដកវិញ'); }
+
 /* ---------- groups ---------- */
 const GNAMES = [['🦁','Lions','#ea580c'],['🐯','Tigers','#d97706'],['🐘','Elephants','#64748b'],['🦅','Eagles','#2563eb'],['🐬','Dolphins','#0891b2'],['🐼','Pandas','#334155'],['🦊','Foxes','#c2410c'],['🐢','Turtles','#15803d'],['🦋','Butterflies','#a21caf'],['🐝','Bees','#ca8a04'],['🦉','Owls','#7c3aed'],['🐧','Penguins','#0f766e']];
 let G={mode:'count', n:4, how:'random', absent:new Set()};
+const GEMO=['🦁','🐯','🐘','🦅','🐬','🐼','🦊','🐢','🦋','🐝','🦉','🐧','🐉','🦄','🐳','🦒','🐙','🦜','⭐','🚀','⚡','🔥','🌈','🍀'];
+const GCOL=['#ea580c','#d97706','#64748b','#2563eb','#0891b2','#334155','#c2410c','#15803d','#a21caf','#ca8a04','#7c3aed','#0f766e'];
+function gn(c,i){ const d=GNAMES[i%GNAMES.length], o=(c.gnames||[])[i]||{}; return [o.e||d[0], o.n||d[1], GCOL[(GEMO.indexOf(o.e||d[0])+GCOL.length)%GCOL.length]||d[2]]; }
+let GE={on:false, sel:null};
+function gHtml(c){ return c.groups?(GE.on?gEditHtml(c):groupsHtml(c)):`<div class="cl-empty"><div style="font-size:64px" class="float">👥</div><p class="km">ជ្រើសរបៀប ហើយចុច «✨ បង្កើតក្រុម» ឬ «✋ បង្កើតដោយដៃ»</p></div>`; }
+function gRe(){ const c=cls(), el=$('#clGroups'); if(el) el.innerHTML=gHtml(c); }
+function gEditHtml(c){ const byId=Object.fromEntries(c.students.map(s=>[s.id,s])), inG=new Set(c.groups.flat()), pool=c.students.filter(s=>!inG.has(s.id));
+  const chip=s=>`<button class="ge-s ${GE.sel===s.id?'sel':''} ${G.absent.has(s.id)?'abs':''}" draggable="true" ondragstart="event.dataTransfer.setData('text',this.dataset.id)" data-id="${s.id}" onclick="event.stopPropagation();Class.gSel('${s.id}')">${avatar(s,30)}<span>${esc(s.name)}</span></button>`;
+  const drop=i=>`ondragover="event.preventDefault();this.classList.add('ov')" ondragleave="this.classList.remove('ov')" ondrop="event.preventDefault();Class.gSel(event.dataTransfer.getData('text'));Class.gTo(${i})" onclick="Class.gTo(${i})"`;
+  return `<div class="row" style="justify-content:space-between;margin-bottom:8px"><h3 class="sec" style="margin:0">✏️ កែក្រុម (${c.groups.length})</h3>
+    <div class="row"><button class="btn ghost sm" onclick="Class.gAdd()">＋ ក្រុមថ្មី</button><button class="btn teal sm" onclick="Class.gEdit(false)">✔ រួចរាល់</button></div></div>
+    <p class="note">👆 ចុចលើសិស្ស ហើយចុចលើក្រុមដែលចង់ដាក់ (ឬអូសទម្លាក់) • ចុចរូបសត្វដើម្បីប្តូរ • វាយឈ្មោះក្រុមថ្មីបាន</p>
+    <div class="cl-groups ge">${c.groups.map((g,i)=>{ const N=gn(c,i); return `<div class="cl-grp ge-g ${GE.sel?'can':''}" style="--gc:${N[2]}" ${drop(i)}>
+      <div class="gh"><button class="ge-e" onclick="event.stopPropagation();Class.gEmo(${i})" title="ប្តូររូប">${N[0]}</button><input class="ge-n" value="${esc(N[1])}" maxlength="24" onclick="event.stopPropagation()" onchange="Class.gName(${i},this.value)"><i>${g.length}</i><button class="ge-x" title="លុបក្រុម" onclick="event.stopPropagation();Class.gDel(${i})">🗑</button></div>
+      <div class="gm">${g.map(id=>byId[id]?chip(byId[id]):'').join('')||'<span class="ge-empty">ទទេ — ដាក់សិស្សនៅទីនេះ</span>'}</div>${GE.sel?'<div class="ge-drop">⬇ ដាក់ទីនេះ</div>':''}</div>`; }).join('')}</div>
+    <div class="ge-pool ${GE.sel?'can':''}" ${drop(-1)}><h4>👤 មិនទាន់មានក្រុម (${pool.length})</h4><div class="gm">${pool.map(chip).join('')||'<span class="ge-empty">សិស្សទាំងអស់មានក្រុមហើយ ✅</span>'}</div></div>`; }
+function gEdit(on){ GE.on=on; GE.sel=null; gRe(); }
+function gManual(){ const c=cls(); const k=Math.max(2,Math.min(12,G.mode==='count'?G.n:Math.ceil(c.students.length/G.n)));
+  if(c.groups&&c.groups.flat().length&&!confirm('បង្កើតក្រុមទទេថ្មី '+k+' ក្រុម? (ក្រុមចាស់នឹងត្រូវជំនួស)')) return;
+  c.groups=Array.from({length:k},()=>[]); c.gnames=[]; saveC(); GE={on:true, sel:null}; gRe(); }
+function gSel(id){ GE.sel=GE.sel===id?null:id; gRe(); }
+function gTo(i){ const c=cls(), id=GE.sel; if(!id) return; c.groups=c.groups.map(g=>g.filter(x=>x!==id)); if(i>=0&&c.groups[i]) c.groups[i].push(id); GE.sel=null; saveC(); gRe(); }
+function gName(i,v){ const c=cls(); c.gnames=c.gnames||[]; c.gnames[i]={...(c.gnames[i]||{}), n:String(v||'').trim().slice(0,24)}; saveC(); }
+function gEmo(i){ const c=cls(); c.gnames=c.gnames||[]; const cur=gn(c,i)[0]; c.gnames[i]={...(c.gnames[i]||{}), e:GEMO[(GEMO.indexOf(cur)+1)%GEMO.length]}; saveC(); gRe(); }
+function gAdd(){ const c=cls(); c.groups=c.groups||[]; if(c.groups.length>=12) return toast('អតិបរមា ១២ ក្រុម'); c.groups.push([]); saveC(); gRe(); }
+function gDel(i){ const c=cls(); if(c.groups[i].length&&!confirm('លុបក្រុមនេះ? សមាជិកនឹងទៅ «មិនទាន់មានក្រុម»')) return; c.groups.splice(i,1); if(c.gnames) c.gnames.splice(i,1); saveC(); gRe(); }
 function tGroups(c){
   const td=(c.att||{})[dkey()]; if(td && G.attC!==c.id+dkey()){ G.attC=c.id+dkey(); G.absent=new Set(Object.keys(td).filter(k=>td[k].st==='a'||td[k].st==='e')); }
   if(!c.students.length){ $('#clTab').innerHTML=`<div class="panel cl-empty"><p class="km">សូមបន្ថែមសិស្សជាមុនសិន</p></div>`; return; }
@@ -675,16 +738,17 @@ function tGroups(c){
       ${[['random','🎲 ចៃដន្យ','លាយសិស្សដោយចៃដន្យ'],['mixed','⚖️ ស្មើកម្រិត','សិស្សពូកែ និងខ្សោយលាយគ្នា (ពិន្ទុខែចុងក្រោយ)'],['gender','👫 ស្មើភេទ','ប្រុស-ស្រីចែកស្មើគ្នា']].map(o=>`<label class="cl-how ${G.how===o[0]?'on':''}"><input type="radio" name="gh" hidden ${G.how===o[0]?'checked':''} onchange="Class.gset('how','${o[0]}')"><b>${o[1]}</b><span>${o[2]}</span></label>`).join('')}
       <h3 class="sec" style="margin-top:14px">🙋 វត្តមានថ្ងៃនេះ (${present.length}/${c.students.length})</h3>
       <div class="cl-att">${c.students.map(s=>`<button class="${G.absent.has(s.id)?'off':''}" onclick="Class.gabs('${s.id}')" title="ចុចដើម្បីសម្គាល់អវត្តមាន">${avatar(s,30)}<span>${esc(s.name)}</span></button>`).join('')}</div>
-      <button class="btn sun xl glow" style="width:100%;justify-content:center;margin-top:14px" onclick="Class.makeGroups()">✨ បង្កើតក្រុម</button>
+      <button class="btn sun xl glow" style="width:100%;justify-content:center;margin-top:14px" onclick="Class.makeGroups()">✨ បង្កើតក្រុម (ស្វ័យប្រវត្តិ)</button>
+      <button class="btn ghost" style="width:100%;justify-content:center;margin-top:8px" onclick="Class.gManual()">✋ បង្កើតដោយដៃ (ក្រុមទទេ ${G.mode==='count'?G.n:Math.ceil(c.students.length/G.n)})</button>
     </div>
-    <div class="panel" id="clGroups">${c.groups?groupsHtml(c):`<div class="cl-empty"><div style="font-size:64px" class="float">👥</div><p class="km">ជ្រើសរបៀប ហើយចុច «✨ បង្កើតក្រុម»</p></div>`}</div>
+    <div class="panel" id="clGroups">${gHtml(c)}</div>
   </div>`;
 }
 function groupsHtml(c){
   const byId=Object.fromEntries(c.students.map(s=>[s.id,s]));
   return `<div class="row" style="justify-content:space-between;margin-bottom:12px"><h3 class="sec" style="margin:0">👥 ${c.groups.length} ក្រុម</h3>
-    <div class="row"><button class="btn ghost sm" onclick="Class.makeGroups()">🔄 បង្កើតម្តងទៀត</button><button class="btn ghost sm" onclick="Class.groupsToScore()">🏆 ផ្ញើទៅពិន្ទុក្រុម</button><button class="btn ghost sm" onclick="Class.groupsFull()">⛶ បង្ហាញធំ</button><button class="btn ghost sm" onclick="Class.printGroups()">🖨</button></div></div>
-    <div class="cl-groups">${c.groups.map((g,i)=>{ const N=GNAMES[i%GNAMES.length]; return `<div class="cl-grp" style="--gc:${N[2]};animation-delay:${i*0.12}s">
+    <div class="row"><button class="btn teal sm" onclick="Class.gEdit(true)">✏️ កែក្រុម / ប្តូរសមាជិក</button><button class="btn ghost sm" onclick="Class.makeGroups()">🔄 បង្កើតម្តងទៀត</button><button class="btn ghost sm" onclick="Class.reward({sids:[]})">🎁 រង្វាន់</button><button class="btn ghost sm" onclick="Class.groupsToScore()">🏆 ផ្ញើទៅពិន្ទុក្រុម</button><button class="btn ghost sm" onclick="Class.groupsFull()">⛶ បង្ហាញធំ</button><button class="btn ghost sm" onclick="Class.printGroups()">🖨</button></div></div>
+    <div class="cl-groups">${c.groups.map((g,i)=>{ const N=gn(c,i); return `<div class="cl-grp" style="--gc:${N[2]};animation-delay:${i*0.12}s">
       <div class="gh"><span>${N[0]}</span><b>${N[1]}</b><i>${g.length} នាក់</i></div>
       <div class="gm">${g.map((id,k)=>{ const s=byId[id]; return s?`<div class="gs" style="animation-delay:${i*0.12+0.15+k*0.07}s">${avatar(s,40)}<span>${esc(s.name)}</span></div>`:''; }).join('')}</div></div>`; }).join('')}</div>`;
 }
@@ -699,15 +763,15 @@ function makeGroups(){
   if(G.how==='gender') order=[...shuffle(st.filter(s=>s.g==='F')),...shuffle(st.filter(s=>s.g!=='F'))];
   // snake distribution keeps groups balanced
   order.forEach((s,i)=>{ const r=Math.floor(i/k), p=i%k; groups[r%2?k-1-p:p].push(s.id); });
-  c.groups=groups.map(g=>shuffle(g)); saveC();
+  c.groups=groups.map(g=>shuffle(g)); c.gnames=[]; GE.on=false; saveC();
   $('#clGroups').innerHTML=groupsHtml(c); beep&&beep(true);
 }
-function groupsToScore(){ const c=cls(); S.teams=c.groups.slice(0,4).map((g,i)=>({n:GNAMES[i][0]+' '+GNAMES[i][1],s:0})); save(); openScore(); if(c.groups.length>4) toast('ពិន្ទុក្រុមបង្ហាញបាន ៤ ក្រុមដំបូង'); }
+function groupsToScore(){ const c=cls(); S.teams=c.groups.slice(0,4).map((g,i)=>({n:gn(c,i)[0]+' '+gn(c,i)[1],s:0})); save(); openScore(); if(c.groups.length>4) toast('ពិន្ទុក្រុមបង្ហាញបាន ៤ ក្រុមដំបូង'); }
 function groupsFull(){
   const c=cls(); const el=document.createElement('div'); el.className='cl-full'; el.innerHTML=`<button class="x" onclick="this.parentNode.remove();document.fullscreenElement&&document.exitFullscreen()">✕</button>`+groupsHtml(c).replace(/<div class="row"[\s\S]*?<\/div><\/div>/,'<h2>👥 ក្រុមថ្ងៃនេះ</h2>');
   document.body.appendChild(el); try{ document.documentElement.requestFullscreen(); }catch(e){}
 }
-function printGroups(){ const c=cls(), byId=Object.fromEntries(c.students.map(s=>[s.id,s])); $('#printArea').innerHTML=`<div class="cl-print"><h1>${esc(c.name)} — ក្រុម</h1>${c.groups.map((g,i)=>`<h2>${GNAMES[i%12][0]} ${GNAMES[i%12][1]}</h2><p>${g.map(id=>esc((byId[id]||{}).name||'')).join(' • ')}</p>`).join('')}</div>`; window.print(); }
+function printGroups(){ const c=cls(), byId=Object.fromEntries(c.students.map(s=>[s.id,s])); $('#printArea').innerHTML=`<div class="cl-print"><h1>${esc(c.name)} — ក្រុម</h1>${c.groups.map((g,i)=>`<h2>${gn(c,i)[0]} ${esc(gn(c,i)[1])}</h2><p>${g.map(id=>esc((byId[id]||{}).name||'')).join(' • ')}</p>`).join('')}</div>`; window.print(); }
 
 /* ---------- timer (big ring) ---------- */
 const TT={total:300,left:300,run:false,h:null,mode:'down',up:0};
@@ -810,7 +874,7 @@ function studentsForPicker(){ const c=cls(); return c?c.students:[]; }
 function setBook(id){ const c=cls(); if(!c) return; c.book=id; saveC(); render(); }
 function share(k){ const c=cls(); if(!c) return; c.share=c.share||{}; c.share[k]=!c.share[k]; saveC(); toast(c.share[k]?'👁 សិស្សអាចមើលបានហើយ':'🔒 បានបិទមិនឱ្យសិស្សមើល'); }
 function shareBtn(c,k){ const on=c.share&&c.share[k]; return `<button class="btn sm ${on?'teal':'ghost'}" onclick="Class._share('${k}');Class.render('${k==='res'?'results':'year'}')" title="សិស្សមើលឃើញក្នុង 🏆 ចំណាត់ថ្នាក់">${on?'👁 សិស្សកំពុងមើលបាន':'🙈 សិស្សមើលមិនឃើញ'}</button>`; }
-window.Class = { TABS, _setCur:id=>{ if(vis().some(x=>x.id===id)){ C.cur=id; saveC(); if(document.getElementById('clTab')) render(); } }, _save:saveC, att, attFine, attNote, attAll, attClear, attDay, attTell, attPrint, attMon:m=>{ AT.m=m; tAttend(cls()); }, fines, FINE_A, gate, gateAuto, copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
+window.Class = { wallet, reward, _rwSet:v=>{ RW.sel=new Set(v==='all'?cls().students.map(s=>s.id):v); rwDraw(); }, _rwTog:id=>{ RW.sel.has(id)?RW.sel.delete(id):RW.sel.add(id); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwA:v=>{ RW.a=Math.max(0,Math.round(+v||0)); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwGo:rwGo, _rwUndo:rwUndo, _gn:gn, gEdit, gManual, gSel, gTo, gName, gEmo, gAdd, gDel, TABS, _setCur:id=>{ if(vis().some(x=>x.id===id)){ C.cur=id; saveC(); if(document.getElementById('clTab')) render(); } }, _save:saveC, att, attFine, attNote, attAll, attClear, attDay, attTell, attPrint, attMon:m=>{ AT.m=m; tAttend(cls()); }, fines, FINE_A, gate, gateAuto, copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
   editStudent, pickPhoto, noPhoto:()=>{ editPhoto=null; $('#clPrev').innerHTML=avatar({name:$('#clN').value},140); }, cam, camStop, saveStudent, photo, delStudent, bulk, impMode, impFile, impPreview, impApply, infoTable, infoSave, template, age:ageOf, sortStudents,
   setMonth:m=>{ if(m){ C.month=m; saveC(); render(); } }, cols, colAdd, colSave, csv, printMonth, csvYear, printYear, certs, certSet, certGrade, certPrint, sigFile, sigDraw, sigScale, sigReset, certShow:i=>{ ctSel=i; certRefresh(); },
   gset:(k,v)=>{ G[k]=v; tGroups(cls()); }, gabs:id=>{ G.absent.has(id)?G.absent.delete(id):G.absent.add(id); tGroups(cls()); }, makeGroups, groupsToScore, groupsFull, printGroups,

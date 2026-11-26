@@ -31,10 +31,10 @@ function coinPop(amt, why){ const d=document.createElement('div'); d.className='
   const n=document.querySelectorAll('.coin-pop').length; d.style.top=(80+n*62)+'px'; document.body.appendChild(d); setTimeout(()=>d.remove(),3200); }
 /* 🙋 my attendance fines (from the class data the teacher keeps) */
 function myFines(){ try{ const me=Auth.user(); if(!me||me.role!=='student'||!window.Class) return {t:0,m:{},log:[]}; return Class.fines(mapClass(), me.studentId); }catch(e){ return {t:0,m:{},log:[]}; } }
-function myMoney(){ const M=S.money||{}, F=myFines(), mk=dayKey().slice(0,7); return {t:(M.t||0)-F.t, m:((M.m||{})[mk]||0)-(F.m[mk]||0), fine:F.t, log:[...(M.log||[]), ...F.log].sort((a,b)=>b[0]-a[0])}; }
+function myMoney(){ const M=S.money||{}, F=myFines(), mk=dayKey().slice(0,7); return {t:(M.t||0)-F.t, m:((M.m||{})[mk]||0)-(F.m[mk]||0), fine:F.fine||0, bonus:F.bonus||0, log:[...(M.log||[]), ...F.log].sort((a,b)=>b[0]-a[0])}; }
 const sRIEL = n => (n>0?'+':n<0?'−':'')+RIEL(Math.abs(n||0));
 function walletInfo(){ const W=myMoney();
-  modal(`<div class="wal"><div class="wal-top"><span>💰</span><small>លុយរបស់ខ្ញុំ</small><b class="${W.t<0?'neg':''}">${W.t<0?'−'+RIEL(-W.t):RIEL(W.t)}</b><em>ខែនេះ ${sRIEL(W.m)}</em>${W.fine?`<em class="wal-fine">❌ ដកដោយសារអវត្តមាន −${RIEL(W.fine)}</em>`:''}</div>
+  modal(`<div class="wal"><div class="wal-top"><span>💰</span><small>លុយរបស់ខ្ញុំ</small><b class="${W.t<0?'neg':''}">${W.t<0?'−'+RIEL(-W.t):RIEL(W.t)}</b><em>ខែនេះ ${sRIEL(W.m)}</em>${W.fine?`<em class="wal-fine">❌ ដកដោយសារអវត្តមាន −${RIEL(W.fine)}</em>`:''}${W.bonus?`<em class="wal-bonus">🎁 រង្វាន់ពីគ្រូ +${RIEL(W.bonus)}</em>`:''}</div>
     <h4>🪙 របៀបរកលុយ</h4><div class="wal-how">
       <div><span>📖 រៀនចប់ផ្នែកមួយ</span><b>500៛</b></div>
       <div><span>✍️ លំហាត់ក្នុងផ្នែក (ត្រូវលើកទីមួយ +100៛/សំណួរ)</span><b>200៛+</b></div>

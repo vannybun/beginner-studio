@@ -241,6 +241,7 @@ function launcher(){
   modal(`<div class="lx">
     <div class="lx-head">${avatarFor(u,64)}<div class="lx-who"><h3>${esc(u.name)}</h3><div><span class="au-badge" style="background:${ROLE[u.role].c}">${ROLE[u.role].i} ${ROLE[u.role].km}</span>${u.username?` <span class="note">@${esc(u.username)}</span>`:''}</div>${u.phone?`<small>📞 ${esc(u.phone)}</small>`:''}</div>
       <button class="btn ghost sm" onclick="Auth.editStaff()">✏️ កែព័ត៌មាន</button></div>
+    ${CL&&CL.wallet?`<button class="lx-wal" onclick="closeModal();Class.reward()"><span>💰 កាបូបគ្រូ</span><b>${CL.wallet().left.toLocaleString('en-US')}៛</b><em>🎁 ផ្តល់រង្វាន់</em></button>`:''}
     <div class="lx-mode"><button class="${teach?'':'on'}" onclick="closeModal();setMode('learn')">🎓 មើលជាសិស្ស</button><button class="${teach?'on':''}" onclick="closeModal();setMode('teach')">👩‍🏫 បង្រៀន / គ្រប់គ្រង</button></div>
     <div class="lx-sec"><h4>👥 ថ្នាក់រៀន</h4>${V.length?`<select class="cl-sel" onchange="Class._setCur(this.value);Auth.menu()">${V.map(c=>`<option value="${c.id}" ${cur&&c.id===cur.id?'selected':''}>${esc(c.name)} (${c.students.length})</option>`).join('')}</select>`:''}</div>
     <div class="lx-grid">${tabs}</div>
@@ -248,6 +249,7 @@ function launcher(){
     <div class="lx-grid">
       ${tile('🏠','ទំព័រដើម',"closeModal();go('home')")}
       ${tile('📖','សៀវភៅឌីជីថល',"closeModal();Book.open()")}
+      ${tile('🎮','ល្បែងសិក្សា',"closeModal();Games.open()",'hot')}
       ${tile('🎲','ជ្រើសសិស្ស',"closeModal();openPicker()")}
       ${tile('🏆','ពិន្ទុក្រុម',"closeModal();openScore()")}
       ${tile('⚙️','ការកំណត់',"closeModal();openSettings()")}
