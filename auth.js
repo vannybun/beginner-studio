@@ -356,7 +356,8 @@ function about(){
     <a class="btn teal" style="justify-content:center;width:100%;margin-top:10px" href="https://t.me/bunvanny" target="_blank" rel="noopener">✈️ ផ្ញើសារតាម Telegram</a>
     <p class="note" style="margin-top:12px">📘 សៀវភៅបច្ចុប្បន្ន៖ ${(window.COURSES||[]).map(c=>c.name).join(' • ')}<br>ពុម្ពអក្សរ Kantumruy Pro (SIL OFL) • QR: qrcode-generator (MIT), jsQR (Apache-2.0)</p></div>`);
 }
-window.Auth = { about, _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
+function moveStudent(oc,os,nc,ns){ const u=A.users.find(x=>x.role==='student'&&x.classId===oc&&x.studentId===os); if(!u) return false; u.classId=nc; u.studentId=ns; saveA(); return true; }
+window.Auth = { moveStudent, about, _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
   editUser, delUser, backupAll, restoreAll, log, data:()=>A,
   _setup, _loginAs, _login, _pin, _recover, _doRecover, _cp, _mk, _rp, _tg, _own, _saveUser,
   _tab:r=>{ LS.tab=r; LS.stu=null; LS.pin=''; loginScreen(); }, _cls:id=>{ LS.cls=id; loginScreen(); }, _stu:id=>{ LS.stu=id; LS.pin=''; loginScreen(); } };

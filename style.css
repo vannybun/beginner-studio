@@ -1352,3 +1352,8 @@ body.stu-ui .app-credit{margin-top:-130px;padding-bottom:110px}
 .rk-why{margin:2px 0 6px;font:13px var(--kh);color:#475569}
 .rk-units .chip{min-width:44px}.chip.dim{opacity:.45}
 .rk-tabs button{font-size:13px}
+.cp-list{max-height:48vh;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px}
+.cp-i{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:12px;background:#f8fafc;cursor:pointer;font-family:var(--kh)}
+.cp-i>span:not(.cl-av){display:flex;flex-direction:column;flex:1;font-size:14px}.cp-i small{color:#64748b;font-size:11px}
+.cp-i.dup{opacity:.5}.cp-i em{font-style:normal;font-size:11px;color:#b45309}
+.cp-i .cl-av{flex:0 0 auto}

@@ -114,12 +114,39 @@ function tUnlock(c){
 function unl(sid,n){ const c=cls(), L=UL(c), a=sid==='*'?L.all:(L.s[sid]=L.s[sid]||[]); const i=a.indexOf(n); i>=0?a.splice(i,1):a.push(n); saveC(); tUnlock(c); toast(i>=0?`🔒 បិទ Unit ${n} វិញ`:`🔓 បានបើក Unit ${n}${sid==='*'?' ឱ្យថ្នាក់ទាំងមូល':''}`); }
 function unlTo(sid,n){ if(isNaN(n)) return; const c=cls(), L=UL(c), v=n?[...Array(n-1)].map((_,i)=>i+2):[]; if(sid==='*') L.all=v; else L.s[sid]=v; saveC(); tUnlock(c); toast(n?`🔓 បានបើក Unit 1–${n}`:'🔒 បានបិទវិញ'); }
 
+/* ---------- 📋 copy / move students from another class ---------- */
+let CP={src:null, mode:'copy'};
+function copyFrom(){
+  const c=cls(), others=vis().filter(x=>x.id!==c.id);
+  if(!others.length) return toast('មិនមានថ្នាក់ផ្សេងទៀតសម្រាប់ចម្លងទេ');
+  if(!others.some(x=>x.id===CP.src)) CP.src=others[0].id;
+  const src=others.find(x=>x.id===CP.src), has=new Set(c.students.map(x=>(x.name||'').trim()));
+  modal(`<h3>📋 ចម្លងសិស្សពីថ្នាក់ផ្សេង → «${esc(c.name)}»</h3>
+    <div class="row" style="gap:8px;margin:6px 0 10px"><b class="km">ពីថ្នាក់៖</b><select class="cl-sel" onchange="Class._cpSrc(this.value)">${others.map(x=>`<option value="${x.id}" ${x.id===CP.src?'selected':''}>${esc(x.name)} (${x.students.length})</option>`).join('')}</select></div>
+    <div class="cl-impmode">
+      <label class="cl-how ${CP.mode==='copy'?'on':''}"><input type="radio" name="cpm" value="copy" hidden ${CP.mode==='copy'?'checked':''} onchange="Class._cpMode('copy')"><b>📋 ចម្លង</b><span>សិស្សនៅថ្នាក់ទាំងពីរ • គណនីចាស់នៅថ្នាក់ដើម (បង្កើតគណនីថ្មីនៅ 🔑 បាន)</span></label>
+      <label class="cl-how ${CP.mode==='move'?'on':''}"><input type="radio" name="cpm" value="move" hidden ${CP.mode==='move'?'checked':''} onchange="Class._cpMode('move')"><b>➡️ ផ្លាស់ទី</b><span>ដកចេញពីថ្នាក់ដើម • គណនី PIN និងវឌ្ឍនភាពរៀនទៅតាមសិស្ស</span></label>
+    </div>
+    <label class="row" style="gap:6px;margin:10px 0 4px"><input type="checkbox" onchange="document.querySelectorAll('.cp-s:not(:disabled)').forEach(x=>x.checked=this.checked)"> <b>ជ្រើសទាំងអស់</b></label>
+    <div class="cp-list">${src.students.map(s=>{ const dup=has.has((s.name||'').trim()); return `<label class="cp-i ${dup?'dup':''}"><input type="checkbox" class="cp-s" value="${s.id}" ${dup?'disabled':''}>${avatar(s,34)}<span>${esc(s.name)}${s.latin?`<small>${esc(s.latin)}</small>`:''}</span>${dup?'<em>មានរួចហើយ</em>':''}</label>`; }).join('')||'<p class="note">ថ្នាក់នេះមិនមានសិស្ស</p>'}</div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" onclick="Class._cpGo()">✅ ${CP.mode==='move'?'ផ្លាស់ទី':'ចម្លង'}</button></div>`);
+}
+function cpGo(){
+  const c=cls(), src=C.classes.find(x=>x.id===CP.src); if(!c||!src) return;
+  const ids=[...document.querySelectorAll('.cp-s:checked')].map(x=>x.value); if(!ids.length) return toast('សូមជ្រើសសិស្សយ៉ាងហោចណាស់ម្នាក់');
+  if(CP.mode==='move' && !confirm(`ផ្លាស់ទីសិស្ស ${ids.length} នាក់ ពី «${src.name}» ទៅ «${c.name}»?\nពិន្ទុប្រចាំខែចាស់នៅថ្នាក់ដើម។`)) return;
+  let n=0, acc=0;
+  ids.forEach(id=>{ const s=src.students.find(x=>x.id===id); if(!s) return; const ns={...JSON.parse(JSON.stringify(s)), id:uid()}; c.students.push(ns); n++;
+    if(CP.mode==='move'){ src.students=src.students.filter(x=>x.id!==id); if(window.Auth&&Auth.moveStudent&&Auth.moveStudent(src.id,id,c.id,ns.id)) acc++; } });
+  saveC(); closeModal(); render(); toast(`✅ បាន${CP.mode==='move'?'ផ្លាស់ទី':'ចម្លង'}សិស្ស ${n} នាក់${acc?` • គណនី ${acc}`:''}`);
+}
+
 /* ---------- students ---------- */
 function tStudents(c){
   $('#clTab').innerHTML = `<div class="panel">
     <div class="row" style="justify-content:space-between;margin-bottom:14px">
       <h3 class="sec" style="margin:0">👩‍🎓 បញ្ជីសិស្ស (${c.students.length})${(()=>{ const nl=c.students.filter(x=>!x.latin).length, nd=c.students.filter(x=>!x.dob).length, ng=c.students.filter(x=>!x.g).length; return (nl||nd||ng)&&c.students.length?`<span class="cl-miss" onclick="Class.infoTable()" title="ចុចដើម្បីបំពេញ">⚠️ ${[nl?'ខ្វះឈ្មោះឡាតាំង '+nl:'',nd?'ខ្វះថ្ងៃកំណើត '+nd:'',ng?'ខ្វះភេទ '+ng:''].filter(Boolean).join(' • ')}</span>`:''; })()}</h3>
-      <div class="row"><button class="btn teal" onclick="Class.editStudent()">＋ បន្ថែមសិស្ស</button><button class="btn ghost" onclick="Class.bulk()">📥 នាំចូល (Excel)</button><button class="btn ghost" onclick="Class.photoBulk()">🖼 រូបថតជាបាច់</button><button class="btn ghost" onclick="Class.infoTable()">📝 កែព័ត៌មានជាតារាង</button><button class="btn ghost" onclick="Class.template()">⬇ គំរូ Excel</button><button class="btn ghost" onclick="Class.sortStudents()">🔤 តម្រៀប</button></div>
+      <div class="row"><button class="btn teal" onclick="Class.editStudent()">＋ បន្ថែមសិស្ស</button><button class="btn ghost" onclick="Class.bulk()">📥 នាំចូល (Excel)</button><button class="btn ghost" onclick="Class.copyFrom()">📋 ចម្លងពីថ្នាក់ផ្សេង</button><button class="btn ghost" onclick="Class.photoBulk()">🖼 រូបថតជាបាច់</button><button class="btn ghost" onclick="Class.infoTable()">📝 កែព័ត៌មានជាតារាង</button><button class="btn ghost" onclick="Class.template()">⬇ គំរូ Excel</button><button class="btn ghost" onclick="Class.sortStudents()">🔤 តម្រៀប</button></div>
     </div>
     ${c.students.length?`<div class="cl-grid">${c.students.map((s,i)=>`
       <div class="cl-card" style="animation-delay:${Math.min(i,30)*0.025}s">
@@ -701,7 +728,7 @@ function studentsForPicker(){ const c=cls(); return c?c.students:[]; }
 function setBook(id){ const c=cls(); if(!c) return; c.book=id; saveC(); render(); }
 function share(k){ const c=cls(); if(!c) return; c.share=c.share||{}; c.share[k]=!c.share[k]; saveC(); toast(c.share[k]?'👁 សិស្សអាចមើលបានហើយ':'🔒 បានបិទមិនឱ្យសិស្សមើល'); }
 function shareBtn(c,k){ const on=c.share&&c.share[k]; return `<button class="btn sm ${on?'teal':'ghost'}" onclick="Class._share('${k}');Class.render('${k==='res'?'results':'year'}')" title="សិស្សមើលឃើញក្នុង 🏆 ចំណាត់ថ្នាក់">${on?'👁 សិស្សកំពុងមើលបាន':'🙈 សិស្សមើលមិនឃើញ'}</button>`; }
-window.Class = { _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
+window.Class = { copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
   editStudent, pickPhoto, noPhoto:()=>{ editPhoto=null; $('#clPrev').innerHTML=avatar({name:$('#clN').value},140); }, cam, camStop, saveStudent, photo, delStudent, bulk, impMode, impFile, impPreview, impApply, infoTable, infoSave, template, age:ageOf, sortStudents,
   setMonth:m=>{ if(m){ C.month=m; saveC(); render(); } }, cols, colAdd, colSave, csv, printMonth, csvYear, printYear, certs, certSet, certGrade, certPrint, sigFile, sigDraw, sigScale, sigReset, certShow:i=>{ ctSel=i; certRefresh(); },
   gset:(k,v)=>{ G[k]=v; tGroups(cls()); }, gabs:id=>{ G.absent.has(id)?G.absent.delete(id):G.absent.add(id); tGroups(cls()); }, makeGroups, groupsToScore, groupsFull, printGroups,
