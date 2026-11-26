@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beginner English Studio — រៀន និងបង្រៀន</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page-bg"><i></i><i></i><i></i></div>
+<header>
+  <div class="brand" onclick="go('home')">
+    <div class="logo"><svg viewBox="0 0 40 40"><path d="M6 10c6-3 11-3 14 0v22c-3-3-8-3-14 0z" fill="#fff"/><path d="M34 10c-6-3-11-3-14 0v22c3-3 8-3 14 0z" fill="#ffe1a8"/><path d="M28 4l2 4 4 1-3 3 1 4-4-2-4 2 1-4-3-3 4-1z" fill="#fff" opacity=".9"/></svg></div>
+    <div>Beginner English Studio<small>រៀន • បង្រៀន • អនុវត្ត</small></div>
+  </div>
+  <div class="modes"><span class="pill" id="mPill"></span><button id="mLearn" onclick="setMode('learn')">🎓 សិស្ស</button><button id="mTeach" onclick="setMode('teach')">👩‍🏫 គ្រូ</button></div>
+  <div class="tools">
+    <button class="teach-only" onclick="go('class',null,'students')">👥<span>ថ្នាក់រៀន</span></button>
+    <button class="teach-only" onclick="go('class',null,'timer')">⏱<span>នាឡិកា</span></button>
+    <button class="teach-only" onclick="openPicker()">🎲<span>ជ្រើសសិស្ស</span></button>
+    <button class="teach-only" onclick="openScore()">🏆<span>ពិន្ទុក្រុម</span></button>
+    <button class="hot" onclick="Book.open()">📖<span>សៀវភៅឌីជីថល</span></button>
+    <button onclick="openSettings()">⚙️</button>
+  </div>
+</header>
+<main id="main"></main>
+
+<div id="player">
+  <button class="pbtn" title="Previous" onclick="P.prev()">⏮</button>
+  <button class="pbtn" title="-5s" onclick="P.skip(-5)">↺5</button>
+  <button class="pbtn main" id="pPlay" onclick="P.toggle()">▶</button>
+  <button class="pbtn" title="+5s" onclick="P.skip(5)">5↻</button>
+  <button class="pbtn" title="Next" onclick="P.next()">⏭</button>
+  <div class="eq" id="pEq"><i></i><i></i><i></i><i></i></div>
+  <div class="ttl"><b id="pTitle">—</b><span id="pSub"></span></div>
+  <input type="range" id="pSeek" min="0" max="1000" value="0">
+  <div class="time" id="pTime">0:00 / 0:00</div>
+  <select id="pRate" title="Speed"><option value="0.6">0.6×</option><option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select>
+  <button class="pbtn" id="pLoop" title="Loop" onclick="P.loopToggle()">🔁</button>
+  <button class="pbtn" id="pAB" title="A–B repeat" onclick="P.ab()">A-B</button>
+  <button class="pbtn" title="Open page" onclick="P.page()">📄</button>
+  <button class="pbtn" title="Close" onclick="P.close()">✕</button>
+  <audio id="audio" preload="metadata"></audio>
+</div>
+
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+<div id="printArea"></div>
+
+<script src="sync.js"></script>
+</body>
+</html>
