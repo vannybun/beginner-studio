@@ -67,7 +67,7 @@ function resizePhoto(file, cb){
 }
 
 /* ---------- main render ---------- */
-const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['accounts','🔑 គណនីសិស្ស']];
+const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['unlock','🔓 បើកមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
 let tab='students';
 function render(t){
   if(t) tab=t;
@@ -92,8 +92,27 @@ function render(t){
     return;
   }
   $('#main').innerHTML = head + `<div class="tabs">${TABS.map(x=>`<button class="${x[0]===tab?'on':''}" onclick="Class.render('${x[0]}')">${x[1]}</button>`).join('')}</div><div id="clTab"></div>`;
-  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
+  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
 }
+
+/* ---------- 🔓 teacher unlocks units (for students who studied before) ---------- */
+function UL(c){ c.unlock=c.unlock||{all:[],s:{}}; c.unlock.all=c.unlock.all||[]; c.unlock.s=c.unlock.s||{}; return c.unlock; }
+function passedOf(c,s){ try{ const u=window.Auth&&Auth.data().users.find(x=>x.role==='student'&&x.classId===c.id&&x.studentId===s.id); const P=u&&JSON.parse(localStorage.getItem('beginner-studio-v1:'+u.id)||'null'); return P?(n=>(P.level||{})[n]>=80):(()=>false); }catch(e){ return ()=>false; } }
+function tUnlock(c){
+  const L=UL(c), N=[...Array(14)].map((_,i)=>i+1);
+  const cell=(sid,n,pass)=>{ const all=L.all.includes(n), on=all||(sid!=='*'&&(L.s[sid]||[]).includes(n)); const lock=n===1;
+    return `<td><button class="ul-c ${pass?'pass':on?'on':''} ${lock?'first':''}" ${lock||(sid!=='*'&&all)?'disabled':''} title="Unit ${n}" onclick="Class.unl('${sid}',${n})">${pass?'✅':lock||on?'🔓':'🔒'}</button></td>`; };
+  const upto=sid=>`<select class="ul-to" onchange="Class.unlTo('${sid}',+this.value);this.value=''"><option value="">បើកដល់…</option>${N.slice(1).map(n=>`<option value="${n}">Unit ${n}</option>`).join('')}<option value="0">🔒 បិទវិញទាំងអស់</option></select>`;
+  $('#clTab').innerHTML=`<div class="panel">
+    <h3 class="sec" style="margin:0 0 6px">🔓 បើកសោមេរៀនឱ្យសិស្ស</h3>
+    <p class="note" style="margin:0 0 12px">សម្រាប់សិស្សដែលធ្លាប់រៀនខ្លះហើយ — ចុច 🔒 ដើម្បីបើក Unit នោះឱ្យសិស្សចូលរៀនបានភ្លាម ដោយមិនចាំបាច់ឆ្លង Unit មុន។ ចុចម្តងទៀតដើម្បីបិទវិញ។ ក្រោយបើក Unit ណាមួយ សិស្សនៅតែត្រូវឆ្លងកម្រិត Unit នោះ ទើប Unit បន្ទាប់បើកដោយខ្លួនឯង។<br>🔓 = បើក • 🔒 = ចាក់សោ • ✅ = ឆ្លងរួច</p>
+    <div class="ul-wrap"><table class="ul-t"><thead><tr><th>សិស្ស</th>${N.map(n=>`<th style="color:${UNIT_STYLE[n].c1}">${n}</th>`).join('')}<th></th></tr></thead><tbody>
+      <tr class="ul-all"><td><b>👥 ថ្នាក់ទាំងមូល</b></td>${N.map(n=>cell('*',n,false)).join('')}<td>${upto('*')}</td></tr>
+      ${c.students.map((s,i)=>{ const P=passedOf(c,s); return `<tr><td><span class="ul-n">${i+1}. ${esc(s.name)}</span></td>${N.map(n=>cell(s.id,n,P(n))).join('')}<td>${upto(s.id)}</td></tr>`; }).join('')}
+    </tbody></table></div></div>`;
+}
+function unl(sid,n){ const c=cls(), L=UL(c), a=sid==='*'?L.all:(L.s[sid]=L.s[sid]||[]); const i=a.indexOf(n); i>=0?a.splice(i,1):a.push(n); saveC(); tUnlock(c); toast(i>=0?`🔒 បិទ Unit ${n} វិញ`:`🔓 បានបើក Unit ${n}${sid==='*'?' ឱ្យថ្នាក់ទាំងមូល':''}`); }
+function unlTo(sid,n){ if(isNaN(n)) return; const c=cls(), L=UL(c), v=n?[...Array(n-1)].map((_,i)=>i+2):[]; if(sid==='*') L.all=v; else L.s[sid]=v; saveC(); tUnlock(c); toast(n?`🔓 បានបើក Unit 1–${n}`:'🔒 បានបិទវិញ'); }
 
 /* ---------- students ---------- */
 function tStudents(c){
@@ -680,7 +699,7 @@ function restore(f){ if(!f||(window.Auth&&Auth.role()!=='admin')) return; f.text
 function studentsForPicker(){ const c=cls(); return c?c.students:[]; }
 
 function setBook(id){ const c=cls(); if(!c) return; c.book=id; saveC(); render(); }
-window.Class = { setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
+window.Class = { unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
   editStudent, pickPhoto, noPhoto:()=>{ editPhoto=null; $('#clPrev').innerHTML=avatar({name:$('#clN').value},140); }, cam, camStop, saveStudent, photo, delStudent, bulk, impMode, impFile, impPreview, impApply, infoTable, infoSave, template, age:ageOf, sortStudents,
   setMonth:m=>{ if(m){ C.month=m; saveC(); render(); } }, cols, colAdd, colSave, csv, printMonth, csvYear, printYear, certs, certSet, certGrade, certPrint, sigFile, sigDraw, sigScale, sigReset, certShow:i=>{ ctSel=i; certRefresh(); },
   gset:(k,v)=>{ G[k]=v; tGroups(cls()); }, gabs:id=>{ G.absent.has(id)?G.absent.delete(id):G.absent.add(id); tGroups(cls()); }, makeGroups, groupsToScore, groupsFull, printGroups,

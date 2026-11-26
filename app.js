@@ -178,7 +178,7 @@ function stuNav(){
 function stuOpenExams(){ const me=Auth.user(), X=(window.Exam&&Exam.data())||{}; const m=new Map(); (X.open||[]).forEach(se=>{ const k=se.n+'|'+se.cls, o=m.get(k); if(!o||se.ts>o.ts) m.set(k,se); }); return [...m.values()].filter(se=>se.cls===me.classId && !(se.once && (X.results||[]).some(r=>r.sess===se.id && (r.uid===me.id||r.sid===me.studentId)))); }
 function unitPct(u){ const kp=knownCount(u.n)/u.vocab.length, sp=((S.sec||{})[u.n]||[]).length/LESSONS[u.n].sections.length, q=(S.quiz[u.n]||0)/100; return Math.round((kp+sp+q)/3*100); }
 function renderStuHome(){
-  if(window.Cloud&&Cloud.refresh&&Date.now()-(renderStuHome.t||0)>15000){ renderStuHome.t=Date.now(); Promise.all([Cloud.refresh('beginner-studio-exams-v1'),Cloud.refresh(WS.key)]).then(([a,b])=>{ if(a) Exam.reload(); if(b) WS.reload(); if(a||b){ if(view.name==='home') render(); else stuNav(); } }).catch(()=>{}); }
+  if(window.Cloud&&Cloud.refresh&&Date.now()-(renderStuHome.t||0)>15000){ renderStuHome.t=Date.now(); Promise.all([Cloud.refresh('beginner-studio-exams-v1'),Cloud.refresh(WS.key),Cloud.refresh('beginner-studio-class-v1')]).then(([a,b,c])=>{ if(a) Exam.reload(); if(b) WS.reload(); if(c) tUnlocked.c=null; if(a||b||c){ if(view.name==='home') render(); else stuNav(); } }).catch(()=>{}); }
   const me=Auth.user(), nu=nextUnit(), u=U(nu), st=UNIT_STYLE[nu]; setUnitColors(nu);
   const totalW=UNITS.reduce((a,x)=>a+x.vocab.length,0), knownW=UNITS.reduce((a,x)=>a+knownCount(x.n),0), passed=Object.values(S.quiz).filter(v=>v>=80).length;
   const ox=stuOpenExams(), wp=WS.pending(), first=(me.name||'').trim().split(/\s+/).slice(-1)[0];
@@ -206,7 +206,11 @@ function secsDone(n){ return ((S.sec||{})[n]||[]).length; }
 function lessonDone(n){ return secsDone(n)>=LESSONS[n].sections.length; }
 function lvl(n){ return (S.level||{})[n]; }
 function unitPassed(n){ return lessonDone(n) && (lvl(n)||0)>=PASS; }
-function unitOpen(n){ return PREVIEW() || n===1 || unitPassed(n-1); }
+/* 🔓 គ្រូបើកសោមេរៀនឱ្យ (class.unlock = {all:[n…], s:{studentId:[n…]}}) */
+function tUnlocked(n){ if(!window.Auth||Auth.role()!=='student') return false; const now=Date.now();
+  if(!tUnlocked.c||now-tUnlocked.t>1500){ tUnlocked.t=now; try{ const me=Auth.user(), c=(JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===me.classId), L=(c&&c.unlock)||{}; tUnlocked.c=new Set([...(L.all||[]),...((L.s||{})[me.studentId]||[])]); }catch(e){ tUnlocked.c=new Set(); } }
+  return tUnlocked.c.has(n); }
+function unitOpen(n){ return PREVIEW() || n===1 || unitPassed(n-1) || tUnlocked(n); }
 function secOpen(n,i){ return PREVIEW() || i===0 || ((S.sec||{})[n]||[]).includes(i-1); }
 function stars(n){ return (lessonDone(n)?1:0) + ((lvl(n)||0)>=PASS?1:0) + ((lvl(n)||0)>=95?1:0); }
 function mapHtml(){
@@ -287,7 +291,7 @@ function tabLesson(u){
     return `<div class="les-s ${on?'on':''} ${ok?'ok':''}" style="--kc:${K.c||'var(--c1)'}"><button class="les-h" onclick="Stu.open(${u.n},${si})"><span class="ki">${ok?'✓':K.i}</span><span class="tt"><small>${K.km}</small><b>${esc(s.t)}</b>${on?'':`<em>${s.km}</em>`}</span><span class="ch">${on?'−':'+'}</span></button>${on?`<div class="les-b"><p class="km les-d">${s.km}</p>${body}</div>`:''}</div>`; }).join('')}</div>`;
 }
 window.Stu = {
-  unit:n=>{ if(!unitOpen(n)) return toast(`🔒 ឆ្លង Unit ${n-1} ជាមុនសិន (រៀនគ្រប់ផ្នែក + 🏁 លំហាត់ឆ្លងកម្រិត ${PASS}%)`); go('unit',n,'lesson'); },
+  unit:n=>{ if(!unitOpen(n)) return toast(`🔒 ឆ្លង Unit ${n-1} ជាមុនសិន (រៀនគ្រប់ផ្នែក + 🏁 លំហាត់ឆ្លងកម្រិត ${PASS}%) ឬសុំគ្រូបើកសោឱ្យ`); go('unit',n,'lesson'); },
   open:(n,i)=>{ openSec={n, i: openSec&&openSec.n===n&&openSec.i===i ? -1 : i}; tabLesson(U(n)); const el=document.querySelectorAll('.les-s')[i]; if(el&&openSec.i===i) el.scrollIntoView({behavior:'smooth',block:'start'}); },
   done:(n,i)=>{ if(!PREVIEW() && window.LEX && !LEX.ready(n,i)) return toast('✍️ ធ្វើលំហាត់ផ្នែកនេះឱ្យត្រូវទាំងអស់សិន'); const d=secDone(n); if(!d.includes(i)){ d.push(i); track('lesson', n+':'+i); save(); } const L=LESSONS[n]; const nx=L.sections.findIndex((x,k)=>k>i&&!d.includes(k)); if(nx>=0){ openSec={n,i:nx}; renderUnit(); setTimeout(()=>{ const el=document.querySelectorAll('.les-s')[nx]; el&&el.scrollIntoView({behavior:'smooth',block:'start'}); },60); } else { toast('🎉 រៀនគ្រប់ផ្នែកហើយ! តោះធ្វើលំហាត់'); renderUnit(); } }
 };
@@ -338,7 +342,7 @@ function renderHome(){
       ${q>=80?'<span class="done-badge">✓ ឆ្លង</span>':''}
     </button>`}).join('')}</div>`;
 }
-function nextUnit(){ for(const u of UNITS){ if(stuUI() ? !unitPassed(u.n) : (S.quiz[u.n]||0)<80) return u.n; } return 14; }
+function nextUnit(){ if(stuUI()&&!PREVIEW()){ const o=UNITS.filter(u=>unitOpen(u.n)&&!unitPassed(u.n)); if(o.length) return o[o.length-1].n; } for(const u of UNITS){ if(stuUI() ? !unitPassed(u.n) : (S.quiz[u.n]||0)<80) return u.n; } return 14; }
 
 /* ---------- unit ---------- */
 const TABS_LEARN = [['path','📚 មេរៀនតាមសៀវភៅ'],['listen','🎧 ស្តាប់'],['vocab','🔤 វាក្យសព្ទ'],['grammar','📐 វេយ្យាករណ៍'],['practice','✍️ លំហាត់'],['exam','📝 ប្រឡងបញ្ចប់មេរៀន']];
