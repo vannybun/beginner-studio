@@ -1028,3 +1028,7 @@ body.role-student .modes{display:none!important}
 .cloud-opt{display:block;text-align:left;background:#f8fafc;border-radius:16px;padding:12px 16px;margin:10px 0}.cloud-opt summary{cursor:pointer}.cloud-opt p{margin:6px 0!important}
 .au-pc .qrw{display:flex;align-items:center;gap:3mm;margin-top:2mm;font-size:9pt;color:#475569}.au-pc .qrw svg{width:26mm;height:26mm}
 @media (max-width:640px){.cloud-join{grid-template-columns:1fr}.au-pad{grid-template-columns:repeat(3,68px)}header{padding:8px 10px;gap:8px}.brand small{display:none}}
+.bk-page.missing img{display:none}
+body.is-web .bk-page.missing::before{content:none}
+.bk-miss{display:flex;flex-direction:column;align-items:center;gap:8px;padding:30px;text-align:center;font-family:var(--kh);color:#334155;max-width:360px}
+.bk-miss .i{font-size:54px}.bk-miss b{font-size:18px}.bk-miss p{margin:0;color:#64748b;font-size:14px;line-height:1.6}.bk-miss code{background:#f1f5f9;padding:1px 6px;border-radius:6px}

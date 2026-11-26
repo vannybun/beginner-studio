@@ -51,7 +51,7 @@ function draw(dir){
   void st.offsetWidth;
   st.innerHTML = `<div class="bk-spread ${ps.length===1?'one':'two'}" style="--z:${B.zoom}">${ps.map((p,k)=>`
      <div class="bk-page ${ps.length===2?(k===0?'left':'right'):'solo'}" data-p="${p}">
-       <img src="${img(p)}" alt="Student's Book page ${p}" draggable="false" onerror="this.parentNode.classList.add('missing')">
+       <img src="${img(p)}" alt="Student's Book page ${p}" draggable="false" onerror="Book.miss(this)">
        <canvas class="bk-ink"></canvas>
        <div class="bk-pno">${p===0?'Cover':'p'+p}</div>
        ${NOTES[p] ? `<div class="bk-ans ${B.showAns?'on':''}"><b>📝 ចម្លើយ p${p}</b><div>${esc(NOTES[p]).replace(/\n/g,'<br>')}</div></div>` : ''}
@@ -265,7 +265,15 @@ function init(){
   st.addEventListener('touchend',e=>{ if(sx==null||B.zoom>1) return; const dx=e.changedTouches[0].clientX-sx; if(Math.abs(dx)>60) dx<0?next():prev(); sx=null; });
   window.addEventListener('resize',()=>{ if(B.open) document.querySelectorAll('.bk-page').forEach(sizeInk); });
 }
-window.Book = { init, open, close, go, next, prev, key, zoom, thumbs, toc, ans, revealAll, note, toggleAns, exportNotes, importNotes, fs, img,
+function miss(im){
+  const pg=im.parentNode; pg.classList.add('missing'); if(!window.IS_WEB||pg.querySelector('.bk-miss')) return;
+  const st=window.Auth&&Auth.role()==='student';
+  pg.insertAdjacentHTML('afterbegin', st
+    ? `<div class="bk-miss"><div class="i">📖</div><b>ទំព័រសៀវភៅមិនមានលើ Website ទេ</b><p>សូមបើកសៀវភៅពិតរបស់អ្នក ទំព័រ ${pg.dataset.p} 🙂<br>ផ្ទាំងជំនួយខាងស្តាំ (សំឡេង វេយ្យាករណ៍ លំហាត់) នៅតែប្រើបាន</p></div>`
+    : `<div class="bk-miss"><div class="i">📂</div><b>ភ្ជាប់ Folder សៀវភៅពីកុំព្យូទ័រនេះ</b><p>ជ្រើស Folder <code>Beginner App</code> (មាន book/ និង 2. Beginner Audio) — ឯកសារមិនត្រូវបាន Upload ទេ</p><button class="btn teal" onclick="Cloud.pickMedia()">📂 ជ្រើស Folder</button></div>`);
+}
+function redraw(){ if(B.open) draw(0); }
+window.Book = { miss, redraw, init, open, close, go, next, prev, key, zoom, thumbs, toc, ans, revealAll, note, toggleAns, exportNotes, importNotes, fs, img,
   tabTo(t){ B.tab=t; drawPanel(); }, toggleSingle(){ const p=pages()[0]; B.single=!B.single; buildSpreads(); B.si=spreadOf(p); draw(0); },
   penToggle(){ B.pen=!B.pen; draw(0); }, color(c){ B.color=c; B.pen=true; document.querySelectorAll('.bk-pens button[style]').forEach(b=>b.classList.toggle('on', b.getAttribute('onclick').includes("'"+c+"'"))); draw(0); },
   undo:inkUndo, clear:inkClear, panelToggle(){ $('#book').classList.toggle('nopanel'); document.body.classList.toggle('nopanel'); setTimeout(()=>document.querySelectorAll('.bk-page').forEach(sizeInk),350); }, B };

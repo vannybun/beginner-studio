@@ -6,7 +6,7 @@
 //  • សៀវភៅ/សំឡេង Headway មិនដាក់លើ Website ទេ — គ្រូភ្ជាប់ពី Folder ក្នុងម៉ាស៊ីន (📂)
 // =====================================================================
 (function(){
-window.IS_WEB = true;
+window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
 const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam-font.js','exam.js','auth.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
@@ -112,15 +112,45 @@ function setStatus(s){ status=s; const el=document.getElementById('cloudChip'); 
   el.textContent={ok:'☁️',wait:'⏳',err:'⚠️',off:'💻'}[s]; }
 
 /* ---------- media from local folder (never uploaded) ---------- */
-function pickMedia(){
+// Chrome/Edge: showDirectoryPicker + handle remembered in IndexedDB (ជ្រើសម្តងគត់)
+const IDB = (mode, fn) => new Promise((res,rej)=>{ const r=indexedDB.open('bs-media',1); r.onupgradeneeded=()=>r.result.createObjectStore('h'); r.onerror=()=>rej(r.error);
+  r.onsuccess=()=>{ const tx=r.result.transaction('h',mode), q=fn(tx.objectStore('h')); tx.oncomplete=()=>res(q&&q.result); tx.onerror=()=>rej(tx.error); }; });
+function addFile(name, f){
+  if(/\.mp3$/i.test(name)){ if(!MEDIA.audio[name]){ MEDIA.audio[name]=URL.createObjectURL(f); return 'a'; } }
+  else if(/^p-\d{3}\.jpg$/i.test(name)){ if(!MEDIA.book[name]){ MEDIA.book[name]=URL.createObjectURL(f); return 'b'; } }
+  else if(/\.pdf$/i.test(name)){ const w=/teacher/i.test(name)?2:/workbook/i.test(name)?3:/student/i.test(name)?1:0; if(w&&!MEDIA.pdf[w]){ MEDIA.pdf[w]=URL.createObjectURL(f); return 'p'; } }
+  return null;
+}
+async function walk(dir, cnt, depth){
+  for await (const [name, h] of dir.entries()){
+    if(h.kind==='directory'){ if(depth<4 && !/^(node_modules|\.git|fonts|cert-frames)$/i.test(name)) await walk(h, cnt, depth+1); }
+    else if(/\.(mp3|jpg|pdf)$/i.test(name)){ const k=addFile(name, await h.getFile()); if(k) cnt[k]++; }
+  }
+}
+function mediaDone(cnt){
+  const t=document.getElementById('bkThumbs'); if(t) delete t.dataset.ok;
+  const chip=document.getElementById('mediaChip'); if(chip) chip.remove();
+  if(window.toast) toast(`📂 បានភ្ជាប់៖ 📖 ${Object.keys(MEDIA.book).length} ទំព័រ • 🎧 ${Object.keys(MEDIA.audio).length} សំឡេង • 📄 ${Object.keys(MEDIA.pdf).length} PDF`);
+  if(window.Book&&Book.redraw) Book.redraw();
+}
+async function loadHandle(h){ const cnt={a:0,b:0,p:0}; if(window.toast) toast('⏳ កំពុងអាន Folder…'); await walk(h,cnt,0); mediaDone(cnt); return cnt; }
+async function pickMedia(){
+  if(window.showDirectoryPicker){
+    try{ const h=await showDirectoryPicker({id:'bs-media', mode:'read'}); await loadHandle(h); try{ await IDB('readwrite', s=>s.put(h,'dir')); }catch(e){} }
+    catch(e){ if(e.name!=='AbortError') toast('មិនអាចបើក Folder: '+e.message); }
+    return;
+  }
   const i=document.createElement('input'); i.type='file'; i.multiple=true; i.webkitdirectory=true;
-  i.onchange=()=>{ let a=0,b=0,p=0; [...i.files].forEach(f=>{ const n=f.name;
-      if(/\.mp3$/i.test(n)){ MEDIA.audio[n]=URL.createObjectURL(f); a++; }
-      else if(/^p-\d{3}\.jpg$/i.test(n)){ MEDIA.book[n]=URL.createObjectURL(f); b++; }
-      else if(/\.pdf$/i.test(n)){ const w=/teacher/i.test(n)?2:/workbook/i.test(n)?3:/student/i.test(n)?1:0; if(w){ MEDIA.pdf[w]=URL.createObjectURL(f); p++; } } });
-    const t=document.getElementById('bkThumbs'); if(t) delete t.dataset.ok;
-    toast(`📂 បានភ្ជាប់៖ 🎧 ${a} សំឡេង • 📖 ${b} ទំព័រ • 📄 ${p} PDF (ក្នុងម៉ាស៊ីននេះតែប៉ុណ្ណោះ)`); if(window.render) render(); };
+  i.onchange=()=>{ const cnt={a:0,b:0,p:0}; [...i.files].forEach(f=>{ const k=addFile(f.name,f); if(k) cnt[k]++; }); mediaDone(cnt); };
   i.click();
+}
+async function restoreMedia(){
+  if(!window.showDirectoryPicker) return;
+  let h=null; try{ h=await IDB('readonly', s=>s.get('dir')); }catch(e){} if(!h) return;
+  try{ if(await h.queryPermission({mode:'read'})==='granted') return loadHandle(h); }catch(e){ return; }
+  const tl=document.querySelector('header .tools'); if(!tl) return;
+  tl.insertAdjacentHTML('afterbegin','<button id="mediaChip" class="hot" title="បើក Folder សៀវភៅ/សំឡេង ដែលបានភ្ជាប់ពីមុន">🔓<span>បើកសៀវភៅ/សំឡេង</span></button>');
+  document.getElementById('mediaChip').onclick=async()=>{ try{ if(await h.requestPermission({mode:'read'})==='granted') loadHandle(h); }catch(e){ pickMedia(); } };
 }
 
 /* ---------- admin panel section ---------- */
@@ -174,6 +204,7 @@ function afterApp(){
   const r=window.Auth&&Auth.role(); if(!r) return;
   if(r!=='student') tl.insertAdjacentHTML('afterbegin','<button onclick="Cloud.pickMedia()" title="ភ្ជាប់ Folder សៀវភៅ/សំឡេង ពីកុំព្យូទ័រនេះ">📂<span>ឯកសារ</span></button>');
   tl.insertAdjacentHTML('afterbegin','<button id="cloudChip" class="cloud-chip" onclick="location.reload()"></button>'); setStatus(db?(status==='err'?'err':'ok'):'off');
+  if(r!=='student') restoreMedia();
 }
 async function boot(){
   const hasLocal=Object.keys(localStorage).some(k=>k.startsWith(PREFIX)) || _get.call(localStorage,CK+'-local');
