@@ -31,7 +31,7 @@ function role(){ const u=user(); return u?u.role:null; }
 function progressKey(){ const u=user(); return u && u.role==='student' ? ':'+u.id : ''; }
 function log(ev, u){ u=u||user(); A.log.unshift({ts:Date.now(), uid:u?u.id:null, name:u?u.name:'—', role:u?u.role:'', ev}); A.log=A.log.slice(0,400); saveA(); }
 function login(u){ u.last=Date.now(); SESSION={uid:u.id, ts:Date.now()}; sessionStorage.setItem(SK, JSON.stringify(SESSION)); log('ចូលប្រព័ន្ធ', u); reload(); }
-function logout(){ log('ចាកចេញ'); sessionStorage.removeItem(SK); reload(); }
+function logout(){ log('ចាកចេញ'); { const u=user(); if(u) sessionStorage.setItem('bs-tab', u.role); } sessionStorage.removeItem(SK); reload(); }
 
 /* ---------- class helpers (works with class.js data) ---------- */
 const CK='beginner-studio-class-v1';
@@ -48,7 +48,7 @@ function gate(){
   if(user()){ applyRole(); return true; }
   const el=document.createElement('div'); el.id='auth';
   document.body.appendChild(el); document.body.classList.add('auth-open');
-  if(!A.users.some(u=>u.role==='admin')) setupScreen(); else loginScreen('student');
+  if(!A.users.some(u=>u.role==='admin')) setupScreen(); else loginScreen();
   return false;
 }
 function shell(inner){ return `<div class="au-bg"><i></i><i></i><i></i></div><div class="au-card">${inner}</div><div class="au-foot">Beginner English Studio • 🔐 គណនីរក្សាទុកក្នុងកុំព្យូទ័រនេះ</div>`; }
@@ -72,10 +72,10 @@ async function _setup(){
     <div class="au-rc">${rc}</div><button class="au-btn" onclick="Auth._loginAs('${u.id}')">✅ ខ្ញុំបានរក្សាទុកហើយ — ចូលប្រព័ន្ធ</button>`);
 }
 function _loginAs(id){ login(A.users.find(u=>u.id===id)); }
-let LS={tab:'student', cls:null, stu:null, pin:''};
+let LS={tab:sessionStorage.getItem('bs-tab')||'student', cls:null, stu:null, pin:''};
 function loginScreen(tab){
   LS.tab=tab||LS.tab;
-  const tabs=`<div class="au-tabs">${['student','teacher','admin'].map(r=>`<button class="${LS.tab===r?'on':''}" onclick="Auth._tab('${r}')">${ROLE[r].i} ${ROLE[r].km}</button>`).join('')}</div>`;
+  const tabs=`<div class="au-tabs">${(LS.tab==='admin'?['student','teacher','admin']:['student','teacher']).map(r=>`<button class="${LS.tab===r?'on':''}" onclick="Auth._tab('${r}')">${ROLE[r].i} ${ROLE[r].km}</button>`).join('')}</div>`;
   let body='';
   if(LS.tab==='student'){
     const D=classData(), classes=(D.classes||[]).filter(c=>A.users.some(u=>u.role==='student'&&u.classId===c.id&&!u.disabled));
@@ -97,9 +97,10 @@ function loginScreen(tab){
     body=`<label>ឈ្មោះអ្នកប្រើ (Username)<input id="auU" autocomplete="off" autofocus></label>
       <label>ពាក្យសម្ងាត់<input id="auP" type="password" onkeydown="if(event.key==='Enter')Auth._login()"></label>
       <div class="au-err" id="auErr"></div><button class="au-btn" onclick="Auth._login()">🔓 ចូលប្រព័ន្ធ</button>
-      ${LS.tab==='admin'?`<a class="au-link" href="#" onclick="Auth._recover();return false">ភ្លេចពាក្យសម្ងាត់ Admin?</a>`:''}`;
+      ${LS.tab==='admin'?`<a class="au-link" href="#" onclick="Auth._recover();return false">ភ្លេចពាក្យសម្ងាត់ Admin?</a>`:''}
+      ${LS.tab==='teacher'?`<p class="note" style="margin-top:10px">គ្មានគណនី? សូមស្នើ Admin បង្កើតគណនីគ្រូឱ្យ</p>`:''}`;
   }
-  $a().innerHTML = shell(`<div class="au-logo">📚</div><h1>Beginner English Studio</h1>${tabs}<div class="au-body">${body}</div>`);
+  $a().innerHTML = shell(`<div class="au-logo">📚</div><h1>Beginner English Studio</h1>${tabs}<div class="au-body">${body}</div>${LS.tab!=='admin'?`<a class="au-link au-adm" href="#" onclick="Auth._tab('admin');return false">🛡️ Admin</a>`:''}`);
   const f=$('#auU'); if(f) setTimeout(()=>f.focus(),50);
 }
 async function _login(){
@@ -219,7 +220,7 @@ async function _mk(cid){ const k=await makeStudentAccounts(cid); toast(`✅ ប�
 async function _rp(id,cid){ const pin=await resetPin(id); toast('🔄 PIN ថ្មី៖ '+pin); render(); }
 function _tg(id){ const u=A.users.find(x=>x.id===id); u.disabled=!u.disabled; saveA(); log((u.disabled?'បិទ':'បើក')+'គណនី: '+u.name); render(); }
 function printCards(cid){
-  const JL=window.Cloud&&Cloud.joinLink&&Cloud.joinLink(), QR=JL?Cloud.qrSvg(JL,2):'';
+  const CC=window.Cloud&&Cloud.code&&Cloud.code(), JL=CC?Cloud.roleLink('student',CC):(window.Cloud&&Cloud.joinLink&&Cloud.joinLink()), QR=JL?Cloud.qrSvg(JL,2):'';
   const D=classData(), c=(D.classes||[]).find(x=>x.id===cid), us=A.users.filter(u=>u.role==='student'&&u.classId===cid&&!u.disabled);
   document.getElementById('printArea').innerHTML = `<div class="au-cards">${us.map(u=>{ const s=c.students.find(x=>x.id===u.studentId)||{};
     return `<div class="au-pc"><div class="h">📚 Beginner English Studio</div><div class="b">${s.photo?`<img src="${s.photo}">`:`<div class="ph">${esc((u.name||'?')[0])}</div>`}<div><b>${esc(u.name)}</b>${s.latin?`<small>${esc(s.latin)}</small>`:''}<span>🏫 ${esc(c.name)}</span></div></div>
@@ -245,7 +246,7 @@ function renderAdmin(t){
       <div class="au-grid">${staff.map(u=>`<div class="au-ucard ${u.disabled?'off':''}">${avatarFor(u,56)}<b>${esc(u.name)}</b><code>@${esc(u.username)}</code><span class="au-badge" style="background:${ROLE[u.role].c}">${ROLE[u.role].i} ${ROLE[u.role].km}</span>
         ${u.role==='teacher'?`<small>🏫 ${(D.classes||[]).filter(c=>c.owner===u.id||(u.classIds||[]).includes(c.id)).map(c=>esc(c.name)).join(', ')||'—'}</small>`:''}
         <small>ចូលចុងក្រោយ៖ ${u.last?new Date(u.last).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'}):'—'}</small>
-        <div class="row" style="justify-content:center;gap:4px"><button class="btn ghost sm" onclick="Auth.editUser('${u.id}')">✎</button>${u.id!==user().id?`<button class="btn ghost sm" onclick="Auth._tg('${u.id}')">${u.disabled?'✅':'⛔'}</button><button class="btn ghost sm" onclick="Auth.delUser('${u.id}')">🗑</button>`:''}</div></div>`).join('')}</div></div>`;
+        <div class="row" style="justify-content:center;gap:4px">${u.role==='teacher'?`<button class="btn ghost sm" title="ផ្ញើតំណចូល" onclick="Auth.invite('${u.id}')">✉️</button>`:''}<button class="btn ghost sm" onclick="Auth.editUser('${u.id}')">✎</button>${u.id!==user().id?`<button class="btn ghost sm" onclick="Auth._tg('${u.id}')">${u.disabled?'✅':'⛔'}</button><button class="btn ghost sm" onclick="Auth.delUser('${u.id}')">🗑</button>`:''}</div></div>`).join('')}</div></div>`;
   } else if(atab==='students'){
     const cs=D.classes||[]; el.innerHTML = cs.length ? cs.map(c=>accountsPanel(c)).join('<div style="height:14px"></div>') : `<div class="panel cl-empty"><p class="km">មិនទាន់មានថ្នាក់ — បង្កើតក្នុង 👥 ថ្នាក់រៀន</p></div>`;
   } else if(atab==='classes'){
@@ -282,13 +283,25 @@ async function _saveUser(id, r){
   u.name=n; u.username=un; if(p){ if(p.length<6) return toast('ពាក្យសម្ងាត់យ៉ាងតិច ៦ តួ'); await setPass(u,p); }
   if(r==='teacher') u.classIds=[...document.querySelectorAll('.au-cls input:checked')].map(x=>x.value);
   saveA(); log((id?'កែ':'បង្កើត')+'គណនី '+ROLE[r].km+': '+n); closeModal(); render(); toast('✅ បានរក្សាទុក');
+  if(r==='teacher' && p) setTimeout(()=>teacherInvite(u, p), 300);
+}
+function teacherInvite(u, pass){
+  const code=window.Cloud&&Cloud.code&&Cloud.code(), L=code?Cloud.roleLink('teacher',code):location.href.split(/[?#]/)[0];
+  const msg=`👩‍🏫 Beginner English Studio — គណនីគ្រូ\n\n🔗 តំណ៖ ${L}\n👤 Username៖ ${u.username}\n🔑 ពាក្យសម្ងាត់៖ ${pass||'(ស្នើ Admin)'}\n\nបើកតំណ → វាយ Username និងពាក្យសម្ងាត់ → ចូលប្រព័ន្ធ។ សូមប្តូរពាក្យសម្ងាត់ក្រោយចូលលើកដំបូង (ចុចឈ្មោះខាងស្តាំលើ → 🔑)។`;
+  modal(`<h3>✉️ ផ្ញើព័ត៌មានចូលប្រព័ន្ធឱ្យ ${esc(u.name)}</h3>
+    ${code&&window.Cloud?`<div style="display:flex;gap:16px;align-items:center;margin:8px 0"><div class="qr" style="width:140px">${Cloud.qrSvg(L,3)}</div><div class="km">📱 គ្រូស្កេន QR នេះ ឬចុចតំណ → វាយ Username និងពាក្យសម្ងាត់</div></div>`:''}
+    <textarea class="cl-in" style="width:100%;height:170px;box-sizing:border-box" readonly onclick="this.select()">${esc(msg)}</textarea>
+    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" onclick="closeModal()">បិទ</button>
+      <a class="btn ghost" target="_blank" href="https://t.me/share/url?url=${encodeURIComponent(L)}&text=${encodeURIComponent(msg)}">✈️ Telegram</a>
+      <button class="btn teal" onclick="navigator.clipboard.writeText(${JSON.stringify(msg).replace(/"/g,'&quot;')}).then(()=>toast('✅ បានចម្លង'))">📋 ចម្លងសារ</button></div>
+    <p class="note">⚠️ ពាក្យសម្ងាត់បង្ហាញតែពេលនេះប៉ុណ្ណោះ។ បើភ្លេច Admin អាចកំណត់ថ្មីបាន (✎)។</p>`);
 }
 function delUser(id){ const u=A.users.find(x=>x.id===id); if(!confirm('លុបគណនី «'+u.name+'»?')) return; A.users=A.users.filter(x=>x.id!==id); saveA(); log('លុបគណនី: '+u.name); render(); }
 function _own(cid, tid){ const D=classData(); const c=D.classes.find(x=>x.id===cid); if(tid) c.owner=tid; else delete c.owner; localStorage.setItem(CK, JSON.stringify(D)); log('កំណត់គ្រូបន្ទុក: '+c.name); toast('✅ រក្សាទុក'); setTimeout(()=>reload(),500); }
 function backupAll(){ const o={}; Object.keys(localStorage).filter(k=>k.startsWith('beginner-studio')).forEach(k=>o[k]=localStorage.getItem(k)); const b=new Blob([JSON.stringify({app:'beginner-studio',v:1,ts:Date.now(),data:o})],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`beginner-studio-FULL-backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); log('Backup ទាំងអស់'); }
 function restoreAll(f){ if(!f) return; f.text().then(t=>{ const d=JSON.parse(t); if(d.app!=='beginner-studio'||!d.data) throw 0; if(!confirm('ជំនួសទិន្នន័យទាំងអស់ដោយ Backup នេះ? (ត្រូវចូលប្រព័ន្ធម្តងទៀត)')) return; Object.keys(localStorage).filter(k=>k.startsWith('beginner-studio')).forEach(k=>localStorage.removeItem(k)); Object.entries(d.data).forEach(([k,v])=>localStorage.setItem(k,v)); sessionStorage.removeItem(SK); reload(); }).catch(()=>toast('ឯកសារ Backup មិនត្រឹមត្រូវ')); }
 
-window.Auth = { gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
+window.Auth = { invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
   editUser, delUser, backupAll, restoreAll, log, data:()=>A,
   _setup, _loginAs, _login, _pin, _recover, _doRecover, _cp, _mk, _rp, _tg, _own, _saveUser,
   _tab:r=>{ LS.tab=r; LS.stu=null; LS.pin=''; loginScreen(); }, _cls:id=>{ LS.cls=id; loginScreen(); }, _stu:id=>{ LS.stu=id; LS.pin=''; loginScreen(); } };

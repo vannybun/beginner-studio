@@ -1,5 +1,5 @@
 // Beginner English Studio — service worker: makes the website open fast on phones (and offline)
-const CACHE='bs-2026.11.26e';
+const CACHE='bs-2026.11.26f';
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', e => {

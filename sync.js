@@ -7,7 +7,7 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.26e';
+const VER='2026.11.26f';
 const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam.js','track.js','auth.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
@@ -36,6 +36,7 @@ function joinLink(){ return location.href.split('#')[0]+'#join='+b64e(JSON.strin
 /* ---------- Firebase ---------- */
 let F=null, db=null, status='off';
 async function initFB(){
+  if(db) return;
   const [app, auth, fs] = await Promise.all([import(FB+'firebase-app.js'), import(FB+'firebase-auth.js'), import(FB+'firebase-firestore.js')]);
   const a=app.initializeApp(cloud.cfg); F={...fs}; db=fs.getFirestore(a);
   const au=auth.getAuth(a); try{ await au.authStateReady(); }catch(e){} if(!au.currentUser) await auth.signInAnonymously(au);
@@ -204,21 +205,37 @@ async function makeCode(){
 async function _code(){
   const inp=document.getElementById('codeIn'), err=document.getElementById('joinErr'), v=inp.value.trim();
   const m=v.match(/join=([\w-]+)/); if(m){ location.hash='join='+m[1]; location.reload(); return; }
-  const code=v.toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/O/g,'0').replace(/I/g,'1');
+  const code=v.toUpperCase().replace(/[^A-Z0-9]/g,'');
   if(code.length!==6){ err.textContent='សូមវាយលេខកូដ ៦ តួ'; return; }
-  const cfg=DEF(); if(!cfg){ err.textContent='Website មិនទាន់កំណត់ Firebase'; return; }
-  err.textContent='⏳ កំពុងស្វែងរកថ្នាក់…'; cloud={cfg, school:null};
-  try{ await initFB(); const d=await F.getDoc(F.doc(db,'codes',code));
-    if(!d.exists()){ cloud=null; err.textContent='❌ រកមិនឃើញកូដ «'+code+'» — សូមពិនិត្យម្តងទៀត'; return; }
-    const v2=d.data(); cloud={cfg:v2.c||cfg, school:v2.s}; _set.call(localStorage,CK,J(cloud)); location.reload(); }
-  catch(x){ cloud=null; err.textContent='❌ ភ្ជាប់មិនបាន ('+(x.code||x.message)+') — សូមពិនិត្យអ៊ីនធឺណិត'; }
+  err.textContent='⏳ កំពុងស្វែងរកថ្នាក់…';
+  try{ const ok=await joinByCode(code); if(!ok){ err.textContent='❌ រកមិនឃើញកូដ «'+code+'» — សូមពិនិត្យម្តងទៀត'; return; } location.reload(); }
+  catch(x){ err.textContent='❌ ភ្ជាប់មិនបាន ('+(x.code||x.message)+') — សូមពិនិត្យអ៊ីនធឺណិត'; }
 }
+// look up a 6-character code and switch this device to that school
+async function joinByCode(code){
+  const cfg=(cloud&&cloud.cfg)||DEF(); if(!cfg) throw new Error('no Firebase config');
+  const prev=cloud; cloud={cfg, school:(prev&&prev.school)||null};
+  if(!db) await initFB();
+  const d=await F.getDoc(F.doc(db,'codes',code));
+  if(!d.exists()){ cloud=prev; return false; }
+  const v=d.data(), school=v.s;
+  if(prev && prev.school && prev.school!==school){   // another school's data on this device → clear it
+    Object.keys(localStorage).filter(k=>k.startsWith(PREFIX)).forEach(k=>_rm.call(localStorage,k)); _rm.call(localStorage,SYK); sessionStorage.removeItem(PREFIX+'-session'); }
+  cloud={cfg:v.c||cfg, school, code}; _set.call(localStorage,CK,J(cloud)); return true;
+}
+// role links:  ?c=CODE → students   ?t=CODE → teachers   ?a=CODE → admin
+const LINK=(()=>{ const q=new URLSearchParams(location.search); for(const [k,role] of [['c','student'],['t','teacher'],['a','admin']]){ const v=(q.get(k)||'').toUpperCase().replace(/[^A-Z0-9]/g,''); if(v.length===6) return {code:v, role}; } return null; })();
+if(LINK) sessionStorage.setItem('bs-tab', LINK.role);
+function roleLink(role, code){ return location.origin+location.pathname+'?'+({student:'c',teacher:'t',admin:'a'}[role])+'='+code; }
 function codeKey(e){ const i=e.target; const p=i.selectionStart; i.value=i.value.toUpperCase().replace(/[^A-Z0-9#:/=._-]/g,''); if(e.key==='Enter') _code(); }
 
 function panel(){
   if(!cloud) return `<div class="panel"><h3 class="sec">☁️ Cloud (Firebase)</h3><p class="km">ម៉ាស៊ីននេះមិនទាន់ភ្ជាប់ Cloud ទេ — ទិន្នន័យនៅក្នុង Browser នេះតែប៉ុណ្ណោះ។</p><button class="btn teal" onclick="Cloud.setupScreen()">☁️ ភ្ជាប់ Firebase</button></div><div style="height:14px"></div>`;
   const L=joinLink();
   return `<div class="panel"><div class="row" style="justify-content:space-between"><h3 class="sec" style="margin:0">☁️ Cloud (Firebase) — ${status==='err'?'⚠️ គ្មានអ៊ីនធឺណិត':'✅ ភ្ជាប់រួច'}</h3><span class="note">Project: <b>${esc(cloud.cfg.projectId)}</b></span></div>
+    ${(()=>{ const c=meta().code; if(!c) return ''; const R=[['student','🎓 តំណសិស្ស','ផ្ញើក្នុងក្រុម Telegram សិស្ស'],['teacher','👩‍🏫 តំណគ្រូ','ផ្ញើឱ្យគ្រូផ្សេងៗ (ចូលដោយ Username + ពាក្យសម្ងាត់)'],['admin','🛡️ តំណ Admin','សម្រាប់ Admin តែប៉ុណ្ណោះ — កុំចែករំលែក']];
+      return `<div class="cloud-links">${R.map(([r,t,d])=>{ const L=roleLink(r,c); return `<div class="cl-link ${r}"><div class="qr">${qrSvg(L,3)}</div><div><b>${t}</b><small>${d}</small><code>${esc(L)}</code>
+        <div class="row"><button class="btn sm teal" onclick="navigator.clipboard.writeText('${L}').then(()=>toast('✅ បានចម្លង'))">📋 ចម្លង</button>${r!=='admin'?`<a class="btn sm ghost" target="_blank" href="https://t.me/share/url?url=${encodeURIComponent(L)}&text=${encodeURIComponent(r==='teacher'?'👩‍🏫 Beginner English Studio — តំណសម្រាប់គ្រូ':'📚 Beginner English Studio — ចុចដើម្បីចូលថ្នាក់')}">✈️ Telegram</a>`:''}</div></div></div>`; }).join('')}</div>`; })()}
     ${(()=>{ const c=meta().code; return `<div class="cloud-code"><div><span>🔢 កូដថ្នាក់ (ប្រាប់សិស្សឱ្យវាយ)</span><b>${c?c.split('').join(' '):'—'}</b><small>${location.host+location.pathname}</small></div>${c?'':`<button class="btn sun" onclick="Cloud.makeCode()">＋ បង្កើតកូដថ្នាក់</button>`}</div>`; })()}
     <div class="cloud-join"><div class="qr">${qrSvg(L,4)}</div><div>
       <p class="km"><b>🔗 តំណចូលថ្នាក់</b> — ផ្ញើឱ្យសិស្ស និងគ្រូតាម Telegram ឬឱ្យស្កេន QR។ បើកម្តងគត់ ទូរស័ព្ទនឹងចងចាំ។</p>
@@ -274,6 +291,12 @@ function afterApp(){
   if(r!=='student') restoreMedia();
 }
 async function boot(){
+  if(LINK && !(cloud && cloud.code===LINK.code)){
+    loader(true,'🔗 កំពុងភ្ជាប់ថ្នាក់…');
+    try{ const ok=await joinByCode(LINK.code); if(!ok){ loader(false); setupScreen(); const e=document.getElementById('joinErr'); if(e) e.textContent='❌ តំណនេះមិនត្រឹមត្រូវ (រកមិនឃើញកូដ '+LINK.code+')'; return; } }
+    catch(e){ console.warn(e); }
+    loader(false);
+  }
   const hasLocal=Object.keys(localStorage).some(k=>k.startsWith(PREFIX)) || _get.call(localStorage,CK+'-local');
   if(!cloud && !hasLocal){ setupScreen(); return; }
   const setBase=()=>Object.keys(localStorage).filter(k=>k.startsWith(PREFIX)).forEach(k=>{ BASE[k]=_get.call(localStorage,k); });
@@ -295,6 +318,6 @@ async function boot(){
   setBase();
   loadScripts();
 }
-window.Cloud={ makeCode, _code, _codeKey:codeKey, code:()=>meta().code, flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _join, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
+window.Cloud={ roleLink, makeCode, _code, _codeKey:codeKey, code:()=>meta().code, flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _join, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
 boot();
 })();
