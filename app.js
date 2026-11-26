@@ -175,6 +175,7 @@ function renderStuHome(){
   const totalW=UNITS.reduce((a,x)=>a+x.vocab.length,0), knownW=UNITS.reduce((a,x)=>a+knownCount(x.n),0), passed=Object.values(S.quiz).filter(v=>v>=80).length;
   const ox=stuOpenExams(), first=(me.name||'').trim().split(/\s+/).slice(-1)[0];
   $('#main').innerHTML=`<div class="stu-hi"><div>${Auth.avatarFor(me,52)}</div><div><small>សួស្តី 👋</small><b>${esc(first)}</b></div></div>
+    ${window.Cloud&&Cloud.installBanner?Cloud.installBanner():''}
     ${ox.length?`<button class="stu-alert" onclick="go('exams')"><span>📝</span><div><b>មានប្រឡង ${ox.length} កំពុងបើក</b><small>ចុចដើម្បីចូលប្រឡង</small></div><i>›</i></button>`:''}
     <div class="stu-cont" style="--c1:${st.c1};--c2:${st.c2}">
       <small>បន្តរៀន</small><div class="r"><div class="n">${nu}</div><div><b>${esc(u.en)}</b><span>${u.km}</span></div><div class="e">${st.icon}</div></div>

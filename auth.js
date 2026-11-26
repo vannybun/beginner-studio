@@ -190,6 +190,7 @@ function menu(){
       ${u.role==='student'?`<button onclick="closeModal();go('me')">📊 លទ្ធផលរបស់ខ្ញុំ</button>`:''}
       ${u.role==='admin'?`<button onclick="closeModal();go('admin',null,'users')">🛡️ ផ្ទាំង Admin</button>`:''}
       ${u.role!=='student'?`<button onclick="Auth.changePass()">🔑 ប្តូរពាក្យសម្ងាត់</button>`:`<button onclick="Auth.changePass()">🔢 ប្តូរ PIN</button>`}
+      ${window.Cloud&&Cloud.install&&!Cloud.standalone()?`<button onclick="closeModal();Cloud.install()">📲 ដំឡើងកម្មវិធីលើទូរស័ព្ទ</button>`:''}
       <button class="out" onclick="Auth.logout()">🚪 ចាកចេញ</button>
     </div>`);
 }

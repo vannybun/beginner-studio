@@ -7,7 +7,7 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.26h';
+const VER='2026.11.26i';
 const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam.js','track.js','auth.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
@@ -190,6 +190,27 @@ async function restoreMedia(){
 /* ---------- admin panel section ---------- */
 function qrSvg(text, cell){ try{ const q=qrcode(0,'L'); q.addData(text); q.make(); return q.createSvgTag({cellSize:cell||4, margin:2}); }catch(e){ return ''; } }
 async function refreshKey(k){ if(!db) return false; const r=await fetchOne(k); if(r.v!=null && r.v!==_get.call(localStorage,k) && !Q.has(k)){ _set.call(localStorage,k,r.v); BASE[k]=r.v; return true; } return false; }
+/* ---------- 📲 install as an app (PWA) ---------- */
+let BIP=null;
+addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); BIP=e; document.querySelectorAll('.inst-b').forEach(b=>b.classList.add('ready')); });
+addEventListener('appinstalled', ()=>{ BIP=null; document.querySelectorAll('.inst-bar').forEach(b=>b.remove()); window.toast&&toast('✅ បានដំឡើងកម្មវិធីរួចរាល់ — រកមើលរូប 📚 នៅលើអេក្រង់ទូរស័ព្ទ'); });
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone===true;
+const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+function installBanner(){
+  if(standalone() || _get.call(localStorage,'bs-inst-x')) return '';
+  return `<div class="inst-bar"><img src="icons/icon-192.png" alt=""><div><b>ដំឡើងកម្មវិធីលើទូរស័ព្ទ</b><small>បើកលឿន ដូចកម្មវិធីធម្មតា 📲</small></div><button class="btn teal sm inst-b ${BIP?'ready':''}" onclick="Cloud.install()">ដំឡើង</button><button class="x" onclick="localStorage.setItem('bs-inst-x','1');this.parentNode.remove()">✕</button></div>`;
+}
+async function install(){
+  if(standalone()) return toast('✅ កម្មវិធីបានដំឡើងរួចហើយ');
+  if(BIP){ BIP.prompt(); try{ const c=await BIP.userChoice; if(c.outcome==='accepted') toast('⏳ កំពុងដំឡើង…'); }catch(e){} BIP=null; return; }
+  const android=/android/i.test(navigator.userAgent);
+  modal(`<h3>📲 ដំឡើងកម្មវិធីលើទូរស័ព្ទ</h3>
+    ${IOS?`<div class="inst-steps"><div><span>1</span>បើក Website នេះក្នុង <b>Safari</b></div><div><span>2</span>ចុចប៊ូតុង <b>ចែករំលែក</b> <svg width="18" height="22" viewBox="0 0 18 22" style="vertical-align:-4px"><path d="M9 1v13M4 6l5-5 5 5M2 10v10h14V10" fill="none" stroke="#2563eb" stroke-width="2"/></svg> (ខាងក្រោមអេក្រង់)</div><div><span>3</span>ជ្រើស <b>Add to Home Screen</b> (បន្ថែមទៅអេក្រង់ដើម)</div><div><span>4</span>ចុច <b>Add</b> → បើកពីរូប 📚 លើអេក្រង់</div></div>
+      <p class="note">💡 លើ iPhone បើកកម្មវិធីលើកដំបូង ត្រូវវាយកូដថ្នាក់ម្តងទៀត</p>`
+    :`<div class="inst-steps"><div><span>1</span>បើក Website នេះក្នុង <b>Chrome</b></div><div><span>2</span>ចុច <b>⋮</b> (ជ្រុងខាងលើស្តាំ)</div><div><span>3</span>ជ្រើស <b>Install app</b> ឬ <b>Add to Home screen</b></div><div><span>4</span>ចុច <b>Install</b> → បើកពីរូប 📚 លើអេក្រង់</div></div>
+      ${android?'':'<p class="note">💡 លើកុំព្យូទ័រ៖ ចុចរូប ⊕ នៅចុងរបារអាសយដ្ឋាន (Chrome/Edge) ដើម្បីដំឡើង</p>'}`}`);
+}
+
 /* ---------- 🔢 class code (short code → school) ---------- */
 const ALPH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789', META=PREFIX+'-meta';
 const DEF = () => window.BS_DEFAULT_CFG || null;
@@ -319,6 +340,6 @@ async function boot(){
   setBase();
   loadScripts();
 }
-window.Cloud={ refresh:refreshKey, roleLink, makeCode, _code, _codeKey:codeKey, code:()=>meta().code, flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _join, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
+window.Cloud={ installBanner, install, standalone, refresh:refreshKey, roleLink, makeCode, _code, _codeKey:codeKey, code:()=>meta().code, flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _join, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
 boot();
 })();
