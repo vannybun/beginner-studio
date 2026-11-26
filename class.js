@@ -100,7 +100,7 @@ function tStudents(c){
   $('#clTab').innerHTML = `<div class="panel">
     <div class="row" style="justify-content:space-between;margin-bottom:14px">
       <h3 class="sec" style="margin:0">👩‍🎓 បញ្ជីសិស្ស (${c.students.length})${(()=>{ const nl=c.students.filter(x=>!x.latin).length, nd=c.students.filter(x=>!x.dob).length, ng=c.students.filter(x=>!x.g).length; return (nl||nd||ng)&&c.students.length?`<span class="cl-miss" onclick="Class.infoTable()" title="ចុចដើម្បីបំពេញ">⚠️ ${[nl?'ខ្វះឈ្មោះឡាតាំង '+nl:'',nd?'ខ្វះថ្ងៃកំណើត '+nd:'',ng?'ខ្វះភេទ '+ng:''].filter(Boolean).join(' • ')}</span>`:''; })()}</h3>
-      <div class="row"><button class="btn teal" onclick="Class.editStudent()">＋ បន្ថែមសិស្ស</button><button class="btn ghost" onclick="Class.bulk()">📥 នាំចូល (Excel)</button><button class="btn ghost" onclick="Class.infoTable()">📝 កែព័ត៌មានជាតារាង</button><button class="btn ghost" onclick="Class.template()">⬇ គំរូ Excel</button><button class="btn ghost" onclick="Class.sortStudents()">🔤 តម្រៀប</button></div>
+      <div class="row"><button class="btn teal" onclick="Class.editStudent()">＋ បន្ថែមសិស្ស</button><button class="btn ghost" onclick="Class.bulk()">📥 នាំចូល (Excel)</button><button class="btn ghost" onclick="Class.photoBulk()">🖼 រូបថតជាបាច់</button><button class="btn ghost" onclick="Class.infoTable()">📝 កែព័ត៌មានជាតារាង</button><button class="btn ghost" onclick="Class.template()">⬇ គំរូ Excel</button><button class="btn ghost" onclick="Class.sortStudents()">🔤 តម្រៀប</button></div>
     </div>
     ${c.students.length?`<div class="cl-grid">${c.students.map((s,i)=>`
       <div class="cl-card" style="animation-delay:${Math.min(i,30)*0.025}s">
@@ -633,13 +633,53 @@ function tFullClose(){ const el=$('#clTfull'); if(el) el.remove(); const h=$('#c
 /* ---------- class management ---------- */
 function addClass(name){ if(name===undefined){ name=prompt('ឈ្មោះថ្នាក់ថ្មី', 'Beginner B'); if(!name) return; } newClass(name.trim()||'ថ្នាក់ថ្មី'); tab='students'; render(); }
 function renameClass(){ const c=cls(); const n=prompt('ប្តូរឈ្មោះថ្នាក់ (ទុកទទេ ដើម្បីលុបថ្នាក់)', c.name); if(n===null) return; if(!n.trim()){ if(confirm('លុបថ្នាក់ «'+c.name+'» ទាំងសិស្ស និងពិន្ទុទាំងអស់?')){ C.classes=C.classes.filter(x=>x!==c); C.cur=C.classes[0]?C.classes[0].id:null; saveC(); render(); } return; } c.name=n.trim(); saveC(); render(); }
+/* ---------- 🖼 bulk photos: many image files, or photos from a Backup .json ---------- */
+const pnorm = x => String(x||'').toLowerCase().normalize('NFC').replace(/\.[a-z0-9]+$/,'').replace(/[\s_\-.]+/g,' ').replace(/^\s*\d+\s*[.)-]?\s*(?=\D)/,'').trim();
+function matchStudent(c, label){
+  const n=pnorm(label), raw=String(label).replace(/\.[a-z0-9]+$/i,'').trim();
+  if(/^\d+$/.test(raw)){ const i=+raw-1; if(c.students[i]) return c.students[i]; }
+  return c.students.find(s=>pnorm(s.latin)===n || pnorm(s.name)===n) || c.students.find(s=>s.latin && n && (pnorm(s.latin).includes(n)||n.includes(pnorm(s.latin))));
+}
+let PB=null;
+function photoBulk(){
+  const c=cls(); PB={items:[]};
+  modal(`<h3>🖼 ដាក់រូបថតសិស្សជាបាច់</h3>
+    <div class="pb-opts">
+      <label class="pb-opt"><input type="file" accept="image/*" multiple hidden onchange="Class._pbFiles(this.files)"><div class="i">📷</div><b>ជ្រើសរូបច្រើនសន្លឹក</b><small>ដាក់ឈ្មោះឯកសារជា <code>ល.រ</code> (1.jpg, 2.jpg…) ឬ <code>ឈ្មោះឡាតាំង</code> (KENG Ratana.jpg) ឬឈ្មោះខ្មែរ</small></label>
+      <label class="pb-opt"><input type="file" accept=".json" hidden onchange="Class._pbBackup(this.files[0])"><div class="i">💾</div><b>យករូបពី Backup</b><small>ឯកសារ Backup (.json) ពីកម្មវិធីក្នុងកុំព្យូទ័រ — យកតែរូបថត ផ្គូផ្គងតាមឈ្មោះ</small></label>
+    </div>
+    <div id="pbPrev" class="pb-prev"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" id="pbGo" disabled onclick="Class._pbApply()">💾 រក្សាទុករូប</button></div>`);
+  $('#modal').classList.add('wide');
+}
+function pbShow(){
+  const c=cls(), ok=PB.items.filter(x=>x.s), bad=PB.items.filter(x=>!x.s);
+  $('#pbPrev').innerHTML = `<p class="km">✅ ផ្គូផ្គងបាន <b>${ok.length}</b>${bad.length?` • ❌ មិនស្គាល់ ${bad.length}`:''} • សិស្សគ្មានរូប ${c.students.filter(s=>!s.photo && !ok.some(x=>x.s===s)).length}</p>
+    <div class="pb-grid">${PB.items.map(x=>`<div class="${x.s?'':'bad'}"><img src="${x.photo}"><b>${x.s?esc(x.s.name):'❓'}</b><small>${esc(x.label)}</small></div>`).join('')}</div>`;
+  $('#pbGo').disabled=!ok.length;
+}
+function _pbFiles(files){
+  const c=cls(), list=[...files]; let left=list.length; if(!left) return; $('#pbPrev').innerHTML='<p class="note">⏳ កំពុងរៀបចំរូប…</p>';
+  list.forEach(f=>resizePhoto(f, d=>{ PB.items.push({label:f.name, photo:d, s:matchStudent(c, f.name)}); if(--left===0){ PB.items.sort((a,b)=>(a.s?c.students.indexOf(a.s):999)-(b.s?c.students.indexOf(b.s):999)); pbShow(); } }));
+}
+function _pbBackup(f){
+  if(!f) return; const c=cls();
+  f.text().then(t=>{ let d=JSON.parse(t), classes=[];
+    if(d.classes) classes=d.classes; else if(d.data && d.data['beginner-studio-class-v1']) classes=JSON.parse(d.data['beginner-studio-class-v1']).classes||[];
+    const studs=classes.flatMap(x=>x.students||[]).filter(s=>s.photo);
+    PB.items=studs.map(s=>({label:(s.latin||s.name), photo:s.photo, s:c.students.find(x=>(s.latin&&pnorm(x.latin)===pnorm(s.latin)) || pnorm(x.name)===pnorm(s.name))}));
+    if(!PB.items.length){ $('#pbPrev').innerHTML='<p class="note">⚠️ Backup នេះគ្មានរូបថតសិស្សទេ</p>'; return; }
+    pbShow(); }).catch(()=>toast('ឯកសារ Backup មិនត្រឹមត្រូវ'));
+}
+function _pbApply(){ const c=cls(); let k=0; PB.items.forEach(x=>{ if(x.s){ const s=c.students.find(y=>y.id===x.s.id); if(s){ s.photo=x.photo; k++; } } }); if(saveC()){ closeModal(); toast(`✅ បានដាក់រូប ${k} នាក់`); render(); } }
+
 function backup(){ download(`class-backup-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(C), 'application/json'); }
 function restore(f){ if(!f||(window.Auth&&Auth.role()!=='admin')) return; f.text().then(t=>{ const d=JSON.parse(t); if(!d.classes) throw 0; if(C.classes.length && !confirm('ជំនួសទិន្នន័យថ្នាក់បច្ចុប្បន្នដោយ Backup នេះ?')) return; C=Object.assign({classes:[],cur:null,month:monthNow()},d); saveC(); render(); toast('✅ Restore រួចរាល់'); }).catch(()=>toast('ឯកសារ Backup មិនត្រឹមត្រូវ')); }
 
 /* ---------- picker integration ---------- */
 function studentsForPicker(){ const c=cls(); return c?c.students:[]; }
 
-window.Class = { render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
+window.Class = { photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
   editStudent, pickPhoto, noPhoto:()=>{ editPhoto=null; $('#clPrev').innerHTML=avatar({name:$('#clN').value},140); }, cam, camStop, saveStudent, photo, delStudent, bulk, impMode, impFile, impPreview, impApply, infoTable, infoSave, template, age:ageOf, sortStudents,
   setMonth:m=>{ if(m){ C.month=m; saveC(); render(); } }, cols, colAdd, colSave, csv, printMonth, csvYear, printYear, certs, certSet, certGrade, certPrint, sigFile, sigDraw, sigScale, sigReset, certShow:i=>{ ctSel=i; certRefresh(); },
   gset:(k,v)=>{ G[k]=v; tGroups(cls()); }, gabs:id=>{ G.absent.has(id)?G.absent.delete(id):G.absent.add(id); tGroups(cls()); }, makeGroups, groupsToScore, groupsFull, printGroups,
