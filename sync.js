@@ -7,7 +7,7 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.26i';
+const VER='2026.11.26j';
 const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam.js','track.js','auth.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
@@ -127,8 +127,8 @@ async function flush(){
       const local=_get.call(localStorage,k);
       const rem=await fetchOne(k); let out=local;
       if(local!=null && rem.v!=null && rem.v!==local){ try{ out=J(merge(JSON.parse(BASE[k]||'null'),JSON.parse(local),JSON.parse(rem.v))); }catch(e){ out=local; } }
-      if(out===rem.v) continue;
-      await writeOne(k,out,rem.n);
+      if(out!==rem.v) await writeOne(k,out,rem.n);
+      BASE[k]=local;   // what this app has seen: our own removals since now count as deletions, others' additions stay
     }
     setStatus('ok');
   }catch(e){ console.warn('sync',e); keys.forEach(k=>Q.set(k,1)); setStatus('err'); clearTimeout(timer); timer=setTimeout(flush,8000); }

@@ -81,10 +81,12 @@ function score(ex, ans){
 /* ---------- 🔓 exam sessions: teacher/admin opens an exam for a class ---------- */
 const meStu = () => { const me=window.Auth&&Auth.user(); return me&&me.role==='student'?me:null; };
 function sessDone(se, me){ return X.results.find(r=>r.sess===se.id && (r.uid===me.id || (r.sid&&r.sid===me.studentId))); }
-function openFor(me){ return (X.open||[]).filter(se=>se.cls===me.classId); }
+function uniqOpen(list){ const m=new Map(); (list||[]).forEach(se=>{ const k=se.n+'|'+se.cls, o=m.get(k); if(!o || se.ts>o.ts) m.set(k,se); }); return [...m.values()]; }
+function cleanOpen(){ const u=uniqOpen(X.open); if(u.length!==(X.open||[]).length){ X.open=u; saveX(); } }
+function openFor(me){ return uniqOpen((X.open||[]).filter(se=>se.cls===me.classId)); }
 function classes(){ const C=(window.Class&&Class.data())||{classes:[]}; return C.classes.filter(c=>!window.Auth||!Auth.user()||Auth.canSeeClass(c)); }
 function openPanel(u){
-  const cs=classes(), list=(X.open||[]).filter(se=>se.n===u.n);
+  cleanOpen(); const cs=classes(), list=(X.open||[]).filter(se=>se.n===u.n);
   return `<div class="panel ex-gate"><div class="row" style="justify-content:space-between"><h3 class="sec" style="margin:0">🔓 បើកឱ្យសិស្សប្រឡង (លើទូរស័ព្ទ/App របស់សិស្ស)</h3><span class="note">សិស្សមើលមិនឃើញប្រឡងទេ រហូតដល់គ្រូបើក</span></div>
     ${cs.length?`<div class="row" style="margin:10px 0;align-items:end">
       <label class="km">🏫 ថ្នាក់<select id="exoC" class="cl-in">${cs.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
@@ -101,10 +103,11 @@ function openSess(n){
   const se={id:Math.random().toString(36).slice(2,10), n, ver:$('#exoV').value, cls:$('#exoC').value, min:+$('#exoM').value||0, once:$('#exoOnce').checked, ts:Date.now(), by:(window.Auth&&Auth.user()&&Auth.user().name)||''};
   X.open=(X.open||[]).filter(x=>!(x.n===n && x.cls===se.cls)); X.open.push(se); saveX(); toast('🔓 បានបើកប្រឡង Unit '+n+' — សិស្សអាចចូលប្រឡងបានហើយ'); render();
 }
-function closeSess(id){ if(!confirm('បិទប្រឡងនេះ? សិស្សនឹងមិនអាចចូលប្រឡងទៀតទេ')) return; X.open=(X.open||[]).filter(x=>x.id!==id); saveX(); toast('⛔ បានបិទ'); render(); }
+function closeSess(id){ if(!confirm('បិទប្រឡងនេះ? សិស្សនឹងមិនអាចចូលប្រឡងទៀតទេ')) return; const se=(X.open||[]).find(x=>x.id===id); X.open=(X.open||[]).filter(x=>x.id!==id && !(se && x.n===se.n && x.cls===se.cls)); saveX(); toast('⛔ បានបិទ'); render(); }
+let lastRef=0;
 async function studentPage(refresh){
   const me=meStu(); if(!me) return;
-  if(refresh && window.Cloud && Cloud.refresh){ $('#main').innerHTML='<div class="stu-empty"><div class="spin2"></div><p>កំពុងពិនិត្យ…</p></div>'; try{ await Cloud.refresh(EK); }catch(e){} reloadX(); }
+  if(window.Cloud && Cloud.refresh && (refresh || Date.now()-lastRef>15000)){ lastRef=Date.now(); $('#main').innerHTML='<div class="stu-empty"><div class="spin2"></div><p>កំពុងពិនិត្យប្រឡងថ្មីៗ…</p></div>'; try{ await Cloud.refresh(EK); }catch(e){} reloadX(); if(typeof stuNav==='function') stuNav(); if(view.name!=='exams') return; }
   const list=openFor(me).sort((a,b)=>a.n-b.n);
   const mine=X.results.filter(r=>r.uid===me.id||(r.sid&&r.sid===me.studentId)).sort((a,b)=>b.ts-a.ts);
   setUnitColors(4);
@@ -148,8 +151,9 @@ function tab(u){
 
 /* ---------- in-app exam ---------- */
 let RUN=null;
-function start(n, ver, sessId){
-  if(meStu()){ const se=(X.open||[]).find(x=>x.id===sessId && x.cls===meStu().classId); if(!se) return toast('🔒 ប្រឡងនេះមិនទាន់បើក ឬបានបិទហើយ'); if(se.once && sessDone(se,meStu())) return toast('✅ អ្នកបានប្រឡងរួចហើយ'); }
+async function start(n, ver, sessId){
+  if(meStu() && window.Cloud && Cloud.refresh){ try{ await Cloud.refresh(EK); }catch(e){} reloadX(); }
+  if(meStu()){ const se=(X.open||[]).find(x=>x.id===sessId && x.cls===meStu().classId); if(!se){ toast('🔒 គ្រូបានបិទប្រឡងនេះហើយ'); studentPage(); return; } if(se.once && sessDone(se,meStu())) return toast('✅ អ្នកបានប្រឡងរួចហើយ'); }
   const me=window.Auth&&Auth.user();
   if(me&&me.role==='student'){ const ex0=build(n,ver), se0=(X.open||[]).find(x=>x.id===sessId)||{}; modal(`<h3>📝 ${esc(ex0.title)} • Version ${ver}</h3><p class="km">👤 ${esc(me.name)} • ${ex0.total} ពិន្ទុ • ${se0.min?se0.min+' នាទី':'គ្មានកំណត់ពេល'}</p><p class="note">សូមត្រៀមខ្លួន ហើយធ្វើដោយខ្លួនឯង 💪</p><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" onclick="Exam.begin(${n},'${ver}','${sessId||''}')">▶ ចាប់ផ្តើមប្រឡង</button></div>`); return; }
   const ex=build(n,ver), st=(window.Class&&Class.studentsForPicker())||[];
