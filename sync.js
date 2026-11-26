@@ -7,8 +7,8 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.26p';
-const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam.js','worksheet.js','track.js','auth.js','ctx.js','lessonex.js','app.js'];
+const VER='2026.11.26q';
+const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam.js','worksheet.js','track.js','qrscan.js','auth.js','ctx.js','lessonex.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -198,7 +198,7 @@ async function checkUpdate(){
     if(!m || m[1]===VER) return;
     if(navigator.serviceWorker){ const r=await navigator.serviceWorker.getRegistration(); if(r) r.update().catch(()=>{}); }
     if(document.getElementById('exam')||document.getElementById('wsRun')){ updWaiting=true; return; }
-    window.toast&&toast('🔄 មានកំណែថ្មី — កំពុងធ្វើបច្ចុប្បន្នភាព…'); await flushNow(); setTimeout(()=>location.reload(),900);
+    (typeof toast==='function')&&toast('🔄 មានកំណែថ្មី — កំពុងធ្វើបច្ចុប្បន្នភាព…'); await flushNow(); setTimeout(()=>location.reload(),900);
   }catch(e){}
 }
 addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && Date.now()-lastChk>30000) checkUpdate(); });
@@ -208,7 +208,7 @@ setInterval(()=>{ if(updWaiting && !document.getElementById('exam') && !document
 /* ---------- 📲 install as an app (PWA) ---------- */
 let BIP=null;
 addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); BIP=e; document.querySelectorAll('.inst-b').forEach(b=>b.classList.add('ready')); });
-addEventListener('appinstalled', ()=>{ BIP=null; document.querySelectorAll('.inst-bar').forEach(b=>b.remove()); window.toast&&toast('✅ បានដំឡើងកម្មវិធីរួចរាល់ — រកមើលរូប 📚 នៅលើអេក្រង់ទូរស័ព្ទ'); });
+addEventListener('appinstalled', ()=>{ BIP=null; document.querySelectorAll('.inst-bar').forEach(b=>b.remove()); (typeof toast==='function')&&toast('✅ បានដំឡើងកម្មវិធីរួចរាល់ — រកមើលរូប 📚 នៅលើអេក្រង់ទូរស័ព្ទ'); });
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone===true;
 const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
 function installBanner(){
@@ -284,8 +284,10 @@ function disconnect(){ if(!confirm('ផ្តាច់ Cloud ពីម៉ាស�
 
 /* ---------- first-visit screen (no cloud, no local data) ---------- */
 function setupScreen(force){
+  if(!window.QRScan){ const sc=document.createElement('script'); sc.src='qrscan.js?v='+VER; document.head.appendChild(sc); }
   const el=document.createElement('div'); el.id='auth'; document.body.appendChild(el); document.body.classList.add('auth-open');
-  el.innerHTML=`<div class="au-bg"><i></i><i></i><i></i></div><div class="au-card"><div class="au-logo">☁️</div><h1>Beginner English Studio</h1>
+  el.innerHTML=`<div class="au-bg"><i></i><i></i><i></i></div><div class="au-card"><div class="au-logo">📚</div><h1>Beginner Class</h1>
+    <button class="au-scan" onclick="QRScan.open()"><span>📷</span><div><b>ស្កេន QR លើកាត</b><small>សិស្ស ឬគ្រូ — ចូលភ្លាម</small></div></button><div class="au-or"><span>ឬ</span></div>
     <div class="cloud-opt code"><b>🔢 វាយលេខកូដថ្នាក់</b><p class="km">លេខកូដ ៦ តួ ដែលគ្រូប្រាប់ (ឧ. <b>K7M2QX</b>)</p>
       <input id="codeIn" class="code-in" maxlength="600" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="••••••" onkeyup="Cloud._codeKey(event)"><div class="au-err" id="joinErr"></div>
       <button class="au-btn" onclick="Cloud._code()">🚀 ចូលថ្នាក់</button>
@@ -296,7 +298,7 @@ function setupScreen(force){
       <textarea id="cfgIn" class="cl-in" style="width:100%;height:140px;font:12px monospace" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;...&quot;,&#10;  authDomain: &quot;...&quot;,&#10;  projectId: &quot;...&quot;,&#10;  appId: &quot;...&quot;&#10;};"></textarea>
       <div class="au-err" id="auErr"></div><button class="au-btn" onclick="Cloud._connect()">☁️ ភ្ជាប់ ហើយបង្កើតសាលាថ្មី</button></details>
     <button class="au-link" style="background:none;display:block;margin:8px auto 0" onclick="Cloud._local()">💻 ប្រើក្នុង Browser នេះតែប៉ុណ្ណោះ (គ្មាន Cloud)</button></div>
-    <div class="au-foot">Beginner English Studio • 🌐 Website</div>`;
+    <div class="au-foot"><div>គ្រប់គ្រងការបង្កើតដោយ៖ <b>លោក ប៊ុន វណ្ណនី</b></div><div class="au-contact">📞 ទំនាក់ទំនង Telegram៖ <a href="https://t.me/bunvanny" target="_blank" rel="noopener">0967943637</a> ឬ <a href="https://t.me/bunvanny" target="_blank" rel="noopener">@bunvanny</a></div></div>`;
   setTimeout(()=>{ const i=document.getElementById('codeIn'); if(i) i.focus(); },100);
 }
 async function _connect(){
@@ -348,7 +350,7 @@ async function boot(){
     if(winner==='slow'){
       setBase(); started=true; Object.keys(BASE).forEach(k=>late.add(k)); status='wait';
       job.then(()=>{ status='ok'; setStatus('ok'); if(Q.size) flush(); }).catch(()=>{ status='err'; setStatus('err'); });
-    } else if(winner==='err'){ status='err'; setTimeout(()=>window.toast&&toast('⚠️ ភ្ជាប់ Cloud មិនបាន — កំពុងប្រើទិន្នន័យចុងក្រោយក្នុងម៉ាស៊ីននេះ'),1500); }
+    } else if(winner==='err'){ status='err'; setTimeout(()=>(typeof toast==='function')&&toast('⚠️ ភ្ជាប់ Cloud មិនបាន — កំពុងប្រើទិន្នន័យចុងក្រោយក្នុងម៉ាស៊ីននេះ'),1500); }
     else status='ok';
     loader(false);
   }

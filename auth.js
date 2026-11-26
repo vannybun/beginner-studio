@@ -92,7 +92,7 @@ function gate(){
   if(!A.users.some(u=>u.role==='admin')) setupScreen(); else loginScreen();
   return false;
 }
-function shell(inner){ return `<div class="au-bg"><i></i><i></i><i></i></div><div class="au-card">${inner}</div><div class="au-foot">Beginner English Studio • 🔐 គណនីរក្សាទុកក្នុងកុំព្យូទ័រនេះ</div>`; }
+function shell(inner){ return `<div class="au-bg"><i></i><i></i><i></i></div><div class="au-card">${inner}</div><div class="au-foot"><div>គ្រប់គ្រងការបង្កើតដោយ៖ <b>លោក ប៊ុន វណ្ណនី</b></div><div class="au-contact">📞 ទំនាក់ទំនង Telegram៖ <a href="https://t.me/bunvanny" target="_blank" rel="noopener">0967943637</a> ឬ <a href="https://t.me/bunvanny" target="_blank" rel="noopener">@bunvanny</a></div></div>`; }
 function setupScreen(){
   $a().innerHTML = shell(`<div class="au-logo">🛡️</div><h1>ចាប់ផ្តើមប្រើប្រាស់ជាលើកដំបូង</h1><p class="km">បង្កើតគណនី <b>Admin</b> (អ្នកគ្រប់គ្រងប្រព័ន្ធ) — អាចបង្កើតគណនីគ្រូ និងសិស្សនៅពេលក្រោយ</p>
     <label>ឈ្មោះពេញ<input id="auN" value="" placeholder="ឧ. លោកគ្រូ ពៅ"></label>
@@ -121,7 +121,7 @@ function loginScreen(tab){
   if(LS.tab==='student'){
     if(!A.users.some(u=>u.role==='student'&&!u.disabled)) body=`<div class="au-empty">🎓 មិនទាន់មានគណនីសិស្សទេ<br><small>សូមឱ្យគ្រូបង្កើតគណនីសិស្ស</small></div>`;
     else if(!LS.stu){
-      body=`<p class="km au-hint">📱 ស្កេន <b>QR</b> លើកាតរបស់អ្នក ដើម្បីចូលភ្លាម — ឬវាយ Username</p>
+      body=`${window.QRScan?`<button class="au-scan" onclick="QRScan.open()"><span>📷</span><div><b>ស្កេន QR លើកាត</b><small>ចូលភ្លាម មិនចាំបាច់វាយ</small></div></button><div class="au-or"><span>ឬវាយ Username</span></div>`:'<p class="km au-hint">📱 ស្កេន <b>QR</b> លើកាតរបស់អ្នក — ឬវាយ Username</p>'}
         <label>Username (មាននៅលើកាត)<input id="auSU" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ឧ. keng.ratana" value="${esc(LS.prefill||'')}" onkeydown="if(event.key==='Enter')Auth._stuFind()"></label>
         <div class="au-err" id="auErr"></div><button class="au-btn" onclick="Auth._stuFind()">បន្ទាប់ ›</button>`;
     } else {
@@ -132,14 +132,14 @@ function loginScreen(tab){
         <div class="au-pad">${[1,2,3,4,5,6,7,8,9,'⌫',0,'✓'].map(k=>`<button onclick="Auth._pin('${k}')">${k}</button>`).join('')}</div>`;
     }
   } else {
-    body=`<label>ឈ្មោះអ្នកប្រើ (Username)<input id="auU" autocomplete="off" autofocus value="${esc(LS.prefill||'')}"></label>
+    body=`${window.QRScan&&LS.tab!=='admin'?`<button class="au-scan sm" onclick="QRScan.open()"><span>📷</span><b>ស្កេន QR របស់គ្រូ</b></button><div class="au-or"><span>ឬ</span></div>`:''}<label>ឈ្មោះអ្នកប្រើ (Username)<input id="auU" autocomplete="off" value="${esc(LS.prefill||'')}"></label>
       <label>ពាក្យសម្ងាត់<input id="auP" type="password" onkeydown="if(event.key==='Enter')Auth._login()"></label>
       <label class="au-keep"><input type="checkbox" id="auKeep" ${localStorage.getItem('bs-keep-pref')?'checked':''}> ចងចាំការចូល (ឧបករណ៍ផ្ទាល់ខ្លួនប៉ុណ្ណោះ)</label>
       <div class="au-err" id="auErr"></div><button class="au-btn" onclick="Auth._login()">🔓 ចូលប្រព័ន្ធ</button>
       ${LS.tab==='admin'?`<a class="au-link" href="#" onclick="Auth._recover();return false">ភ្លេចពាក្យសម្ងាត់ Admin?</a>`:''}
       ${LS.tab==='teacher'?`<p class="note" style="margin-top:10px">គ្មានគណនី? សូមស្នើ Admin បង្កើតគណនីគ្រូឱ្យ</p>`:''}`;
   }
-  $a().innerHTML = shell(`<div class="au-logo">📚</div><h1>Beginner English Studio</h1>${tabs}<div class="au-body">${body}</div>${LS.tab!=='admin'?`<a class="au-link au-adm" href="#" onclick="Auth._tab('admin');return false">🛡️ Admin</a>`:''}`);
+  $a().innerHTML = shell(`<div class="au-logo">📚</div><h1>Beginner Class</h1>${tabs}<div class="au-body">${body}</div>${LS.tab!=='admin'?`<a class="au-link au-adm" href="#" onclick="Auth._tab('admin');return false">🛡️ Admin</a>`:''}`);
   const f=$('#auU')||$('#auSU'); if(f) setTimeout(()=>{ (LS.prefill&&$('#auP')?$('#auP'):f).focus(); },50);
 }
 async function _login(){
