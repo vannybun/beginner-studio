@@ -204,10 +204,11 @@ const ANIMAL_KM=['កូនមាន់','ឆ្មា','ឆ្កែ','ទន�
 const PASS=80;
 function secsDone(n){ return ((S.sec||{})[n]||[]).length; }
 function lessonDone(n){ return secsDone(n)>=LESSONS[n].sections.length; }
-function unitPassed(n){ return lessonDone(n) && (S.quiz[n]||0)>=PASS; }
+function lvl(n){ return (S.level||{})[n]; }
+function unitPassed(n){ return lessonDone(n) && (lvl(n)||0)>=PASS; }
 function unitOpen(n){ return PREVIEW() || n===1 || unitPassed(n-1); }
 function secOpen(n,i){ return PREVIEW() || i===0 || ((S.sec||{})[n]||[]).includes(i-1); }
-function stars(n){ return (lessonDone(n)?1:0) + ((S.quiz[n]||0)>=PASS?1:0) + ((S.quiz[n]||0)>=100?1:0); }
+function stars(n){ return (lessonDone(n)?1:0) + ((lvl(n)||0)>=PASS?1:0) + ((lvl(n)||0)>=95?1:0); }
 function mapHtml(){
   const cur=nextUnit(), W=360, rowH=132;
   const pts=UNITS.map((u,i)=>({x:[70,180,290,180][i%4], y:70+i*rowH}));
@@ -226,7 +227,7 @@ function mapHtml(){
 function renderStuUnits(){ setUnitColors(nextUnit());
   const done=UNITS.filter(u=>unitPassed(u.n)).length;
   $('#main').innerHTML=`<div class="stu-head"><h2>🗺 ផែនទីរៀន</h2><span class="map-prog">🏅 ${done}/14</span></div>
-    ${PREVIEW()?'<div class="pv-note">👀 Mode គ្រូមើលជាសិស្ស — គ្រប់មេរៀនបើកទាំងអស់ (សិស្សពិតត្រូវរៀនឆ្លងតាមលំដាប់)</div>':`<p class="map-tip">រៀនគ្រប់ផ្នែក ✅ ហើយធ្វើលំហាត់បាន ${PASS}% ឡើងទៅ ដើម្បីដោះសោមេរៀនបន្ទាប់ 🔓</p>`}
+    ${PREVIEW()?'<div class="pv-note">👀 Mode គ្រូមើលជាសិស្ស — គ្រប់មេរៀនបើកទាំងអស់ (សិស្សពិតត្រូវរៀនឆ្លងតាមលំដាប់)</div>':`<p class="map-tip">រៀនគ្រប់ផ្នែក ✅ ហើយធ្វើ 🏁 លំហាត់ឆ្លងកម្រិត បាន ${PASS}% ឡើងទៅ ដើម្បីដោះសោមេរៀនបន្ទាប់ 🔓</p>`}
     ${mapHtml()}`;
   const m=document.querySelector('.map'); if(m) setTimeout(()=>window.scrollTo({top:Math.max(0,m.offsetTop+(+m.dataset.cury)-window.innerHeight/2),behavior:'smooth'}),250);
 }
@@ -251,16 +252,16 @@ function renderStuUnit(u, tabs){
     </div>
     <div class="tabs su-tabs">${tabs.map(t=>`<button class="${t[0]===view.tab?'on':''}" onclick="go('unit',${u.n},'${t[0]}')">${t[1]}</button>`).join('')}</div>
     <div id="tab"></div>`;
-  if(view.tab==='practice' && !PREVIEW() && !lessonDone(u.n)){ $('#tab').innerHTML=passBanner(u)+`<div class="stu-empty"><div style="font-size:54px">🔒</div><b>តេស្តឆ្លងវគ្គនៅចាក់សោ</b><p>រៀនផ្នែកទាំងអស់ក្នុង 📖 មេរៀន ឱ្យចប់សិន (${secsDone(u.n)}/${LESSONS[u.n].sections.length})</p><button class="btn teal" onclick="go('unit',${u.n},'lesson')">📖 ទៅរៀន</button></div>`; return; }
+  if(view.tab==='practice' && !PREVIEW() && !lessonDone(u.n)){ $('#tab').innerHTML=passBanner(u)+`<div class="stu-empty"><div style="font-size:54px">🔒</div><b>លំហាត់នៅចាក់សោ</b><p>រៀនផ្នែកទាំងអស់ក្នុង 📖 មេរៀន ឱ្យចប់សិន (${secsDone(u.n)}/${LESSONS[u.n].sections.length})</p><button class="btn teal" onclick="go('unit',${u.n},'lesson')">📖 ទៅរៀន</button></div>`; return; }
   ({lesson:tabLesson, vocab:tabVocab, grammar:tabGrammar, practice:tabPractice, listen:tabListen})[view.tab](u);
 }
 let openSec=null;
 function passBanner(u){
-  const n=u.n, L=LESSONS[n].sections.length, d=secsDone(n), q=S.quiz[n], pass=unitPassed(n);
+  const n=u.n, L=LESSONS[n].sections.length, d=secsDone(n), q=lvl(n), pass=unitPassed(n);
   if(pass) return `<div class="pass-b ok"><span>🏆</span><div><b>បានឆ្លង Unit ${n}!</b><small>${n<14?`Unit ${n+1} បានដោះសោ ${ANIMALS[n]}`:'អ្នកបញ្ចប់គ្រប់មេរៀនហើយ 🎉'}</small></div>${n<14?`<button class="btn sun sm" onclick="go('unit',${n+1},'lesson')">Unit ${n+1} ›</button>`:''}</div>`;
   return `<div class="pass-b"><span>${ANIMALS[n-1]}</span><div><b>ដើម្បីឆ្លង Unit ${n}</b>
-    <small class="${d>=L?'y':''}">${d>=L?'✅':'⬜'} ១. រៀនគ្រប់ផ្នែក (${d}/${L})</small><small class="${(q||0)>=PASS?'y':''}">${(q||0)>=PASS?'✅':'⬜'} ២. ធ្វើលំហាត់បាន ${PASS}%+ (ល្អបំផុត ${q!=null?q+'%':'—'})</small></div>
-    ${d>=L?`<button class="btn sun sm" onclick="go('unit',${n},'practice')">✍️ ធ្វើតេស្ត</button>`:''}</div>`;
+    <small class="${d>=L?'y':''}">${d>=L?'✅':'⬜'} ១. រៀនគ្រប់ផ្នែក (${d}/${L})</small><small class="${(q||0)>=PASS?'y':''}">${(q||0)>=PASS?'✅':'⬜'} ២. 🏁 លំហាត់ឆ្លងកម្រិត បាន ${PASS}%+ (ល្អបំផុត ${q!=null?q+'%':'—'})</small></div>
+    ${d>=L?`<button class="btn sun sm" onclick="startLevel(${n})">🏁 ធ្វើ</button>`:''}</div>`;
 }
 function tabLesson(u){
   const L=LESSONS[u.n], dn=secDone(u.n); if(openSec==null || openSec.n!==u.n){ const f=L.sections.findIndex((x,i)=>!dn.includes(i)); openSec={n:u.n, i:f<0?0:f}; }
@@ -284,7 +285,7 @@ function tabLesson(u){
     return `<div class="les-s ${on?'on':''} ${ok?'ok':''}" style="--kc:${K.c||'var(--c1)'}"><button class="les-h" onclick="Stu.open(${u.n},${si})"><span class="ki">${ok?'✓':K.i}</span><span class="tt"><small>${K.km}</small><b>${esc(s.t)}</b>${on?'':`<em>${s.km}</em>`}</span><span class="ch">${on?'−':'+'}</span></button>${on?`<div class="les-b"><p class="km les-d">${s.km}</p>${body}</div>`:''}</div>`; }).join('')}</div>`;
 }
 window.Stu = {
-  unit:n=>{ if(!unitOpen(n)) return toast(`🔒 ឆ្លង Unit ${n-1} ជាមុនសិន (រៀនគ្រប់ផ្នែក + លំហាត់ ${PASS}%)`); go('unit',n,'lesson'); },
+  unit:n=>{ if(!unitOpen(n)) return toast(`🔒 ឆ្លង Unit ${n-1} ជាមុនសិន (រៀនគ្រប់ផ្នែក + 🏁 លំហាត់ឆ្លងកម្រិត ${PASS}%)`); go('unit',n,'lesson'); },
   open:(n,i)=>{ openSec={n, i: openSec&&openSec.n===n&&openSec.i===i ? -1 : i}; tabLesson(U(n)); const el=document.querySelectorAll('.les-s')[i]; if(el&&openSec.i===i) el.scrollIntoView({behavior:'smooth',block:'start'}); },
   done:(n,i)=>{ const d=secDone(n); if(!d.includes(i)){ d.push(i); track('lesson', n+':'+i); save(); } const L=LESSONS[n]; const nx=L.sections.findIndex((x,k)=>k>i&&!d.includes(k)); if(nx>=0){ openSec={n,i:nx}; renderUnit(); setTimeout(()=>{ const el=document.querySelectorAll('.les-s')[nx]; el&&el.scrollIntoView({behavior:'smooth',block:'start'}); },60); } else { toast('🎉 រៀនគ្រប់ផ្នែកហើយ! តោះធ្វើលំហាត់'); renderUnit(); } }
 };
@@ -479,10 +480,13 @@ const QTYPES = [
   ['listen','🎧','ស្តាប់ហើយជ្រើស','ស្តាប់សំឡេង ជ្រើសពាក្យដែលឮ'],
   ['spell','⌨️','សរសេរប្រកប','មើលខ្មែរ/ស្តាប់ ហើយវាយពាក្យ']
 ];
+function levelSize(n){ const u=U(n), w=vocabPool(u).length, g=(window.Exam&&Exam.grammarPool)?Exam.grammarPool(n).length:u.quiz.length, sc=LESSONS[n].sections.length; return Math.max(25, Math.min(100, Math.round(w*0.9 + g + sc))); }
 function tabPractice(u){
-  $('#tab').innerHTML = `<div class="panel"><h3 class="sec">✍️ ជ្រើសប្រភេទលំហាត់</h3>
+  const N=levelSize(u.n), b=lvl(u.n), ok=(b||0)>=PASS;
+  $('#tab').innerHTML = `${stuUI()?passBanner(u):''}<button class="lvl-card ${ok?'ok':''}" onclick="startLevel(${u.n})"><span class="i">${ok?'🏆':'🏁'}</span><span class="t"><b>លំហាត់ឆ្លងកម្រិត Unit ${u.n}</b><small>${N} សំណួរ • ពាក្យ វេយ្យាករណ៍ ស្តាប់ សរសេរ • ត្រូវបាន ${PASS}% ដើម្បីឆ្លង</small>${b!=null?`<em>ល្អបំផុត ${b}% ${ok?'✅ ឆ្លង':''}</em>`:''}</span><span class="go">▶</span></button>
+  <div class="panel"><h3 class="sec">✍️ លំហាត់អនុវត្ត — ជ្រើសប្រភេទណាក៏បាន</h3>
     <div class="qtypes">${QTYPES.map((q,i)=>`<button class="qtype" style="animation-delay:${i*0.05}s" onclick="startQuiz(${u.n},'${q[0]}')"><div class="qi">${q[1]}</div><b>${q[2]}</b><span>${q[3]}</span></button>`).join('')}</div>
-    <p class="note" style="margin-top:14px">ពិន្ទុល្អបំផុត៖ ${S.quiz[u.n]!=null?S.quiz[u.n]+'%':'—'} • ទទួលបាន 80% ឡើងទៅ = ឆ្លងមេរៀន ✅</p></div>`;
+    <p class="note" style="margin-top:14px">ពិន្ទុល្អបំផុត៖ ${S.quiz[u.n]!=null?S.quiz[u.n]+'%':'—'} • លំហាត់ទាំងនេះសម្រាប់ហាត់ — ឆ្លងមេរៀនដោយ 🏁 លំហាត់ឆ្លងកម្រិត</p></div>`;
 }
 let Q=null;
 function vocabPool(u){ return u.vocab.filter(v=>!/[→↔\/]/.test(v[0])); }
@@ -498,6 +502,25 @@ function makeVocabQ(u,type){
   if(type==='listen') return {kind:'mc',prompt:'',audio:v[0],opts:shuffle([v,...others]).map(x=>x[0]),ans:v[0]};
   return {kind:'spell',prompt:v[2],kmPrompt:true,audio:v[0],ans:v[0]};
 }
+function startLevel(n){
+  const u=U(n), N=levelSize(n), pool=shuffle(vocabPool(u)), qs=[];
+  const gp=shuffle(((window.Exam&&Exam.grammarPool)?Exam.grammarPool(n):u.quiz.map(q=>({q:q.q,o:q.o,a:q.a})))).filter((q,i,a)=>a.findIndex(x=>x.q===q.q&&x.o[x.a]===q.o[q.a])===i);
+  const nG=Math.min(gp.length, Math.round(N*0.3));
+  gp.slice(0,nG).forEach(q=>{ const opts=shuffle(q.o); qs.push({kind:'mc',prompt:q.q,opts,ans:q.o[q.a]}); });
+  const types=['en2km','km2en','listen','spell','pic'], others=v=>shuffle(pool.filter(x=>x!==v)).slice(0,3);
+  let k=0, round=0;
+  while(qs.length<N && round<4){ for(const v of pool){ if(qs.length>=N) break; let t=types[(k++ + round)%types.length]; const e=emojiFor(u,v[0]); if(t==='pic' && (!e || /^\d+$/.test(e))) t='en2km';
+      const o=others(v);
+      qs.push(t==='en2km'?{kind:'mc',prompt:v[0],speakIt:v[0],opts:shuffle([v,...o]).map(x=>x[2]),ans:v[2],kmOpts:true}
+        :t==='km2en'?{kind:'mc',prompt:v[2],kmPrompt:true,opts:shuffle([v,...o]).map(x=>x[0]),ans:v[0]}
+        :t==='pic'?{kind:'mc',emoji:e,prompt:'',opts:shuffle([v,...o]).map(x=>x[0]),ans:v[0]}
+        :t==='listen'?{kind:'mc',prompt:'',audio:v[0],opts:shuffle([v,...o]).map(x=>x[0]),ans:v[0]}
+        :{kind:'spell',prompt:v[2],kmPrompt:true,audio:v[0],ans:v[0]}); }
+    round++; }
+  Q={n,type:'level',qs:shuffle(qs).slice(0,N),i:0,score:0,locked:false};
+  if(view.name!=='unit'||view.tab!=='practice'){ view={name:'unit',unit:n,tab:'practice'}; renderUnit(); }
+  showQ();
+}
 function startQuiz(n,type){
   const u=U(n); let qs=[];
   const gq = q=>({kind:'mc',prompt:q.q,opts:shuffle(q.o),ans:q.o[q.a]});
@@ -510,7 +533,7 @@ function startQuiz(n,type){
 }
 function showQ(){
   const q=Q.qs[Q.i];
-  const top=`<div class="qtop"><span>សំណួរ ${Q.i+1} / ${Q.qs.length}</span><span>⭐ ${Q.score}</span><button class="btn ghost sm" onclick="tabPractice(U(${Q.n}))">✕ ចេញ</button></div><div class="bar"><i style="width:${Q.i/Q.qs.length*100}%"></i></div>`;
+  const top=`${Q.type==='level'?`<div class="lvl-top">🏁 លំហាត់ឆ្លងកម្រិត Unit ${Q.n} • ត្រូវ ${Q.score}/${Q.i} ${Q.i?`(${Math.round(Q.score/Q.i*100)}%)`:''}</div>`:''}<div class="qtop"><span>សំណួរ ${Q.i+1} / ${Q.qs.length}</span><span>⭐ ${Q.score}</span><button class="btn ghost sm" onclick="${Q.type==='level'?`if(confirm('ចេញពីលំហាត់ឆ្លងកម្រិត? ពិន្ទុនឹងមិនរក្សាទុកទេ'))`:''}tabPractice(U(${Q.n}))">✕ ចេញ</button></div><div class="bar"><i style="width:${Q.i/Q.qs.length*100}%"></i></div>`;
   let body='';
   if(q.kind==='mc'){
     const pr = q.emoji ? `<span class="em">${q.emoji}</span>What's this?` : q.audio ? `<button class="btn teal xl" onclick="speak(${attr(q.audio)})">🔊 ស្តាប់ម្តងទៀត</button>` : esc(q.prompt).replace('___','<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>');
@@ -548,12 +571,13 @@ function feedback(ok,ans){
 }
 function finishQ(){
   const pct=Math.round(Q.score/Q.qs.length*100);
-  const wasPass=stuUI()&&unitPassed(Q.n); track('quiz', Q.n+':'+pct); if(S.quiz[Q.n]==null || pct>S.quiz[Q.n]){ S.quiz[Q.n]=pct; } save();
+  const LV=Q.type==='level', wasPass=stuUI()&&unitPassed(Q.n); track(LV?'level':'quiz', Q.n+':'+pct);
+  if(LV){ S.level=S.level||{}; if(S.level[Q.n]==null || pct>S.level[Q.n]) S.level[Q.n]=pct; } else if(S.quiz[Q.n]==null || pct>S.quiz[Q.n]){ S.quiz[Q.n]=pct; } save();
   if(stuUI() && !wasPass && unitPassed(Q.n)){ setTimeout(()=>{ if(window.pageConfetti) pageConfetti(); toast(`🏆 បានឆ្លង Unit ${Q.n}!`+(Q.n<14?` Unit ${Q.n+1} ${ANIMALS[Q.n]} បានដោះសោ`:'')); },600); }
   $('#tab').innerHTML=`<div class="panel result"><div style="font-size:64px" class="pop">${pct>=80?'🏆':pct>=50?'👍':'💪'}</div><div class="score">${pct}%</div>
-    <p class="km" style="font-size:18px">${pct>=80?'🎉 អស្ចារ្យ! អ្នកឆ្លងមេរៀននេះហើយ':pct>=50?'👍 ល្អ! ហាត់បន្ថែមបន្តិចទៀត':'💪 កុំបោះបង់! រៀនវាក្យសព្ទម្តងទៀត ហើយសាកល្បងម្តងទៀត'}</p>
+    <p class="km" style="font-size:18px">${pct>=80?(LV?'🎉 អស្ចារ្យ! អ្នកឆ្លងកម្រិត Unit '+Q.n+' ហើយ':'🎉 អស្ចារ្យ! ពូកែណាស់'):pct>=50?'👍 ល្អ! ហាត់បន្ថែមបន្តិចទៀត':'💪 កុំបោះបង់! រៀនវាក្យសព្ទម្តងទៀត ហើយសាកល្បងម្តងទៀត'}</p>
     <p class="note">ត្រូវ ${Q.score} / ${Q.qs.length}</p>
-    <div class="row" style="justify-content:center"><button class="btn teal" onclick="startQuiz(${Q.n},'${Q.type}')">↺ ធ្វើម្តងទៀត</button><button class="btn ghost" onclick="tabPractice(U(${Q.n}))">ប្រភេទផ្សេង</button>${Q.n<14?`<button class="btn sun" onclick="go('unit',${Q.n+1})">Unit ${Q.n+1} ▶</button>`:''}</div></div>`;
+    <div class="row" style="justify-content:center"><button class="btn teal" onclick="${LV?`startLevel(${Q.n})`:`startQuiz(${Q.n},'${Q.type}')`}">↺ ធ្វើម្តងទៀត</button><button class="btn ghost" onclick="tabPractice(U(${Q.n}))">ប្រភេទផ្សេង</button>${Q.n<14?`<button class="btn sun" onclick="go('unit',${Q.n+1})">Unit ${Q.n+1} ▶</button>`:''}</div></div>`;
   if(pct>=80) pageConfetti();
 }
 let actx;

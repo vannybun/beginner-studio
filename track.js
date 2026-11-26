@@ -36,7 +36,7 @@ function collect(c, s){
     const parts=[kw/U.vocab.length, tt.length?tl/tt.length:0, (quiz[U.n]||0)/100, exBest[U.n]?exBest[U.n].pct/100:0];
     return {n:U.n, kw, kt:U.vocab.length, tl, tt:tt.length, quiz:quiz[U.n], exam:exBest[U.n]?exBest[U.n].pct:null, secs:(A.u||{})[U.n]||0, done:Math.round(parts.reduce((a,b)=>a+b,0)/4*100)}; });
   const events=[...(A.ev||[]).map(e=>({ts:e[0],t:e[1],d:e[2]})), ...ex.map(r=>({ts:r.ts,t:'exam',d:`${r.n}:${r.pct}`})), ...logins.map(ts=>({ts,t:'login',d:''}))].sort((a,b)=>b.ts-a.ts);
-  return {s, u, P, A, words, tracks:Object.keys(listened).length, quizAvg, passed:qv.filter(v=>v>=80).length, exAvg, exams:ex.length, s7, d7, s30, d30, sAll, last, status, monthPct, month, units, events, logins:logins.length};
+  return {s, u, P, A, words, tracks:Object.keys(listened).length, quizAvg, passed:Object.values(P.level||{}).filter(v=>v>=80).length, exAvg, exams:ex.length, s7, d7, s30, d30, sAll, last, status, monthPct, month, units, events, logins:logins.length};
 }
 
 /* ---------- small visuals ---------- */

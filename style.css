@@ -1255,3 +1255,9 @@ body.stu-ui [onclick*="Deck.open"],body.stu-ui.is-web [onclick*="P.load"],body.s
 /* teacher preview of the student app: keep header tools + mode switch */
 body.stu-ui.preview .modes{display:flex!important}
 body.stu-ui.preview header .brand small{display:block}
+/* 🏁 level test */
+.lvl-card{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border-radius:22px;padding:16px 18px;margin-bottom:14px;color:#fff;background:linear-gradient(135deg,#f59e0b,#ef4444);box-shadow:0 14px 28px -14px #ef4444;animation:auIn .4s;transition:.15s}
+.lvl-card:active{transform:scale(.98)}.lvl-card.ok{background:linear-gradient(135deg,#16a34a,#0d9488);box-shadow:0 14px 28px -14px #16a34a}
+.lvl-card .i{font-size:44px}.lvl-card .t{flex:1}.lvl-card b{display:block;font:700 18px var(--kh)}.lvl-card small{display:block;font:13px var(--kh);opacity:.92}.lvl-card em{display:inline-block;margin-top:6px;font:normal 600 13px var(--kh);background:rgba(255,255,255,.22);border-radius:999px;padding:2px 10px}
+.lvl-card .go{width:44px;height:44px;border-radius:50%;background:#fff;color:#ef4444;display:grid;place-items:center;font-size:18px}.lvl-card.ok .go{color:#16a34a}
+.lvl-top{background:linear-gradient(135deg,#fef3c7,#fee2e2);border-radius:12px;padding:8px 12px;margin-bottom:10px;font:600 14px var(--kh);color:#9a3412;text-align:center}
