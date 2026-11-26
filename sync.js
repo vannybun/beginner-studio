@@ -7,6 +7,7 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
+const VER='2026.11.26b';
 const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam-font.js','exam.js','track.js','auth.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
@@ -201,8 +202,8 @@ function _local(){ _set.call(localStorage,CK+'-local','1'); location.reload(); }
 
 /* ---------- boot ---------- */
 function loader(on){ let l=document.getElementById('bootL'); if(on&&!l){ l=document.createElement('div'); l.id='bootL'; l.innerHTML='<div class="spin"></div><p>☁️ កំពុងទាញទិន្នន័យថ្នាក់…</p>'; document.body.appendChild(l); } if(!on&&l) l.remove(); }
-function loadScripts(){ FILES.forEach(f=>{ const s=document.createElement('script'); s.src=f; s.async=false; document.body.appendChild(s); });
-  const last=document.querySelector('script[src="app.js"]'); last.addEventListener('load',afterApp); }
+function loadScripts(){ FILES.forEach(f=>{ const s=document.createElement('script'); s.src=f+'?v='+VER; s.async=false; document.body.appendChild(s); });
+  const last=document.querySelector('script[src^="app.js"]'); last.addEventListener('load',afterApp); }
 function afterApp(){
   const tl=document.querySelector('header .tools'); if(!tl) return;
   const r=window.Auth&&Auth.role(); if(!r) return;
