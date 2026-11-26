@@ -42,6 +42,7 @@ function walletInfo(){ const M=S.money||{}, mk=dayKey().slice(0,7);
     <h4>📜 ប្រវត្តិថ្មីៗ</h4><div class="wal-log">${(M.log||[]).slice(0,20).map(([t,a,w])=>`<div><span>${esc(w)}<small>${new Date(t).toLocaleDateString('en-GB')}</small></span><b>+${RIEL(a)}</b></div>`).join('')||'<p class="note">មិនទាន់មាន — ចាប់ផ្តើមរៀនដើម្បីរកលុយ!</p>'}</div>
     <button class="btn teal" style="width:100%;justify-content:center;margin-top:10px" onclick="closeModal();Rank.set('rich');go('rank')">💰 មើលអ្នកមានប្រចាំថ្នាក់</button></div>`); }
 window.earn=earn; window.RIEL=RIEL;
+window.Me={ profile:()=>S.profile||null, setProfile:p=>{ S.profile=p; save(); } };
 /* ---------- 📊 activity tracking (students only) ---------- */
 const TRACKING = window.Auth && Auth.role && Auth.role()==='student';
 const dayKey = (t=new Date()) => t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
@@ -208,8 +209,8 @@ function renderStuHome(){
   if(window.Rank) Rank.push(S);
   const me=Auth.user(), nu=nextUnit(), u=U(nu), st=UNIT_STYLE[nu]; setUnitColors(nu);
   const totalW=UNITS.reduce((a,x)=>a+x.vocab.length,0), knownW=UNITS.reduce((a,x)=>a+knownCount(x.n),0), passed=Object.values(S.quiz).filter(v=>v>=80).length;
-  const ox=stuOpenExams(), wp=WS.pending(), first=(me.name||'').trim().split(/\s+/).slice(-1)[0];
-  $('#main').innerHTML=`<div class="stu-hi"><div>${Auth.avatarFor(me,52)}</div><div><small>សួស្តី 👋</small><b>${esc(first)}</b></div>${(()=>{const cc=(window.Class&&Auth.user().classId)?(JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===Auth.user().classId):null, b=courseOf(cc); return `<span class="stu-book">${b.icon} ${esc(b.name)}</span>`;})()}</div>
+  const ox=stuOpenExams(), wp=WS.pending(), first=(((S.profile||{}).name)||me.name||'').trim().split(/\s+/).slice(-1)[0];
+  $('#main').innerHTML=`<div class="stu-hi"><div>${Auth.avatarFor(me,52)}</div><div><small>សួស្តី 👋</small><b>${esc(first)}</b><button class="stu-edit" onclick="Auth.editMe()">✏️ កែព័ត៌មាន</button></div>${(()=>{const cc=(window.Class&&Auth.user().classId)?(JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===Auth.user().classId):null, b=courseOf(cc); return `<span class="stu-book">${b.icon} ${esc(b.name)}</span>`;})()}</div>
     <button class="stu-wallet" onclick="walletInfo()"><span>💰</span><div><small>លុយរបស់ខ្ញុំ</small><b>${RIEL((S.money||{}).t)}</b></div><em>ខែនេះ +${RIEL(((S.money||{}).m||{})[dayKey().slice(0,7)])}</em><i>›</i></button>
     ${window.Cloud&&Cloud.installBanner?Cloud.installBanner():''}
     ${ox.length||wp?`<button class="stu-alert" onclick="go('exams')"><span>📝</span><div><b>${[ox.length?`ប្រឡង ${ox.length}`:'',wp?`សន្លឹកលំហាត់ ${wp}`:''].filter(Boolean).join(' • ')} កំពុងរង់ចាំ</b><small>ចុចដើម្បីធ្វើ</small></div><i>›</i></button>`:''}

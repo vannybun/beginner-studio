@@ -29,6 +29,14 @@ function vis(){ return window.Auth&&Auth.user() ? C.classes.filter(c=>Auth.canSe
 function cls(){ const V=vis(); let c=V.find(x=>x.id===C.cur); if(!c && V.length){ c=V[0]; C.cur=c.id; } return c; }
 function newClass(name){ const c={id:uid(), name:name||'ថ្នាក់ Beginner A', book:'hw5-beg', cols:JSON.parse(JSON.stringify(DEFAULT_COLS)), students:[], scores:{}, groups:null}; if(window.Auth&&Auth.role()==='teacher') c.owner=Auth.user().id; C.classes.push(c); C.cur=c.id; saveC(); return c; }
 
+/* ✏️ students edit their own profile (kept in their progress key) → staff devices copy newer ones into the roster */
+function applyProfiles(){ if(!window.Auth||!Auth.user()||Auth.role()==='student') return 0; let n=0;
+  Auth.data().users.filter(u=>u.role==='student').forEach(u=>{ let P=null; try{ P=JSON.parse(localStorage.getItem('beginner-studio-v1:'+u.id)||'null'); }catch(e){} const p=P&&P.profile; if(!p||!p.ts) return;
+    const c=C.classes.find(x=>x.id===u.classId), s=c&&c.students.find(x=>x.id===u.studentId); if(!s||(s.pts||0)>=p.ts) return;
+    if(p.name) s.name=p.name; s.latin=p.latin||''; if(p.dob) s.dob=p.dob; s.phone=p.phone||''; s.photo=p.photo||''; s.pts=p.ts; n++; Auth._rename(c.id,s.id,s.name); });
+  if(n) saveC(); return n; }
+setTimeout(()=>{ const n=applyProfiles(); if(n) toast(`✏️ សិស្ស ${n} នាក់បានកែព័ត៌មានខ្លួនឯង — បានធ្វើបច្ចុប្បន្នភាពបញ្ជីថ្នាក់`); }, 2500);
+
 /* ---------- helpers ---------- */
 function avatar(s, size){
   size=size||44;
@@ -69,7 +77,7 @@ function resizePhoto(file, cb){
 /* ---------- main render ---------- */
 const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['unlock','🔓 បើកមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
 let tab='students';
-function render(t){
+function render(t){ applyProfiles();
   if(t) tab=t;
   setUnitColors(3);
   let c=cls();

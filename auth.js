@@ -40,7 +40,8 @@ const CK='beginner-studio-class-v1';
 function classData(){ try{ return JSON.parse(localStorage.getItem(CK)||'{}'); }catch(e){ return {}; } }
 function studentOf(u){ const D=classData(); const c=(D.classes||[]).find(x=>x.id===u.classId); return c ? {c, s:c.students.find(x=>x.id===u.studentId)} : {}; }
 function canSeeClass(c){ const u=user(); if(!u) return false; if(u.role==='admin') return true; if(u.role==='teacher') return c.owner===u.id || (u.classIds||[]).includes(c.id); if(u.role==='student') return c.id===u.classId; return false; }
-function avatarFor(u, size){ size=size||36; let photo=u.photo; if(u.role==='student'){ const {s}=studentOf(u); if(s&&s.photo) photo=s.photo; }
+function myProf(u){ const me=user(); if(!me||u.id!==me.id||u.role!=="student") return null; try{ return (JSON.parse(localStorage.getItem('beginner-studio-v1:'+u.id)||'{}').profile)||null; }catch(e){ return null; } }
+function avatarFor(u, size){ size=size||36; let photo=u.photo; if(u.role==='student'){ const {s}=studentOf(u); if(s&&s.photo) photo=s.photo; const p=myProf(u); if(p&&p.photo) photo=p.photo; }
   if(photo) return `<img class="au-av" src="${photo}" style="width:${size}px;height:${size}px">`;
   const ini=(u.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('');
   return `<span class="au-av ini" style="width:${size}px;height:${size}px;font-size:${size*.38}px;background:${ROLE[u.role].c}">${esc(ini)}</span>`; }
@@ -53,16 +54,36 @@ function qrLinkOf(u){
 }
 function qrObj(text){ try{ const q=qrcode(0,'M'); q.addData(text); q.make(); return q; }catch(e){ return null; } }
 function qrSvgOf(text, size){ const q=qrObj(text); if(!q) return ''; const n=q.getModuleCount(); let d=''; for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(q.isDark(r,c)) d+=`M${c+2} ${r+2}h1v1h-1z`; return `<svg viewBox="0 0 ${n+4} ${n+4}" width="${size||200}" height="${size||200}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="${d}" fill="#0f172a"/></svg>`; }
-function qrPng(u){
-  const L=qrLinkOf(u), q=qrObj(L); if(!q) return;
+function qrPng(u){ const cv=qrCanvas(u); if(!cv) return; const a=document.createElement('a'); a.href=cv.toDataURL('image/png'); a.download=`QR - ${u.name} (${u.username}).png`; a.click(); }
+function qrCanvas(u){
+  const L=qrLinkOf(u), q=qrObj(L); if(!q) return null;
   const n=q.getModuleCount(), cell=Math.floor(520/(n+4)), W=600, H=820, cv=document.createElement('canvas'); cv.width=W; cv.height=H; const x=cv.getContext('2d');
   const g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,ROLE[u.role].c); g.addColorStop(1,'#0f172a'); x.fillStyle=g; x.fillRect(0,0,W,H);
   x.fillStyle='#fff'; x.beginPath(); x.roundRect(30,140,540,560,28); x.fill();
   const off=(W-cell*(n+4))/2; x.fillStyle='#0f172a'; for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(q.isDark(r,c)) x.fillRect(off+(c+2)*cell, 150+(r+2)*cell, cell, cell);
   x.fillStyle='#fff'; x.textAlign='center'; x.font='bold 30px "Kantumruy Pro",sans-serif'; x.fillText('📚 Beginner Class',W/2,60);
   x.font='26px "Kantumruy Pro",sans-serif'; x.fillText(ROLE[u.role].i+' '+ROLE[u.role].km,W/2,110);
-  x.font='bold 36px "Kantumruy Pro",sans-serif'; x.fillText(u.name||'',W/2,760); x.font='22px sans-serif'; x.fillText('@'+u.username,W/2,800);
-  const a=document.createElement('a'); a.href=cv.toDataURL('image/png'); a.download=`QR - ${u.name} (${u.username}).png`; a.click();
+  x.font='bold 36px "Kantumruy Pro",sans-serif'; x.fillText(u.name||'',W/2,760); x.font='22px sans-serif'; x.fillText('@'+u.username+(u.role==='student'&&studentOf(u).c?'  •  '+studentOf(u).c.name:''),W/2,800);
+  return cv;
+}
+/* 🗜 tiny ZIP writer (stored, no compression) — PNGs are already compressed */
+const CRC=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return b=>{ let c=0xFFFFFFFF; for(let i=0;i<b.length;i++) c=t[(c^b[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }; })();
+function makeZip(files){ const enc=new TextEncoder(), parts=[], cen=[]; let off=0;
+  files.forEach(f=>{ const nm=enc.encode(f.name), d=f.data, crc=CRC(d), h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true); h.setUint16(4,20,true); h.setUint16(6,0x0800,true); h.setUint32(14,crc,true); h.setUint32(18,d.length,true); h.setUint32(22,d.length,true); h.setUint16(26,nm.length,true);
+    parts.push(new Uint8Array(h.buffer),nm,d);
+    const c=new DataView(new ArrayBuffer(46)); c.setUint32(0,0x02014b50,true); c.setUint16(4,20,true); c.setUint16(6,20,true); c.setUint16(8,0x0800,true); c.setUint32(16,crc,true); c.setUint32(20,d.length,true); c.setUint32(24,d.length,true); c.setUint16(28,nm.length,true); c.setUint32(42,off,true);
+    cen.push(new Uint8Array(c.buffer),nm); off+=30+nm.length+d.length; });
+  const cs=cen.reduce((a,x)=>a+x.length,0), e=new DataView(new ArrayBuffer(22)); e.setUint32(0,0x06054b50,true); e.setUint16(8,files.length,true); e.setUint16(10,files.length,true); e.setUint32(12,cs,true); e.setUint32(16,off,true);
+  return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:'application/zip'}); }
+async function qrZip(cid){
+  const D=classData(), c=(D.classes||[]).find(x=>x.id===cid), us=A.users.filter(u=>u.role==='student'&&u.classId===cid&&!u.disabled);
+  if(!us.length) return toast('មិនទាន់មានគណនីសិស្សទេ'); if(!(window.Cloud&&Cloud.code&&Cloud.code())) return toast('⚠️ ត្រូវភ្ជាប់ Cloud (លេខកូដសាលា) ជាមុនសិន ដើម្បីបង្កើត QR');
+  toast(`⏳ កំពុងបង្កើតរូប QR ${us.length} …`); try{ await document.fonts.ready; }catch(e){}
+  const files=[], clean=t=>String(t).replace(/[\\/:*?"<>|]/g,'_');
+  for(const [i,u] of us.entries()){ const cv=qrCanvas(u); if(!cv) continue; const b=await new Promise(r=>cv.toBlob(r,'image/png')); files.push({name:`${String(i+1).padStart(2,'0')} - ${clean(u.name)} (${clean(u.username)}).png`, data:new Uint8Array(await b.arrayBuffer())}); }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(makeZip(files)); a.download=`QR សិស្ស - ${clean(c?c.name:'class')}.zip`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast(`✅ បានទាញយករូប QR ${files.length} (ZIP)`);
 }
 function showQR(id){
   const u=A.users.find(x=>x.id===id), L=qrLinkOf(u);
@@ -188,7 +209,8 @@ function applyRole(){
 }
 function headerChip(){
   const u=user(); if(!u) return '';
-  return `<button class="au-chip" onclick="Auth.menu()">${avatarFor(u,30)}<span><b>${esc(u.name)}</b><i>${ROLE[u.role].i} ${ROLE[u.role].km}</i></span></button>`;
+  const pf=myProf(u);
+  return `<button class="au-chip" onclick="Auth.menu()">${avatarFor(u,30)}<span><b>${esc((pf&&pf.name)||u.name)}</b><i>${ROLE[u.role].i} ${ROLE[u.role].km}</i></span></button>`;
 }
 function menu(){
   const u=user();
@@ -198,6 +220,7 @@ function menu(){
       ${u.role==='admin'?`<button onclick="closeModal();go('admin',null,'users')">🛡️ ផ្ទាំង Admin</button>`:''}
       ${u.role!=='student'?`<button onclick="Auth.changePass()">🔑 ប្តូរពាក្យសម្ងាត់</button>`:`<button onclick="Auth.changePass()">🔢 ប្តូរ PIN</button>`}
       ${window.Cloud&&Cloud.install&&!Cloud.standalone()?`<button onclick="closeModal();Cloud.install()">📲 ដំឡើងកម្មវិធីលើទូរស័ព្ទ</button>`:''}
+      ${u.role==='student'?`<button onclick="closeModal();Auth.editMe()">✏️ កែព័ត៌មាន និងរូបថតរបស់ខ្ញុំ</button>`:''}
       <button onclick="closeModal();Auth.about()">ℹ️ អំពីកម្មវិធី • ទំនាក់ទំនង</button>
       <button class="out" onclick="Auth.logout()">🚪 ចាកចេញ</button>
     </div>`);
@@ -257,7 +280,7 @@ async function resetPin(id){ const u=A.users.find(x=>x.id===id); const pin=randP
 function accountsPanel(c){
   const {us, missing}=studentAccounts(c);
   return `<div class="panel"><div class="row" style="justify-content:space-between"><h3 class="sec" style="margin:0">🔑 គណនីសិស្ស — ${esc(c.name)} (${us.filter(u=>!u.disabled).length}/${c.students.length})</h3>
-    <div class="row">${missing.length?`<button class="btn teal" onclick="Auth._mk('${c.id}')">＋ បង្កើតគណនីសិស្ស ${missing.length} នាក់</button>`:''}${us.length?`<button class="btn sun" onclick="Auth.printCards('${c.id}')">🖨 បោះពុម្ពកាតចូលប្រព័ន្ធ</button>`:''}</div></div>${(()=>{ const CC=window.Cloud&&Cloud.code&&Cloud.code(); if(!CC) return ''; const JL=Cloud.roleLink('student',CC);
+    <div class="row">${missing.length?`<button class="btn teal" onclick="Auth._mk('${c.id}')">＋ បង្កើតគណនីសិស្ស ${missing.length} នាក់</button>`:''}${us.length?`<button class="btn ghost" onclick="Auth.qrZip('${c.id}')">🖼 ទាញយក QR ទាំងអស់ (រូបភាព)</button><button class="btn sun" onclick="Auth.printCards('${c.id}')">🖨 បោះពុម្ពកាតចូលប្រព័ន្ធ</button>`:''}</div></div>${(()=>{ const CC=window.Cloud&&Cloud.code&&Cloud.code(); if(!CC) return ''; const JL=Cloud.roleLink('student',CC);
       return `<div class="au-code"><div><small>🔢 លេខកូដចូលថ្នាក់ (ប្រើដូចគ្នាគ្រប់ថ្នាក់ក្នុងសាលា)</small><b>${CC}</b><span class="note">សិស្សវាយកូដនេះ ឬស្កេន QR → វាយ Username → PIN ។ គណនីរបស់សិស្សកំណត់ថាគាត់នៅថ្នាក់ណា។</span></div>
         <div class="row"><button class="btn ghost sm" onclick="navigator.clipboard&&navigator.clipboard.writeText('${CC}');toast('📋 បានចម្លងកូដ ${CC}')">📋 ចម្លងកូដ</button><button class="btn ghost sm" onclick="navigator.clipboard&&navigator.clipboard.writeText('${JL}');toast('🔗 បានចម្លងតំណសិស្ស')">🔗 ចម្លងតំណ</button></div></div>`; })()}
     <p class="note">សិស្សចូលប្រព័ន្ធដោយស្កេន QR លើកាត ឬវាយ Username រួច PIN ៤ ខ្ទង់ (សិស្សមើលមិនឃើញឈ្មោះសិស្សផ្សេងទេ)។ វឌ្ឍនភាព និងប្រឡងរបស់សិស្សម្នាក់ៗត្រូវបានរក្សាទុកដាច់ដោយឡែក។</p>
@@ -359,7 +382,28 @@ function about(){
     <p class="note" style="margin-top:12px">📘 សៀវភៅបច្ចុប្បន្ន៖ ${(window.COURSES||[]).map(c=>c.name).join(' • ')}<br>ពុម្ពអក្សរ Kantumruy Pro (SIL OFL) • QR: qrcode-generator (MIT), jsQR (Apache-2.0)</p></div>`);
 }
 function moveStudent(oc,os,nc,ns){ const u=A.users.find(x=>x.role==='student'&&x.classId===oc&&x.studentId===os); if(!u) return false; u.classId=nc; u.studentId=ns; saveA(); return true; }
-window.Auth = { moveStudent, about, _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
+/* ✏️ student edits own profile → stored in own progress key (student can sync it); staff devices copy it into the class roster */
+let EP=null;
+function editMe(){ const u=user(); if(!u||u.role!=='student') return; const {s}=studentOf(u), p=myProf(u)||{};
+  EP={photo:p.photo||(s&&s.photo)||''};
+  const v=k=>esc(p[k]!=null?p[k]:(s&&s[k])||'');
+  modal(`<h3>✏️ ព័ត៌មានរបស់ខ្ញុំ</h3>
+    <div class="me-ed"><div class="me-ph" id="meP">${EP.photo?`<img src="${EP.photo}">`:`<span>${esc((u.name||'?')[0])}</span>`}</div>
+      <div class="row" style="justify-content:center;gap:6px"><label class="btn teal sm">📷 ថតរូប<input type="file" accept="image/*" capture="user" hidden onchange="Auth._mePic(this.files[0])"></label><label class="btn ghost sm">🖼 រើសរូប<input type="file" accept="image/*" hidden onchange="Auth._mePic(this.files[0])"></label>${EP.photo?`<button class="btn ghost sm" onclick="Auth._mePic(null)">🗑</button>`:''}</div></div>
+    <label class="me-f"><span>ឈ្មោះ (ខ្មែរ)</span><input id="meN" class="cl-in" value="${v('name')}" maxlength="40"></label>
+    <label class="me-f"><span>ឈ្មោះឡាតាំង</span><input id="meL" class="cl-in" value="${v('latin')}" maxlength="40" placeholder="ឧ. SOK Dara"></label>
+    <label class="me-f"><span>ថ្ងៃខែឆ្នាំកំណើត</span><input id="meD" class="cl-in" type="date" value="${v('dob')}"></label>
+    <label class="me-f"><span>លេខទូរស័ព្ទ</span><input id="meT" class="cl-in" type="tel" value="${v('phone')}" maxlength="20" placeholder="ឧ. 012 345 678"></label>
+    <p class="note">ព័ត៌មាននេះនឹងផ្ញើទៅគ្រូរបស់អ្នក ហើយបង្ហាញក្នុងបញ្ជីថ្នាក់។</p>
+    <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" onclick="Auth._meSave()">💾 រក្សាទុក</button></div>`);
+}
+function mePic(f){ if(!f){ EP.photo=''; document.getElementById('meP').innerHTML='<span>?</span>'; return; }
+  const fr=new FileReader(); fr.onload=()=>{ const im=new Image(); im.onload=()=>{ const sz=Math.min(im.width,im.height), cv=document.createElement('canvas'); cv.width=cv.height=240; cv.getContext('2d').drawImage(im,(im.width-sz)/2,(im.height-sz)/2*0.6,sz,sz,0,0,240,240); EP.photo=cv.toDataURL('image/jpeg',0.8); document.getElementById('meP').innerHTML=`<img src="${EP.photo}">`; }; im.src=fr.result; }; fr.readAsDataURL(f); }
+function meSave(){ const u=user(), n=document.getElementById('meN').value.trim(); if(n.length<2) return toast('សូមបញ្ចូលឈ្មោះ');
+  const prof={name:n, latin:document.getElementById('meL').value.trim(), dob:document.getElementById('meD').value, phone:document.getElementById('meT').value.trim(), photo:EP.photo, ts:Date.now()};
+  if(window.Me) Me.setProfile(prof); closeModal(); const ch=document.querySelector('.au-chip'); if(ch) ch.outerHTML=headerChip(); toast('✅ បានរក្សាទុក — គ្រូនឹងឃើញព័ត៌មានថ្មី'); if(window.render) render(); }
+function renameUser(cid,sid,name){ const u=A.users.find(x=>x.role==='student'&&x.classId===cid&&x.studentId===sid); if(u&&name&&u.name!==name){ u.name=name; saveA(); } }
+window.Auth = { qrZip, editMe, _mePic:mePic, _meSave:meSave, _rename:renameUser, moveStudent, about, _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
   editUser, delUser, backupAll, restoreAll, log, data:()=>A,
   _setup, _loginAs, _login, _pin, _recover, _doRecover, _cp, _mk, _rp, _tg, _own, _saveUser,
   _tab:r=>{ LS.tab=r; LS.stu=null; LS.pin=''; loginScreen(); }, _cls:id=>{ LS.cls=id; loginScreen(); }, _stu:id=>{ LS.stu=id; LS.pin=''; loginScreen(); } };
