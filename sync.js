@@ -7,7 +7,7 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.26b';
+const VER='2026.11.26c';
 const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam-font.js','exam.js','track.js','auth.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
@@ -31,7 +31,7 @@ let F=null, db=null, status='off';
 async function initFB(){
   const [app, auth, fs] = await Promise.all([import(FB+'firebase-app.js'), import(FB+'firebase-auth.js'), import(FB+'firebase-firestore.js')]);
   const a=app.initializeApp(cloud.cfg); F={...fs}; db=fs.getFirestore(a);
-  const au=auth.getAuth(a); if(!au.currentUser) await auth.signInAnonymously(au);
+  const au=auth.getAuth(a); try{ await au.authStateReady(); }catch(e){} if(!au.currentUser) await auth.signInAnonymously(au);
 }
 const col = () => F.collection(db,'schools',cloud.school,'kv');
 const dref = id => F.doc(db,'schools',cloud.school,'kv',id);
@@ -156,10 +156,38 @@ async function restoreMedia(){
 
 /* ---------- admin panel section ---------- */
 function qrSvg(text, cell){ try{ const q=qrcode(0,'L'); q.addData(text); q.make(); return q.createSvgTag({cellSize:cell||4, margin:2}); }catch(e){ return ''; } }
+/* ---------- 🔢 class code (short code → school) ---------- */
+const ALPH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789', META=PREFIX+'-meta';
+const DEF = () => window.BS_DEFAULT_CFG || null;
+function meta(){ try{ return JSON.parse(_get.call(localStorage,META)||'{}'); }catch(e){ return {}; } }
+async function makeCode(){
+  if(!db) return toast('⚠️ ត្រូវភ្ជាប់ Cloud ជាមុនសិន');
+  for(let i=0;i<8;i++){
+    const code=Array.from(crypto.getRandomValues(new Uint8Array(6)),x=>ALPH[x%ALPH.length]).join('');
+    try{ const b=F.writeBatch(db); b.set(F.doc(db,'codes',code),{s:cloud.school, c:cloud.cfg, ts:Date.now()}); await b.commit();
+      const m=meta(); m.code=code; localStorage.setItem(META, J(m)); toast('✅ កូដថ្នាក់៖ '+code); if(window.render) render(); return code; }
+    catch(e){ if(i===7) toast('❌ បង្កើតកូដមិនបាន៖ '+(e.code||e.message)); }
+  }
+}
+async function _code(){
+  const inp=document.getElementById('codeIn'), err=document.getElementById('joinErr'), v=inp.value.trim();
+  const m=v.match(/join=([\w-]+)/); if(m){ location.hash='join='+m[1]; location.reload(); return; }
+  const code=v.toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/O/g,'0').replace(/I/g,'1');
+  if(code.length!==6){ err.textContent='សូមវាយលេខកូដ ៦ តួ'; return; }
+  const cfg=DEF(); if(!cfg){ err.textContent='Website មិនទាន់កំណត់ Firebase'; return; }
+  err.textContent='⏳ កំពុងស្វែងរកថ្នាក់…'; cloud={cfg, school:null};
+  try{ await initFB(); const d=await F.getDoc(F.doc(db,'codes',code));
+    if(!d.exists()){ cloud=null; err.textContent='❌ រកមិនឃើញកូដ «'+code+'» — សូមពិនិត្យម្តងទៀត'; return; }
+    const v2=d.data(); cloud={cfg:v2.c||cfg, school:v2.s}; _set.call(localStorage,CK,J(cloud)); location.reload(); }
+  catch(x){ cloud=null; err.textContent='❌ ភ្ជាប់មិនបាន ('+(x.code||x.message)+') — សូមពិនិត្យអ៊ីនធឺណិត'; }
+}
+function codeKey(e){ const i=e.target; const p=i.selectionStart; i.value=i.value.toUpperCase().replace(/[^A-Z0-9#:/=._-]/g,''); if(e.key==='Enter') _code(); }
+
 function panel(){
   if(!cloud) return `<div class="panel"><h3 class="sec">☁️ Cloud (Firebase)</h3><p class="km">ម៉ាស៊ីននេះមិនទាន់ភ្ជាប់ Cloud ទេ — ទិន្នន័យនៅក្នុង Browser នេះតែប៉ុណ្ណោះ។</p><button class="btn teal" onclick="Cloud.setupScreen()">☁️ ភ្ជាប់ Firebase</button></div><div style="height:14px"></div>`;
   const L=joinLink();
   return `<div class="panel"><div class="row" style="justify-content:space-between"><h3 class="sec" style="margin:0">☁️ Cloud (Firebase) — ${status==='err'?'⚠️ គ្មានអ៊ីនធឺណិត':'✅ ភ្ជាប់រួច'}</h3><span class="note">Project: <b>${esc(cloud.cfg.projectId)}</b></span></div>
+    ${(()=>{ const c=meta().code; return `<div class="cloud-code"><div><span>🔢 កូដថ្នាក់ (ប្រាប់សិស្សឱ្យវាយ)</span><b>${c?c.split('').join(' '):'—'}</b><small>${location.host+location.pathname}</small></div>${c?'':`<button class="btn sun" onclick="Cloud.makeCode()">＋ បង្កើតកូដថ្នាក់</button>`}</div>`; })()}
     <div class="cloud-join"><div class="qr">${qrSvg(L,4)}</div><div>
       <p class="km"><b>🔗 តំណចូលថ្នាក់</b> — ផ្ញើឱ្យសិស្ស និងគ្រូតាម Telegram ឬឱ្យស្កេន QR។ បើកម្តងគត់ ទូរស័ព្ទនឹងចងចាំ។</p>
       <textarea class="cl-in" readonly style="width:100%;height:70px;font-size:11px" onclick="this.select()">${esc(L)}</textarea>
@@ -172,16 +200,18 @@ function disconnect(){ if(!confirm('ផ្តាច់ Cloud ពីម៉ាស�
 function setupScreen(force){
   const el=document.createElement('div'); el.id='auth'; document.body.appendChild(el); document.body.classList.add('auth-open');
   el.innerHTML=`<div class="au-bg"><i></i><i></i><i></i></div><div class="au-card"><div class="au-logo">☁️</div><h1>Beginner English Studio</h1>
-    <div class="cloud-opt"><b>🎓 សិស្ស / 👩‍🏫 គ្រូ / 🛡️ Admin</b><p class="km">ស្កេន <b>QR</b> ឬបើក <b>តំណចូលថ្នាក់</b> — ឬបិទភ្ជាប់តំណនៅទីនេះ៖</p>
-      <input id="joinIn" class="cl-in" style="width:100%;box-sizing:border-box" placeholder="https://…#join=…" onkeydown="if(event.key==='Enter')Cloud._join()"><div class="au-err" id="joinErr"></div>
-      <button class="au-btn" onclick="Cloud._join()">🔗 ចូលថ្នាក់</button></div>
+    <div class="cloud-opt code"><b>🔢 វាយលេខកូដថ្នាក់</b><p class="km">លេខកូដ ៦ តួ ដែលគ្រូប្រាប់ (ឧ. <b>K7M2QX</b>)</p>
+      <input id="codeIn" class="code-in" maxlength="600" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="••••••" onkeyup="Cloud._codeKey(event)"><div class="au-err" id="joinErr"></div>
+      <button class="au-btn" onclick="Cloud._code()">🚀 ចូលថ្នាក់</button>
+      <p class="note" style="text-align:center;margin-top:8px">ឬស្កេន QR លើកាតចូលប្រព័ន្ធ</p></div>
     <details class="cloud-opt" ${force?'open':''}><summary><b>⚙️ បង្កើតសាលាថ្មីលើ Firebase (Admin តែលើកដំបូងប៉ុណ្ណោះ)</b></summary>
       <p class="km" style="text-align:left;color:#b45309">⚠️ បើសាលាបានភ្ជាប់រួចហើយ កុំប្រើផ្នែកនេះ — វានឹងបង្កើតសាលាថ្មីទទេ។ សូមប្រើតំណចូលថ្នាក់ខាងលើវិញ។</p>
       <p class="km" style="text-align:left">បិទភ្ជាប់ <code>firebaseConfig</code> ពី Firebase Console (Project settings → Your apps → Web)</p>
       <textarea id="cfgIn" class="cl-in" style="width:100%;height:140px;font:12px monospace" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;...&quot;,&#10;  authDomain: &quot;...&quot;,&#10;  projectId: &quot;...&quot;,&#10;  appId: &quot;...&quot;&#10;};"></textarea>
       <div class="au-err" id="auErr"></div><button class="au-btn" onclick="Cloud._connect()">☁️ ភ្ជាប់ ហើយបង្កើតសាលាថ្មី</button></details>
-    <button class="au-link" style="background:none" onclick="Cloud._local()">💻 ប្រើក្នុង Browser នេះតែប៉ុណ្ណោះ (គ្មាន Cloud)</button></div>
+    <button class="au-link" style="background:none;display:block;margin:8px auto 0" onclick="Cloud._local()">💻 ប្រើក្នុង Browser នេះតែប៉ុណ្ណោះ (គ្មាន Cloud)</button></div>
     <div class="au-foot">Beginner English Studio • 🌐 Website</div>`;
+  setTimeout(()=>{ const i=document.getElementById('codeIn'); if(i) i.focus(); },100);
 }
 async function _connect(){
   const t=document.getElementById('cfgIn').value, cfg={};
@@ -226,6 +256,6 @@ async function boot(){
   }
   loadScripts();
 }
-window.Cloud={ flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _join, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
+window.Cloud={ makeCode, _code, _codeKey:codeKey, code:()=>meta().code, flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _join, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
 boot();
 })();

@@ -223,7 +223,7 @@ function printCards(cid){
   const D=classData(), c=(D.classes||[]).find(x=>x.id===cid), us=A.users.filter(u=>u.role==='student'&&u.classId===cid&&!u.disabled);
   document.getElementById('printArea').innerHTML = `<div class="au-cards">${us.map(u=>{ const s=c.students.find(x=>x.id===u.studentId)||{};
     return `<div class="au-pc"><div class="h">📚 Beginner English Studio</div><div class="b">${s.photo?`<img src="${s.photo}">`:`<div class="ph">${esc((u.name||'?')[0])}</div>`}<div><b>${esc(u.name)}</b>${s.latin?`<small>${esc(s.latin)}</small>`:''}<span>🏫 ${esc(c.name)}</span></div></div>
-      <div class="pinrow"><span>Username: <b>${esc(u.username)}</b></span><span>PIN: <b>${u.pin||'— (ស្នើគ្រូ)'}</b></span></div><div class="t">ចុចរូបខ្លួនឯង → វាយ PIN • កុំប្រាប់អ្នកដទៃ 🤫</div>${QR?`<div class="qrw">${QR}<span>📱 ស្កេនដើម្បីចូលថ្នាក់លើទូរស័ព្ទ</span></div>`:''}</div>`; }).join('')}</div>`;
+      <div class="pinrow"><span>Username: <b>${esc(u.username)}</b></span><span>PIN: <b>${u.pin||'— (ស្នើគ្រូ)'}</b></span></div><div class="t">ចុចរូបខ្លួនឯង → វាយ PIN • កុំប្រាប់អ្នកដទៃ 🤫</div>${QR?`<div class="qrw">${QR}<span>📱 ស្កេនដើម្បីចូលថ្នាក់${Cloud.code&&Cloud.code()?`<br>ឬវាយកូដ <b class="code">${Cloud.code()}</b><br><small>${location.host+location.pathname}</small>`:''}</span></div>`:''}</div>`; }).join('')}</div>`;
   const st=document.createElement('style'); st.textContent='@page{size:A4 portrait;margin:10mm}'; document.head.appendChild(st);
   document.body.classList.add('printing-cert'); const done=()=>{ st.remove(); document.body.classList.remove('printing-cert'); window.removeEventListener('afterprint',done); };
   window.addEventListener('afterprint',done); setTimeout(()=>{ window.print(); setTimeout(done,1500); },150);
