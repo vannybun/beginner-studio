@@ -67,7 +67,7 @@ function resizePhoto(file, cb){
 }
 
 /* ---------- main render ---------- */
-const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['unlock','🔓 បើកមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
+const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['unlock','🔓 បើកមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
 let tab='students';
 function render(t){
   if(t) tab=t;
@@ -92,7 +92,7 @@ function render(t){
     return;
   }
   $('#main').innerHTML = head + `<div class="tabs">${TABS.map(x=>`<button class="${x[0]===tab?'on':''}" onclick="Class.render('${x[0]}')">${x[1]}</button>`).join('')}</div><div id="clTab"></div>`;
-  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
+  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, rank:c=>{ Rank._target(()=>Class.render('rank')); Rank.page($('#clTab'), c, {staff:true, head:false}); }, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
 }
 
 /* ---------- 🔓 teacher unlocks units (for students who studied before) ---------- */
@@ -315,7 +315,7 @@ function tResults(c){
   const pod = [top[1],top[0],top[2]];
   const dist = GRADES.map(g=>({g, n:has.filter(r=>grade(r.p)===g).length}));
   $('#clTab').innerHTML = `<div class="panel">
-    ${monthBar(c, `<button class="btn sm" style="background:linear-gradient(135deg,#b45309,#f59e0b)" onclick="Class.certs()">🏆 ប័ណ្ណសរសើរ</button><button class="btn ghost sm" onclick="Class.csv()">📊 Excel (CSV)</button><button class="btn sun sm" onclick="Class.printMonth()">🖨 បោះពុម្ព / PDF</button>`)}
+    ${monthBar(c, `${shareBtn(c,'res')}<button class="btn sm" style="background:linear-gradient(135deg,#b45309,#f59e0b)" onclick="Class.certs()">🏆 ប័ណ្ណសរសើរ</button><button class="btn ghost sm" onclick="Class.csv()">📊 Excel (CSV)</button><button class="btn sun sm" onclick="Class.printMonth()">🖨 បោះពុម្ព / PDF</button>`)}
     ${!has.length?`<div class="cl-empty"><div style="font-size:54px">📭</div><p class="km">មិនទាន់មានពិន្ទុសម្រាប់${monthName(m)}</p><button class="btn teal" onclick="Class.render('scores')">✏️ ដាក់ពិន្ទុ</button></div>`:`
     <div class="cl-res">
       <div class="cl-podium">${pod.map((r,k)=>r?`<div class="pd p${[2,1,3][k]}" style="animation-delay:${[.3,.1,.5][k]}s">
@@ -541,7 +541,7 @@ function tYear(c){
   const ranked=rows.filter(r=>r.avg!=null).sort((a,b)=>b.avg-a.avg); ranked.forEach((r,i)=>r.rank=i>0&&Math.abs(ranked[i-1].avg-r.avg)<1e-9?ranked[i-1].rank:i+1);
   rows.sort((a,b)=>(a.rank||999)-(b.rank||999));
   $('#clTab').innerHTML=`<div class="panel"><div class="row" style="justify-content:space-between"><h3 class="sec" style="margin:0">📈 សរុបពិន្ទុគ្រប់ខែ (${ms.length} ខែ) — មធ្យមភាគ %</h3>
-    <div class="row"><button class="btn ghost sm" onclick="Class.csvYear()">📊 Excel (CSV)</button><button class="btn sun sm" onclick="Class.printYear()">🖨 បោះពុម្ព</button></div></div>
+    <div class="row">${shareBtn(c,'year')}<button class="btn ghost sm" onclick="Class.csvYear()">📊 Excel (CSV)</button><button class="btn sun sm" onclick="Class.printYear()">🖨 បោះពុម្ព</button></div></div>
     <div class="cl-tablewrap"><table class="cl-table res" id="clYear"><thead><tr><th>ចំណាត់ថ្នាក់</th><th></th><th class="l">ឈ្មោះ</th>${ms.map(m=>`<th>${monthName(m).replace('ខែ','')}</th>`).join('')}<th>មធ្យមភាគ</th><th>និទ្ទេស</th><th>វឌ្ឍនភាព</th></tr></thead>
     <tbody>${rows.map(r=>{ const g=r.avg==null?null:grade(r.avg); const pts=r.ps.map((p,i)=>p==null?null:[i,p]).filter(Boolean);
       const spark = pts.length>1 ? `<svg viewBox="0 0 ${(ms.length-1)*20+4} 34" class="spark"><polyline points="${pts.map(q=>`${q[0]*20+2},${32-q[1]*0.3}`).join(' ')}"/>${pts.map(q=>`<circle cx="${q[0]*20+2}" cy="${32-q[1]*0.3}" r="2.5"/>`).join('')}</svg>` : '';
@@ -699,7 +699,9 @@ function restore(f){ if(!f||(window.Auth&&Auth.role()!=='admin')) return; f.text
 function studentsForPicker(){ const c=cls(); return c?c.students:[]; }
 
 function setBook(id){ const c=cls(); if(!c) return; c.book=id; saveC(); render(); }
-window.Class = { unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
+function share(k){ const c=cls(); if(!c) return; c.share=c.share||{}; c.share[k]=!c.share[k]; saveC(); toast(c.share[k]?'👁 សិស្សអាចមើលបានហើយ':'🔒 បានបិទមិនឱ្យសិស្សមើល'); }
+function shareBtn(c,k){ const on=c.share&&c.share[k]; return `<button class="btn sm ${on?'teal':'ghost'}" onclick="Class._share('${k}');Class.render('${k==='res'?'results':'year'}')" title="សិស្សមើលឃើញក្នុង 🏆 ចំណាត់ថ្នាក់">${on?'👁 សិស្សកំពុងមើលបាន':'🙈 សិស្សមើលមិនឃើញ'}</button>`; }
+window.Class = { _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
   editStudent, pickPhoto, noPhoto:()=>{ editPhoto=null; $('#clPrev').innerHTML=avatar({name:$('#clN').value},140); }, cam, camStop, saveStudent, photo, delStudent, bulk, impMode, impFile, impPreview, impApply, infoTable, infoSave, template, age:ageOf, sortStudents,
   setMonth:m=>{ if(m){ C.month=m; saveC(); render(); } }, cols, colAdd, colSave, csv, printMonth, csvYear, printYear, certs, certSet, certGrade, certPrint, sigFile, sigDraw, sigScale, sigReset, certShow:i=>{ ctSel=i; certRefresh(); },
   gset:(k,v)=>{ G[k]=v; tGroups(cls()); }, gabs:id=>{ G.absent.has(id)?G.absent.delete(id):G.absent.add(id); tGroups(cls()); }, makeGroups, groupsToScore, groupsFull, printGroups,

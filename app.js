@@ -31,6 +31,7 @@ if(TRACKING) setInterval(()=>{
   const deckOn=document.getElementById('deck')&&document.getElementById('deck').classList.contains('show');
   const un = deckOn&&window.Deck&&Deck.D ? Deck.D.n : (typeof view!=='undefined'&&view.name==='unit' ? view.unit : null);
   if(un) a.u[un]=(a.u[un]||0)+15;
+  if(window.Rank) setTimeout(()=>Rank.push(S),0);
   if(++hbN%4===0) save();
 }, 15000);
 addEventListener('visibilitychange',()=>{ if(TRACKING && document.visibilityState==='hidden') save(); });
@@ -144,8 +145,9 @@ function render(){
   if(!ROLE_NOW) return;
   if(ROLE_NOW==='student' && (view.name==='class'||view.name==='admin')) view.name='home';
   if(ROLE_NOW!=='admin' && view.name==='admin') view.name='home';
-  if(stuUI() && view.name!=='class' && view.name!=='admin'){ stuNav(); if(view.name==='home') return renderStuHome(); if(view.name==='units') return renderStuUnits(); if(view.name==='exams') return PREVIEW()?renderPreviewTasks():Exam.studentPage(); if(view.name==='me' && PREVIEW()) return renderPreviewMe(); }
+  if(stuUI() && view.name!=='class' && view.name!=='admin'){ stuNav(); if(view.name==='home') return renderStuHome(); if(view.name==='units') return renderStuUnits(); if(view.name==='exams') return PREVIEW()?renderPreviewTasks():Exam.studentPage(); if(view.name==='me' && PREVIEW()) return renderPreviewMe(); if(view.name==='rank'){ if(PREVIEW()){ Rank._target(()=>render()); return Rank.page($('#main'), Class._cur(), {staff:true}); } return Rank.stuPage(); } }
   else { const n=document.getElementById('stuNav'); if(n) n.remove(); }
+  if(view.name==='rank'){ view={name:'class',unit:view.unit,tab:'rank'}; }
   view.name==='home' ? renderHome() : view.name==='class' ? Class.render(view.tab) : view.name==='me' ? Auth.renderMe() : view.name==='admin' ? Auth.renderAdmin(view.tab) : renderUnit(); }
 window.render = render;
 
@@ -169,7 +171,7 @@ const HERO_SVG = `<svg class="ill" viewBox="0 0 260 220" aria-hidden="true">
 </svg>`;
 
 /* ---------- 🎓 student (mobile-first) ---------- */
-const STU_NAV=[['home','🏠','ដើម'],['units','🗺','ផែនទី'],['exams','📝','កិច្ចការ'],['me','📊','ខ្ញុំ']];
+const STU_NAV=[['home','🏠','ដើម'],['units','🗺','ផែនទី'],['exams','📝','កិច្ចការ'],['rank','🏆','ចំណាត់ថ្នាក់'],['me','📊','ខ្ញុំ']];
 function stuNav(){
   let n=document.getElementById('stuNav'); if(!n){ n=document.createElement('nav'); n.id='stuNav'; document.body.appendChild(n); }
   const cur=view.name==='unit'?'units':view.name;
@@ -179,6 +181,7 @@ function stuOpenExams(){ const me=Auth.user(), X=(window.Exam&&Exam.data())||{};
 function unitPct(u){ const kp=knownCount(u.n)/u.vocab.length, sp=((S.sec||{})[u.n]||[]).length/LESSONS[u.n].sections.length, q=(S.quiz[u.n]||0)/100; return Math.round((kp+sp+q)/3*100); }
 function renderStuHome(){
   if(window.Cloud&&Cloud.refresh&&Date.now()-(renderStuHome.t||0)>15000){ renderStuHome.t=Date.now(); Promise.all([Cloud.refresh('beginner-studio-exams-v1'),Cloud.refresh(WS.key),Cloud.refresh('beginner-studio-class-v1')]).then(([a,b,c])=>{ if(a) Exam.reload(); if(b) WS.reload(); if(c) tUnlocked.c=null; if(a||b||c){ if(view.name==='home') render(); else stuNav(); } }).catch(()=>{}); }
+  if(window.Rank) Rank.push(S);
   const me=Auth.user(), nu=nextUnit(), u=U(nu), st=UNIT_STYLE[nu]; setUnitColors(nu);
   const totalW=UNITS.reduce((a,x)=>a+x.vocab.length,0), knownW=UNITS.reduce((a,x)=>a+knownCount(x.n),0), passed=Object.values(S.quiz).filter(v=>v>=80).length;
   const ox=stuOpenExams(), wp=WS.pending(), first=(me.name||'').trim().split(/\s+/).slice(-1)[0];
@@ -575,7 +578,7 @@ function feedback(ok,ans){
   beep(ok);
   setTimeout(()=>{ Q.i++; Q.i<Q.qs.length ? showQ() : finishQ(); }, ok?900:1900);
 }
-function finishQ(){
+function finishQ(){ setTimeout(()=>{ if(window.Rank) Rank.push(S,true); },300);
   const pct=Math.round(Q.score/Q.qs.length*100);
   const LV=Q.type==='level', wasPass=stuUI()&&unitPassed(Q.n); track(LV?'level':'quiz', Q.n+':'+pct);
   if(LV){ S.level=S.level||{}; if(S.level[Q.n]==null || pct>S.level[Q.n]) S.level[Q.n]=pct; } else if(S.quiz[Q.n]==null || pct>S.quiz[Q.n]){ S.quiz[Q.n]=pct; } save();
