@@ -1,3 +1,6 @@
+/* 📚 បញ្ជីសៀវភៅ (course registry) — ថ្ងៃក្រោយបន្ថែមសៀវភៅថ្មីនៅទីនេះ ហើយកំណត់ class.book ដើម្បីឱ្យសិស្សថ្នាក់នោះឃើញតែសៀវភៅនោះ */
+window.COURSES=[{id:'hw5-beg', name:'Headway 5th ed. Beginner', level:'Beginner', icon:'📘'}];
+window.courseOf=function(c){ return COURSES.find(x=>x.id===(c&&c.book))||COURSES[0]; };
 window.TRACKS=[
 {
 "id": "1.1",

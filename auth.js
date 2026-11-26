@@ -59,7 +59,7 @@ function qrPng(u){
   const g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,ROLE[u.role].c); g.addColorStop(1,'#0f172a'); x.fillStyle=g; x.fillRect(0,0,W,H);
   x.fillStyle='#fff'; x.beginPath(); x.roundRect(30,140,540,560,28); x.fill();
   const off=(W-cell*(n+4))/2; x.fillStyle='#0f172a'; for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(q.isDark(r,c)) x.fillRect(off+(c+2)*cell, 150+(r+2)*cell, cell, cell);
-  x.fillStyle='#fff'; x.textAlign='center'; x.font='bold 30px "Kantumruy Pro",sans-serif'; x.fillText('📚 Beginner English Studio',W/2,60);
+  x.fillStyle='#fff'; x.textAlign='center'; x.font='bold 30px "Kantumruy Pro",sans-serif'; x.fillText('📚 Beginner Class',W/2,60);
   x.font='26px "Kantumruy Pro",sans-serif'; x.fillText(ROLE[u.role].i+' '+ROLE[u.role].km,W/2,110);
   x.font='bold 36px "Kantumruy Pro",sans-serif'; x.fillText(u.name||'',W/2,760); x.font='22px sans-serif'; x.fillText('@'+u.username,W/2,800);
   const a=document.createElement('a'); a.href=cv.toDataURL('image/png'); a.download=`QR - ${u.name} (${u.username}).png`; a.click();
@@ -198,6 +198,7 @@ function menu(){
       ${u.role==='admin'?`<button onclick="closeModal();go('admin',null,'users')">🛡️ ផ្ទាំង Admin</button>`:''}
       ${u.role!=='student'?`<button onclick="Auth.changePass()">🔑 ប្តូរពាក្យសម្ងាត់</button>`:`<button onclick="Auth.changePass()">🔢 ប្តូរ PIN</button>`}
       ${window.Cloud&&Cloud.install&&!Cloud.standalone()?`<button onclick="closeModal();Cloud.install()">📲 ដំឡើងកម្មវិធីលើទូរស័ព្ទ</button>`:''}
+      <button onclick="closeModal();Auth.about()">ℹ️ អំពីកម្មវិធី • ទំនាក់ទំនង</button>
       <button class="out" onclick="Auth.logout()">🚪 ចាកចេញ</button>
     </div>`);
 }
@@ -270,7 +271,7 @@ function printCards(cid){
   const CC=window.Cloud&&Cloud.code&&Cloud.code(), JL=CC?Cloud.roleLink('student',CC):(window.Cloud&&Cloud.joinLink&&Cloud.joinLink()), QR=JL?Cloud.qrSvg(JL,2):'';
   const D=classData(), c=(D.classes||[]).find(x=>x.id===cid), us=A.users.filter(u=>u.role==='student'&&u.classId===cid&&!u.disabled);
   document.getElementById('printArea').innerHTML = `<div class="au-cards">${us.map(u=>{ const s=c.students.find(x=>x.id===u.studentId)||{};
-    return `<div class="au-pc"><div class="h">📚 Beginner English Studio</div><div class="b">${s.photo?`<img src="${s.photo}">`:`<div class="ph">${esc((u.name||'?')[0])}</div>`}<div><b>${esc(u.name)}</b>${s.latin?`<small>${esc(s.latin)}</small>`:''}<span>🏫 ${esc(c.name)}</span></div></div>
+    return `<div class="au-pc"><div class="h">📚 Beginner Class <small>• កម្មវិធីគ្រប់គ្រងថ្នាក់រៀន</small></div><div class="b">${s.photo?`<img src="${s.photo}">`:`<div class="ph">${esc((u.name||'?')[0])}</div>`}<div><b>${esc(u.name)}</b>${s.latin?`<small>${esc(s.latin)}</small>`:''}<span>🏫 ${esc(c.name)}</span></div></div>
       <div class="pinrow"><span>Username: <b>${esc(u.username)}</b></span><span>PIN: <b>${u.pin||'— (ស្នើគ្រូ)'}</b></span></div><div class="t">ស្កេន QR ឬវាយ Username → PIN • កុំប្រាប់អ្នកដទៃ 🤫</div>${(()=>{ const PL=qrLinkOf(u); return PL?`<div class="qrw">${qrSvgOf(PL,100)}<span>📱 <b>ស្កេន QR = ចូលភ្លាម</b><br>ឬបើក ${esc(location.host+location.pathname)}<br>វាយកូដថ្នាក់ <b class="code">${CC||''}</b></span></div>`:''; })()}</div>`; }).join('')}</div>`;
   const st=document.createElement('style'); st.textContent='@page{size:A4 portrait;margin:10mm}'; document.head.appendChild(st);
   document.body.classList.add('printing-cert'); const done=()=>{ st.remove(); document.body.classList.remove('printing-cert'); window.removeEventListener('afterprint',done); };
@@ -334,7 +335,7 @@ async function _saveUser(id, r){
 }
 function teacherInvite(u, pass){
   const code=window.Cloud&&Cloud.code&&Cloud.code(), L=(code&&qrLinkOf(u))||location.href.split(/[?#]/)[0];
-  const msg=`👩‍🏫 Beginner English Studio — គណនីគ្រូ\n\n🔗 តំណ៖ ${L}\n👤 Username៖ ${u.username}\n🔑 ពាក្យសម្ងាត់៖ ${pass||'(ស្នើ Admin)'}\n\nបើកតំណ → វាយ Username និងពាក្យសម្ងាត់ → ចូលប្រព័ន្ធ។ សូមប្តូរពាក្យសម្ងាត់ក្រោយចូលលើកដំបូង (ចុចឈ្មោះខាងស្តាំលើ → 🔑)។`;
+  const msg=`👩‍🏫 កម្មវិធីគ្រប់គ្រងថ្នាក់រៀន (Beginner Class) — គណនីគ្រូ\n\n🔗 តំណ៖ ${L}\n👤 Username៖ ${u.username}\n🔑 ពាក្យសម្ងាត់៖ ${pass||'(ស្នើ Admin)'}\n\nបើកតំណ → វាយ Username និងពាក្យសម្ងាត់ → ចូលប្រព័ន្ធ។ សូមប្តូរពាក្យសម្ងាត់ក្រោយចូលលើកដំបូង (ចុចឈ្មោះខាងស្តាំលើ → 🔑)។`;
   modal(`<h3>✉️ ផ្ញើព័ត៌មានចូលប្រព័ន្ធឱ្យ ${esc(u.name)}</h3>
     ${code&&window.Cloud?`<div style="display:flex;gap:16px;align-items:center;margin:8px 0"><div class="qr" style="width:140px">${qrSvgOf(L,140)}</div><div class="km">📱 គ្រូស្កេន QR នេះ ឬចុចតំណ → វាយ Username និងពាក្យសម្ងាត់</div></div>`:''}
     <textarea class="cl-in" style="width:100%;height:170px;box-sizing:border-box" readonly onclick="this.select()">${esc(msg)}</textarea>
@@ -348,7 +349,14 @@ function _own(cid, tid){ const D=classData(); const c=D.classes.find(x=>x.id===c
 function backupAll(){ const o={}; Object.keys(localStorage).filter(k=>k.startsWith('beginner-studio')).forEach(k=>o[k]=localStorage.getItem(k)); const b=new Blob([JSON.stringify({app:'beginner-studio',v:1,ts:Date.now(),data:o})],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`beginner-studio-FULL-backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); log('Backup ទាំងអស់'); }
 function restoreAll(f){ if(!f) return; f.text().then(t=>{ const d=JSON.parse(t); if(d.app!=='beginner-studio'||!d.data) throw 0; if(!confirm('ជំនួសទិន្នន័យទាំងអស់ដោយ Backup នេះ? (ត្រូវចូលប្រព័ន្ធម្តងទៀត)')) return; Object.keys(localStorage).filter(k=>k.startsWith('beginner-studio')).forEach(k=>localStorage.removeItem(k)); Object.entries(d.data).forEach(([k,v])=>localStorage.setItem(k,v)); dropSession(); reload(); }).catch(()=>toast('ឯកសារ Backup មិនត្រឹមត្រូវ')); }
 
-window.Auth = { _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
+function about(){
+  modal(`<div class="about"><div class="ab-logo">📚</div><h3>កម្មវិធីគ្រប់គ្រងថ្នាក់រៀន</h3><p class="km">Beginner Class • រៀន • បង្រៀន • អនុវត្ត</p>
+    <div class="ab-c"><span>👨‍💻 គ្រប់គ្រងការបង្កើតដោយ</span><b>លោក ប៊ុន វណ្ណនី</b></div>
+    <div class="ab-c"><span>📞 ទំនាក់ទំនង Telegram</span><b><a href="https://t.me/bunvanny" target="_blank" rel="noopener">0967943637</a> ឬ <a href="https://t.me/bunvanny" target="_blank" rel="noopener">@bunvanny</a></b></div>
+    <a class="btn teal" style="justify-content:center;width:100%;margin-top:10px" href="https://t.me/bunvanny" target="_blank" rel="noopener">✈️ ផ្ញើសារតាម Telegram</a>
+    <p class="note" style="margin-top:12px">📘 សៀវភៅបច្ចុប្បន្ន៖ ${(window.COURSES||[]).map(c=>c.name).join(' • ')}<br>ពុម្ពអក្សរ Kantumruy Pro (SIL OFL) • QR: qrcode-generator (MIT), jsQR (Apache-2.0)</p></div>`);
+}
+window.Auth = { about, _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
   editUser, delUser, backupAll, restoreAll, log, data:()=>A,
   _setup, _loginAs, _login, _pin, _recover, _doRecover, _cp, _mk, _rp, _tg, _own, _saveUser,
   _tab:r=>{ LS.tab=r; LS.stu=null; LS.pin=''; loginScreen(); }, _cls:id=>{ LS.cls=id; loginScreen(); }, _stu:id=>{ LS.stu=id; LS.pin=''; loginScreen(); } };

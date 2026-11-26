@@ -27,7 +27,7 @@ try { Object.assign(C, JSON.parse(localStorage.getItem(CK)||'{}')); } catch(e){}
 function saveC(){ try{ localStorage.setItem(CK, JSON.stringify(C)); return true; }catch(e){ toast('⚠️ ទំហំទិន្នន័យពេញ — សូម Backup ហើយកាត់បន្ថយរូបថត'); return false; } }
 function vis(){ return window.Auth&&Auth.user() ? C.classes.filter(c=>Auth.canSeeClass(c)) : C.classes; }
 function cls(){ const V=vis(); let c=V.find(x=>x.id===C.cur); if(!c && V.length){ c=V[0]; C.cur=c.id; } return c; }
-function newClass(name){ const c={id:uid(), name:name||'ថ្នាក់ Beginner A', cols:JSON.parse(JSON.stringify(DEFAULT_COLS)), students:[], scores:{}, groups:null}; if(window.Auth&&Auth.role()==='teacher') c.owner=Auth.user().id; C.classes.push(c); C.cur=c.id; saveC(); return c; }
+function newClass(name){ const c={id:uid(), name:name||'ថ្នាក់ Beginner A', book:'hw5-beg', cols:JSON.parse(JSON.stringify(DEFAULT_COLS)), students:[], scores:{}, groups:null}; if(window.Auth&&Auth.role()==='teacher') c.owner=Auth.user().id; C.classes.push(c); C.cur=c.id; saveC(); return c; }
 
 /* ---------- helpers ---------- */
 function avatar(s, size){
@@ -81,7 +81,7 @@ function render(t){
     <div class="act" style="width:auto;margin-left:auto;align-items:center">
       ${vis().length?`<select class="cl-sel" onchange="Class.pick(this.value)">${vis().map(x=>`<option value="${x.id}" ${x.id===C.cur?'selected':''}>${esc(x.name)}</option>`).join('')}</select>`:''}
       <button class="btn ghost sm" onclick="Class.addClass()">＋ ថ្នាក់ថ្មី</button>
-      ${c?`<button class="btn ghost sm" onclick="Class.renameClass()">✎</button>`:''}
+      ${c?`<button class="btn ghost sm" onclick="Class.renameClass()">✎</button><select class="cl-sel" title="សៀវភៅរបស់ថ្នាក់" onchange="Class.setBook(this.value)">${COURSES.map(b=>`<option value="${b.id}" ${courseOf(c).id===b.id?'selected':''}>${b.icon} ${esc(b.name)}</option>`).join('')}</select>`:''}
       <button class="btn ghost sm" onclick="Class.backup()">⬇ Backup</button>
       ${!window.Auth||Auth.role()==='admin'?`<label class="btn ghost sm">⬆ Restore<input type="file" accept=".json" hidden onchange="Class.restore(this.files[0])"></label>`:''}
     </div>
@@ -679,7 +679,8 @@ function restore(f){ if(!f||(window.Auth&&Auth.role()!=='admin')) return; f.text
 /* ---------- picker integration ---------- */
 function studentsForPicker(){ const c=cls(); return c?c.students:[]; }
 
-window.Class = { photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
+function setBook(id){ const c=cls(); if(!c) return; c.book=id; saveC(); render(); }
+window.Class = { setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
   editStudent, pickPhoto, noPhoto:()=>{ editPhoto=null; $('#clPrev').innerHTML=avatar({name:$('#clN').value},140); }, cam, camStop, saveStudent, photo, delStudent, bulk, impMode, impFile, impPreview, impApply, infoTable, infoSave, template, age:ageOf, sortStudents,
   setMonth:m=>{ if(m){ C.month=m; saveC(); render(); } }, cols, colAdd, colSave, csv, printMonth, csvYear, printYear, certs, certSet, certGrade, certPrint, sigFile, sigDraw, sigScale, sigReset, certShow:i=>{ ctSel=i; certRefresh(); },
   gset:(k,v)=>{ G[k]=v; tGroups(cls()); }, gabs:id=>{ G.absent.has(id)?G.absent.delete(id):G.absent.add(id); tGroups(cls()); }, makeGroups, groupsToScore, groupsFull, printGroups,

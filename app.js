@@ -182,7 +182,7 @@ function renderStuHome(){
   const me=Auth.user(), nu=nextUnit(), u=U(nu), st=UNIT_STYLE[nu]; setUnitColors(nu);
   const totalW=UNITS.reduce((a,x)=>a+x.vocab.length,0), knownW=UNITS.reduce((a,x)=>a+knownCount(x.n),0), passed=Object.values(S.quiz).filter(v=>v>=80).length;
   const ox=stuOpenExams(), wp=WS.pending(), first=(me.name||'').trim().split(/\s+/).slice(-1)[0];
-  $('#main').innerHTML=`<div class="stu-hi"><div>${Auth.avatarFor(me,52)}</div><div><small>សួស្តី 👋</small><b>${esc(first)}</b></div></div>
+  $('#main').innerHTML=`<div class="stu-hi"><div>${Auth.avatarFor(me,52)}</div><div><small>សួស្តី 👋</small><b>${esc(first)}</b></div>${(()=>{const cc=(window.Class&&Auth.user().classId)?(JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===Auth.user().classId):null, b=courseOf(cc); return `<span class="stu-book">${b.icon} ${esc(b.name)}</span>`;})()}</div>
     ${window.Cloud&&Cloud.installBanner?Cloud.installBanner():''}
     ${ox.length||wp?`<button class="stu-alert" onclick="go('exams')"><span>📝</span><div><b>${[ox.length?`ប្រឡង ${ox.length}`:'',wp?`សន្លឹកលំហាត់ ${wp}`:''].filter(Boolean).join(' • ')} កំពុងរង់ចាំ</b><small>ចុចដើម្បីធ្វើ</small></div><i>›</i></button>`:''}
     <div class="stu-cont" style="--c1:${st.c1};--c2:${st.c2}">
