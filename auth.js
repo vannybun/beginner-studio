@@ -222,18 +222,61 @@ function headerChip(bell){
   return B+`<button class="au-chip" onclick="Auth.menu()">${avatarFor(u,30)}<span><b>${esc((pf&&pf.name)||u.name)}</b><i>${ROLE[u.role].i} ${ROLE[u.role].km}</i></span></button>`;
 }
 function menu(){
-  const u=user();
+  const u=user(); if(u.role!=='student') return launcher();
   modal(`<div class="au-mhead">${avatarFor(u,64)}<div><h3 style="margin:0">${esc(u.name)}</h3><span class="au-badge" style="background:${ROLE[u.role].c}">${ROLE[u.role].i} ${ROLE[u.role].km}</span>${u.username?` <span class="note">@${esc(u.username)}</span>`:''}</div></div>
     <div class="au-menu">
-      ${u.role==='student'?`<button onclick="closeModal();go('me')">📊 លទ្ធផលរបស់ខ្ញុំ</button>`:''}
-      ${u.role==='admin'?`<button onclick="closeModal();go('admin',null,'users')">🛡️ ផ្ទាំង Admin</button>`:''}
-      ${u.role!=='student'?`<button onclick="Auth.changePass()">🔑 ប្តូរពាក្យសម្ងាត់</button>`:`<button onclick="Auth.changePass()">🔢 ប្តូរ PIN</button>`}
+      <button onclick="closeModal();go('me')">📊 លទ្ធផលរបស់ខ្ញុំ</button>
+      <button onclick="Auth.changePass()">🔢 ប្តូរ PIN</button>
       ${window.Cloud&&Cloud.install&&!Cloud.standalone()?`<button onclick="closeModal();Cloud.install()">📲 ដំឡើងកម្មវិធីលើទូរស័ព្ទ</button>`:''}
-      ${u.role==='student'?`<button onclick="closeModal();Auth.editMe()">✏️ កែព័ត៌មាន និងរូបថតរបស់ខ្ញុំ</button>`:''}
+      <button onclick="closeModal();Auth.editMe()">✏️ កែព័ត៌មាន និងរូបថតរបស់ខ្ញុំ</button>
       <button onclick="closeModal();Auth.about()">ℹ️ អំពីកម្មវិធី • ទំនាក់ទំនង</button>
       <button class="out" onclick="Auth.logout()">🚪 ចាកចេញ</button>
     </div>`);
 }
+/* 👩‍🏫 staff launcher: profile + every class function as icons + teaching tools + account */
+function launcher(){
+  const u=user(), CL=window.Class, V=(CL&&CL.data?CL.data().classes:[]).filter(c=>canSeeClass(c)), cur=CL&&CL._cur&&CL._cur(), teach=document.body.classList.contains('teach');
+  const tile=(ic,t,js,cls)=>`<button class="lx-t ${cls||''}" onclick="${js}"><span>${ic}</span><b>${t}</b></button>`;
+  const tabs=(CL&&CL.TABS||[]).map(([k,l])=>{ const i=l.indexOf(' '); return tile(l.slice(0,i), ({unlock:'បើកមេរៀន',track:'តាមដាន',accounts:'គណនីសិស្ស',results:'លទ្ធផលខែ'})[k]||l.slice(i+1), `Auth._lxGo('${k}')`, k==='attend'||k==='track'?'hot':''); }).join('');
+  modal(`<div class="lx">
+    <div class="lx-head">${avatarFor(u,64)}<div class="lx-who"><h3>${esc(u.name)}</h3><div><span class="au-badge" style="background:${ROLE[u.role].c}">${ROLE[u.role].i} ${ROLE[u.role].km}</span>${u.username?` <span class="note">@${esc(u.username)}</span>`:''}</div>${u.phone?`<small>📞 ${esc(u.phone)}</small>`:''}</div>
+      <button class="btn ghost sm" onclick="Auth.editStaff()">✏️ កែព័ត៌មាន</button></div>
+    <div class="lx-mode"><button class="${teach?'':'on'}" onclick="closeModal();setMode('learn')">🎓 មើលជាសិស្ស</button><button class="${teach?'on':''}" onclick="closeModal();setMode('teach')">👩‍🏫 បង្រៀន / គ្រប់គ្រង</button></div>
+    <div class="lx-sec"><h4>👥 ថ្នាក់រៀន</h4>${V.length?`<select class="cl-sel" onchange="Class._setCur(this.value);Auth.menu()">${V.map(c=>`<option value="${c.id}" ${cur&&c.id===cur.id?'selected':''}>${esc(c.name)} (${c.students.length})</option>`).join('')}</select>`:''}</div>
+    <div class="lx-grid">${tabs}</div>
+    <div class="lx-sec"><h4>🧰 ឧបករណ៍បង្រៀន</h4></div>
+    <div class="lx-grid">
+      ${tile('🏠','ទំព័រដើម',"closeModal();go('home')")}
+      ${tile('📖','សៀវភៅឌីជីថល',"closeModal();Book.open()")}
+      ${tile('🎲','ជ្រើសសិស្ស',"closeModal();openPicker()")}
+      ${tile('🏆','ពិន្ទុក្រុម',"closeModal();openScore()")}
+      ${tile('⚙️','ការកំណត់',"closeModal();openSettings()")}
+      ${u.role==='admin'?tile('🛡️','Admin',"closeModal();go('admin',null,'users')"):''}</div>
+    <div class="au-menu" style="margin-top:14px">
+      <button onclick="Auth.changePass()">🔑 ប្តូរពាក្យសម្ងាត់</button>
+      ${window.Cloud&&Cloud.install&&!Cloud.standalone()?`<button onclick="closeModal();Cloud.install()">📲 ដំឡើងកម្មវិធីលើទូរស័ព្ទ</button>`:''}
+      <button onclick="closeModal();Auth.about()">ℹ️ អំពីកម្មវិធី • ទំនាក់ទំនង</button>
+      <button class="out" onclick="Auth.logout()">🚪 ចាកចេញ</button></div></div>`);
+  document.getElementById('modal').classList.add('wide');
+}
+function lxGo(tab){ closeModal(); if(!document.body.classList.contains('teach')) setMode('teach'); go('class',null,tab); }
+/* ✏️ staff edit own info + photo (stored on the account; syncs with the school) */
+function editStaff(){ const u=user(); if(!u||u.role==='student') return; EP={photo:u.photo||''};
+  modal(`<h3>✏️ ព័ត៌មានរបស់ខ្ញុំ</h3>
+    <div class="me-ed"><div class="me-ph" id="meP">${EP.photo?`<img src="${EP.photo}">`:`<span>${esc((u.name||'?')[0])}</span>`}</div>
+      <div class="row" style="justify-content:center;gap:6px"><label class="btn teal sm">📷 ថតរូប<input type="file" accept="image/*" capture="user" hidden onchange="Auth._mePic(this.files[0])"></label><label class="btn ghost sm">🖼 រើសរូប<input type="file" accept="image/*" hidden onchange="Auth._mePic(this.files[0])"></label><button class="btn ghost sm" onclick="Auth._mePic(null)">🗑</button></div></div>
+    <label class="me-f"><span>ឈ្មោះដែលបង្ហាញ</span><input id="meN" class="cl-in" value="${esc(u.name)}" maxlength="40" placeholder="ឧ. លោកគ្រូ ប៊ុន វណ្ណនី"></label>
+    <label class="me-f"><span>លេខទូរស័ព្ទ</span><input id="meT" class="cl-in" type="tel" value="${esc(u.phone||'')}" maxlength="20" placeholder="ឧ. 012 345 678"></label>
+    <label class="me-f"><span>Telegram</span><input id="meG" class="cl-in" value="${esc(u.tg||'')}" maxlength="40" placeholder="ឧ. @username"></label>
+    <label class="me-f"><span>ពីខ្លួនខ្ញុំ</span><input id="meB" class="cl-in" value="${esc(u.bio||'')}" maxlength="80" placeholder="ឧ. គ្រូបង្រៀនភាសាអង់គ្លេស ថ្នាក់ Beginner"></label>
+    <p class="note">ឈ្មោះប្រើចូលប្រព័ន្ធ៖ <b>@${esc(u.username||'')}</b> (មិនប្តូរ) • សិស្សនឹងឃើញឈ្មោះ និងរូបថតនេះក្នុងឆាត និងដំណឹង។</p>
+    <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="Auth.menu()">‹ ត្រឡប់</button><button class="btn teal" onclick="Auth._staffSave()">💾 រក្សាទុក</button></div>`);
+}
+function staffSave(){ const u=user(), n=document.getElementById('meN').value.trim(); if(n.length<2) return toast('សូមបញ្ចូលឈ្មោះ');
+  const r=A.users.find(x=>x.id===u.id); if(!r) return;
+  r.name=n; r.phone=document.getElementById('meT').value.trim(); r.tg=document.getElementById('meG').value.trim(); r.bio=document.getElementById('meB').value.trim();
+  if(EP.photo) r.photo=EP.photo; else delete r.photo; r.ts=Date.now(); saveA(); log('✏️ កែព័ត៌មានផ្ទាល់ខ្លួន', r);
+  const ch=document.querySelector('.au-chip'); if(ch) ch.outerHTML=headerChip(false); toast('✅ បានរក្សាទុកព័ត៌មាន'); launcher(); }
 function changePass(){
   const u=user(), st=u.role==='student';
   modal(`<h3>${st?'🔢 ប្តូរ PIN':'🔑 ប្តូរពាក្យសម្ងាត់'}</h3>
@@ -412,7 +455,7 @@ function meSave(){ const u=user(), n=document.getElementById('meN').value.trim()
   const prof={name:n, latin:document.getElementById('meL').value.trim(), dob:document.getElementById('meD').value, phone:document.getElementById('meT').value.trim(), photo:EP.photo, ts:Date.now()};
   if(window.Me) Me.setProfile(prof); closeModal(); const ch=document.querySelector('.au-chip'); if(ch) ch.outerHTML=headerChip(false); toast('✅ បានរក្សាទុក — គ្រូនឹងឃើញព័ត៌មានថ្មី'); if(window.render) render(); }
 function renameUser(cid,sid,name){ const u=A.users.find(x=>x.role==='student'&&x.classId===cid&&x.studentId===sid); if(u&&name&&u.name!==name){ u.name=name; saveA(); } }
-window.Auth = { viewAs, asStaff, backToStaff, qrZip, editMe, _mePic:mePic, _meSave:meSave, _rename:renameUser, moveStudent, about, _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
+window.Auth = { editStaff, _staffSave:staffSave, _lxGo:lxGo, viewAs, asStaff, backToStaff, qrZip, editMe, _mePic:mePic, _meSave:meSave, _rename:renameUser, moveStudent, about, _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
   editUser, delUser, backupAll, restoreAll, log, data:()=>A,
   _setup, _loginAs, _login, _pin, _recover, _doRecover, _cp, _mk, _rp, _tg, _own, _saveUser,
   _tab:r=>{ LS.tab=r; LS.stu=null; LS.pin=''; loginScreen(); }, _cls:id=>{ LS.cls=id; loginScreen(); }, _stu:id=>{ LS.stu=id; LS.pin=''; loginScreen(); } };

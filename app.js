@@ -180,8 +180,15 @@ function render(){
   if(stuUI() && view.name!=='class' && view.name!=='admin'){ stuNav(); if(view.name==='home') return renderStuHome(); if(view.name==='units') return renderStuUnits(); if(view.name==='exams') return PREVIEW()?renderPreviewTasks():Exam.studentPage(); if(view.name==='me' && PREVIEW()) return renderPreviewMe(); if(view.name==='inbox'){ if(PREVIEW()){ view={name:'class',unit:view.unit,tab:'notify'}; setMode('teach'); return; } return Notify.page($('#main')); } if(view.name==='chat'){ if(PREVIEW()){ view={name:'class',unit:view.unit,tab:'chat'}; setMode('teach'); return; } return Chat.page($('#main')); } if(view.name==='rank'){ if(PREVIEW()){ Rank._target(()=>render()); return Rank.page($('#main'), Class._cur(), {staff:true}); } return Rank.stuPage(); } }
   else { const n=document.getElementById('stuNav'); if(n) n.remove(); }
   if(view.name==='rank'){ view={name:'class',unit:view.unit,tab:'rank'}; }
+  tNav();
   view.name==='home' ? renderHome() : view.name==='class' ? Class.render(view.tab) : view.name==='me' ? Auth.renderMe() : view.name==='admin' ? Auth.renderAdmin(view.tab) : renderUnit(); }
 window.render = render;
+/* 📱 teacher bottom bar (phones): quick class jobs + ☰ launcher */
+function tNav(){ let n=document.getElementById('tNav'); if(!STAFF){ if(n) n.remove(); return; }
+  if(!n){ n=document.createElement('nav'); n.id='tNav'; document.body.appendChild(n); }
+  const on=k=>view.name==='class'&&view.tab===k?'on':'';
+  const it=[['home','🏠','ដើម',"go('home')",view.name==='home'?'on':''],['attend','🙋','វត្តមាន',"Auth._lxGo('attend')",on('attend')],['track','📊','តាមដាន',"Auth._lxGo('track')",on('track')],['chat','💬','ឆាត',"Auth._lxGo('chat')",on('chat')],['more','☰','ច្រើនទៀត',"Auth.menu()",view.name==='class'&&!['attend','track','chat'].includes(view.tab)||view.name==='admin'?'on':'']];
+  n.innerHTML=it.map(([k,i,t,js,c])=>`<button class="${c}" onclick="${js}"><span>${i}</span><b>${t}</b></button>`).join(''); }
 
 /* ---------- illustration ---------- */
 const HERO_SVG = `<svg class="ill" viewBox="0 0 260 220" aria-hidden="true">
