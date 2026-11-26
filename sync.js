@@ -7,8 +7,8 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.26j';
-const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam.js','track.js','auth.js','app.js'];
+const VER='2026.11.26k';
+const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam.js','worksheet.js','track.js','auth.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -115,7 +115,7 @@ function merge(b,l,r){
 const BASE={}, N={}, Q=new Map(); let timer=null, busy=false;
 function allowed(k){
   const r=window.Auth&&Auth.role&&Auth.role();
-  if(r==='student') return k===PREFIX+'-exams-v1' || k===PREFIX+'-auth-v1' || k.startsWith(PREFIX+'-v1:');
+  if(r==='student') return k===PREFIX+'-exams-v1' || k===PREFIX+'-ws-v1' || k===PREFIX+'-auth-v1' || k.startsWith(PREFIX+'-v1:');
   return true;
 }
 function queue(k){ if(!cloud || !k.startsWith(PREFIX) || k===PREFIX+'-session') return; Q.set(k,1); if(!db) return; setStatus('wait'); clearTimeout(timer); timer=setTimeout(flush,900); }

@@ -20,6 +20,18 @@ const shuf = (a,r) => { a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math
 const clean = t => String(t).replace(/\(.*?\)/g,'').replace(/[→=↔].*$/,'').trim();
 const normA = t => clean(t).toLowerCase().replace(/[’`]/g,"'").replace(/^(a|an|the) /,'').replace(/[^a-z0-9' -]/g,'').replace(/\s+/g,' ').trim();
 
+function grammarItems(n, r){
+  const u=UNITS[n-1], L=LESSONS[n], B=[];
+  const mcFrom = (ans, others) => { const o=shuf([ans,...others],r); return {opts:o, a:o.indexOf(ans)}; };
+
+  shuf(u.quiz,r).forEach(q=>{ const m=mcFrom(q.o[q.a], q.o.filter((_,k)=>k!==q.a)); B.push({t:'mc',q:q.q,...m}); });
+  L.grammar.forEach(g=>(g.err||[]).forEach(e=>{ const m=mcFrom(e[1],[e[0]]); B.push({t:'mc',q:'Which sentence is correct?',qKm:'ប្រយោគណាត្រឹមត្រូវ?',...m}); }));
+  L.grammar.forEach(g=>{ const keys=[...new Set((g.t+' '+(g.form||[]).flat().join(' ')).toLowerCase().replace(/[^a-z' ]/g,' ').split(/\s+/).filter(w=>w.length>1&&!['and','the','or','with','to','noun','verb','past','present','simple','questions','negatives','short','answers'].includes(w)))];
+    g.ex.forEach(ex=>{ const ws=ex.split(' '); const i=ws.findIndex(w=>keys.includes(w.toLowerCase().replace(/[^a-z']/g,''))); if(i<0||keys.length<3) return;
+      const ans=ws[i].replace(/[^A-Za-z']/g,''); const others=shuf(keys.filter(k=>k!==ans.toLowerCase()),r).slice(0,2); const m=mcFrom(ans,others);
+      B.push({t:'mc',q:ws.map((w,j)=>j===i?w.replace(/[A-Za-z']+/,'_____'):w).join(' '),...m}); }); });
+  return B;
+}
 /* ---------- build an exam (deterministic per unit + version) ---------- */
 function build(n, ver){
   const u=UNITS[n-1], L=LESSONS[n], r=rng(hashStr('exam-'+n+'-'+ver));
@@ -36,13 +48,7 @@ function build(n, ver){
     const m=mcFrom(v[0],distract(v,0,3)); return {t:'mc',q:v[2],km:true,em:emo(v[0]),...m}; });
   parts.push({id:'A',km:'វាក្យសព្ទ',en:'Vocabulary',ins:'Choose the correct answer.',insKm:'ជ្រើសចម្លើយត្រឹមត្រូវ។',pts:1,qs:A});
   // B — Grammar (10): unit quiz + correct-sentence + gap from examples
-  const B=[];
-  shuf(u.quiz,r).forEach(q=>{ const m=mcFrom(q.o[q.a], q.o.filter((_,k)=>k!==q.a)); B.push({t:'mc',q:q.q,...m}); });
-  L.grammar.forEach(g=>(g.err||[]).forEach(e=>{ const m=mcFrom(e[1],[e[0]]); B.push({t:'mc',q:'Which sentence is correct?',qKm:'ប្រយោគណាត្រឹមត្រូវ?',...m}); }));
-  L.grammar.forEach(g=>{ const keys=[...new Set((g.t+' '+(g.form||[]).flat().join(' ')).toLowerCase().replace(/[^a-z' ]/g,' ').split(/\s+/).filter(w=>w.length>1&&!['and','the','or','with','to','noun','verb','past','present','simple','questions','negatives','short','answers'].includes(w)))];
-    g.ex.forEach(ex=>{ const ws=ex.split(' '); const i=ws.findIndex(w=>keys.includes(w.toLowerCase().replace(/[^a-z']/g,''))); if(i<0||keys.length<3) return;
-      const ans=ws[i].replace(/[^A-Za-z']/g,''); const others=shuf(keys.filter(k=>k!==ans.toLowerCase()),r).slice(0,2); const m=mcFrom(ans,others);
-      B.push({t:'mc',q:ws.map((w,j)=>j===i?w.replace(/[A-Za-z']+/,'_____'):w).join(' '),...m}); }); });
+  const B=grammarItems(n, r);
   parts.push({id:'B',km:'វេយ្យាករណ៍',en:'Grammar',ins:'Choose the correct answer.',insKm:'ជ្រើសចម្លើយត្រឹមត្រូវ។',pts:1,qs:shuf(B,r).slice(0,10)});
   // C — Matching (8)
   const C=take(words,8); const right=shuf(C.map(v=>v[2]),r);
@@ -107,16 +113,17 @@ function closeSess(id){ if(!confirm('បិទប្រឡងនេះ? សិ�
 let lastRef=0;
 async function studentPage(refresh){
   const me=meStu(); if(!me) return;
-  if(window.Cloud && Cloud.refresh && (refresh || Date.now()-lastRef>15000)){ lastRef=Date.now(); $('#main').innerHTML='<div class="stu-empty"><div class="spin2"></div><p>កំពុងពិនិត្យប្រឡងថ្មីៗ…</p></div>'; try{ await Cloud.refresh(EK); }catch(e){} reloadX(); if(typeof stuNav==='function') stuNav(); if(view.name!=='exams') return; }
+  if(window.Cloud && Cloud.refresh && (refresh || Date.now()-lastRef>15000)){ lastRef=Date.now(); $('#main').innerHTML='<div class="stu-empty"><div class="spin2"></div><p>កំពុងពិនិត្យប្រឡងថ្មីៗ…</p></div>'; try{ await Promise.all([Cloud.refresh(EK), window.WS?Cloud.refresh(WS.key):0]); }catch(e){} reloadX(); if(window.WS) WS.reload(); if(typeof stuNav==='function') stuNav(); if(view.name!=='exams') return; }
   const list=openFor(me).sort((a,b)=>a.n-b.n);
   const mine=X.results.filter(r=>r.uid===me.id||(r.sid&&r.sid===me.studentId)).sort((a,b)=>b.ts-a.ts);
   setUnitColors(4);
-  $('#main').innerHTML=`<div class="stu-head"><h2>📝 ប្រឡង</h2><button class="btn ghost sm" onclick="Exam.studentPage(true)">🔄</button></div>
-    ${list.length?list.map(se=>{ const u=UNITS[se.n-1], st=UNIT_STYLE[se.n], d=sessDone(se,me), can=!d||!se.once;
+  $('#main').innerHTML=`<div class="stu-head"><h2>📝 កិច្ចការ</h2><button class="btn ghost sm" onclick="Exam.studentPage(true)">🔄</button></div>
+    <h3 class="stu-sub">📝 ប្រឡង</h3>${list.length?list.map(se=>{ const u=UNITS[se.n-1], st=UNIT_STYLE[se.n], d=sessDone(se,me), can=!d||!se.once;
       return `<div class="stu-exam" style="--c1:${st.c1};--c2:${st.c2}"><div class="ic">${st.icon}</div><div class="tx"><b>Unit ${se.n} • ${esc(u.en)}</b><span>50 ពិន្ទុ • ${se.min?'⏱ '+se.min+' នាទី':'គ្មានកំណត់ពេល'}</span>
         ${d?`<span class="dn">✅ បានប្រឡង • ${d.s}/${d.t} (${d.pct}%)</span>`:''}</div>
         ${can?`<button class="btn sun" onclick="Exam.start(${se.n},'${se.ver}','${se.id}')">▶ ${d?'ម្តងទៀត':'ចាប់ផ្តើម'}</button>`:'<span class="lock">🔒</span>'}</div>`; }).join('')
-      :`<div class="stu-empty"><div style="font-size:64px">🔒</div><b>មិនទាន់មានប្រឡងបើកទេ</b><p>ពេលគ្រូបើកប្រឡង វានឹងបង្ហាញនៅទីនេះ។ ចុច 🔄 ដើម្បីពិនិត្យម្តងទៀត។</p></div>`}
+      :`<div class="stu-empty sm"><div style="font-size:40px">🔒</div><b>មិនទាន់មានប្រឡងបើកទេ</b><p>ពេលគ្រូបើក វានឹងបង្ហាញនៅទីនេះ។ ចុច 🔄 ដើម្បីពិនិត្យម្តងទៀត។</p></div>`}
+    ${window.WS?WS.studentSection():''}
     ${mine.length?`<h3 class="stu-sub">📊 លទ្ធផលរបស់ខ្ញុំ</h3>${mine.map(r=>`<div class="stu-res"><b>Unit ${r.n}</b><span>${new Date(r.ts).toLocaleDateString('en-GB')}</span><em style="background:${r.pct>=80?'#16a34a':r.pct>=50?'#2563eb':'#dc2626'}">${r.s}/${r.t} • ${r.pct}%</em></div>`).join('')}`:''}`;
 }
 
@@ -437,6 +444,6 @@ const EXAM_CSS = `
 `;
 const st=document.createElement('style'); st.textContent=EXAM_CSS; document.head.appendChild(st);
 
-window.Exam = { studentPage, openSess, closeSess, reload:reloadX, build, score, tab, start, begin, quit, print, online, importCodes, doImport, toScores, doScores, csv, clear,
+window.Exam = { grammarPool:n=>grammarItems(n,Math.random).map(q=>({q:q.q,qKm:q.qKm,o:q.opts,a:q.a})), studentPage, openSess, closeSess, reload:reloadX, build, score, tab, start, begin, quit, print, online, importCodes, doImport, toScores, doScores, csv, clear,
   setting:(k,v)=>{ X.settings[k]=v; saveX(); }, data:()=>X };
 })();

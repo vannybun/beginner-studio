@@ -162,22 +162,22 @@ const HERO_SVG = `<svg class="ill" viewBox="0 0 260 220" aria-hidden="true">
 </svg>`;
 
 /* ---------- 🎓 student (mobile-first) ---------- */
-const STU_NAV=[['home','🏠','ដើម'],['units','📚','មេរៀន'],['exams','📝','ប្រឡង'],['me','📊','ខ្ញុំ']];
+const STU_NAV=[['home','🏠','ដើម'],['units','📚','មេរៀន'],['exams','📝','កិច្ចការ'],['me','📊','ខ្ញុំ']];
 function stuNav(){
   let n=document.getElementById('stuNav'); if(!n){ n=document.createElement('nav'); n.id='stuNav'; document.body.appendChild(n); }
   const cur=view.name==='unit'?'units':view.name;
-  n.innerHTML=STU_NAV.map(([k,i,t])=>`<button class="${cur===k?'on':''}" onclick="go('${k}')"><span>${i}</span><b>${t}</b>${k==='exams'&&stuOpenExams().length?`<i>${stuOpenExams().length}</i>`:''}</button>`).join('');
+  n.innerHTML=STU_NAV.map(([k,i,t])=>`<button class="${cur===k?'on':''}" onclick="go('${k}')"><span>${i}</span><b>${t}</b>${k==='exams'&&(stuOpenExams().length+WS.pending())?`<i>${stuOpenExams().length+WS.pending()}</i>`:''}</button>`).join('');
 }
 function stuOpenExams(){ const me=Auth.user(), X=(window.Exam&&Exam.data())||{}; const m=new Map(); (X.open||[]).forEach(se=>{ const k=se.n+'|'+se.cls, o=m.get(k); if(!o||se.ts>o.ts) m.set(k,se); }); return [...m.values()].filter(se=>se.cls===me.classId && !(se.once && (X.results||[]).some(r=>r.sess===se.id && (r.uid===me.id||r.sid===me.studentId)))); }
 function unitPct(u){ const kp=knownCount(u.n)/u.vocab.length, sp=((S.sec||{})[u.n]||[]).length/LESSONS[u.n].sections.length, q=(S.quiz[u.n]||0)/100; return Math.round((kp+sp+q)/3*100); }
 function renderStuHome(){
-  if(window.Cloud&&Cloud.refresh&&Date.now()-(renderStuHome.t||0)>15000){ renderStuHome.t=Date.now(); Cloud.refresh('beginner-studio-exams-v1').then(ch=>{ if(ch&&Exam.reload){ Exam.reload(); if(view.name==='home') render(); else stuNav(); } }).catch(()=>{}); }
+  if(window.Cloud&&Cloud.refresh&&Date.now()-(renderStuHome.t||0)>15000){ renderStuHome.t=Date.now(); Promise.all([Cloud.refresh('beginner-studio-exams-v1'),Cloud.refresh(WS.key)]).then(([a,b])=>{ if(a) Exam.reload(); if(b) WS.reload(); if(a||b){ if(view.name==='home') render(); else stuNav(); } }).catch(()=>{}); }
   const me=Auth.user(), nu=nextUnit(), u=U(nu), st=UNIT_STYLE[nu]; setUnitColors(nu);
   const totalW=UNITS.reduce((a,x)=>a+x.vocab.length,0), knownW=UNITS.reduce((a,x)=>a+knownCount(x.n),0), passed=Object.values(S.quiz).filter(v=>v>=80).length;
-  const ox=stuOpenExams(), first=(me.name||'').trim().split(/\s+/).slice(-1)[0];
+  const ox=stuOpenExams(), wp=WS.pending(), first=(me.name||'').trim().split(/\s+/).slice(-1)[0];
   $('#main').innerHTML=`<div class="stu-hi"><div>${Auth.avatarFor(me,52)}</div><div><small>សួស្តី 👋</small><b>${esc(first)}</b></div></div>
     ${window.Cloud&&Cloud.installBanner?Cloud.installBanner():''}
-    ${ox.length?`<button class="stu-alert" onclick="go('exams')"><span>📝</span><div><b>មានប្រឡង ${ox.length} កំពុងបើក</b><small>ចុចដើម្បីចូលប្រឡង</small></div><i>›</i></button>`:''}
+    ${ox.length||wp?`<button class="stu-alert" onclick="go('exams')"><span>📝</span><div><b>${[ox.length?`ប្រឡង ${ox.length}`:'',wp?`សន្លឹកលំហាត់ ${wp}`:''].filter(Boolean).join(' • ')} កំពុងរង់ចាំ</b><small>ចុចដើម្បីធ្វើ</small></div><i>›</i></button>`:''}
     <div class="stu-cont" style="--c1:${st.c1};--c2:${st.c2}">
       <small>បន្តរៀន</small><div class="r"><div class="n">${nu}</div><div><b>${esc(u.en)}</b><span>${u.km}</span></div><div class="e">${st.icon}</div></div>
       <div class="bar"><i style="width:${unitPct(u)}%"></i></div>
@@ -280,7 +280,7 @@ function nextUnit(){ for(const u of UNITS){ if(ROLE_NOW==='student' ? (((S.sec||
 
 /* ---------- unit ---------- */
 const TABS_LEARN = [['path','📚 មេរៀនតាមសៀវភៅ'],['listen','🎧 ស្តាប់'],['vocab','🔤 វាក្យសព្ទ'],['grammar','📐 វេយ្យាករណ៍'],['practice','✍️ លំហាត់'],['exam','📝 ប្រឡងបញ្ចប់មេរៀន']];
-const TABS_TEACH = [['plan','📋 ផែនការបង្រៀន'],['worksheet','🖨 សន្លឹកលំហាត់']];
+const TABS_TEACH = [['plan','📋 ផែនការបង្រៀន'],['worksheet','📄 សន្លឹកលំហាត់']];
 function renderUnit(){
   const u = U(view.unit), st = UNIT_STYLE[u.n];
   setUnitColors(u.n);
@@ -305,7 +305,7 @@ function renderUnit(){
   </div>
   <div class="tabs">${tabs.map(t=>`<button class="${t[0]===view.tab?'on':''}" onclick="go('unit',${u.n},'${t[0]}')">${t[1]}</button>`).join('')}</div>
   <div id="tab"></div>`;
-  ({path:tabPath, listen:tabListen, vocab:tabVocab, grammar:tabGrammar, practice:tabPractice, plan:tabPlan, worksheet:tabWorksheet, exam:Exam.tab})[view.tab](u);
+  ({path:tabPath, listen:tabListen, vocab:tabVocab, grammar:tabGrammar, practice:tabPractice, plan:tabPlan, worksheet:u=>WS.teacherTab(u), exam:Exam.tab})[view.tab](u);
 }
 
 /* lesson path: sections in book order */
