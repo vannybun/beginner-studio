@@ -8,8 +8,9 @@
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $ = s => document.querySelector(s);
 const EK = 'beginner-studio-exams-v1';
-let X = { results:[], settings:{minutes:40, school:'', ver:'A'} };
+let X = { results:[], open:[], settings:{minutes:40, school:'', ver:'A'} };
 try { Object.assign(X, JSON.parse(localStorage.getItem(EK)||'{}')); } catch(e){}
+function reloadX(){ try{ X={ results:[], open:[], settings:{minutes:40, school:'', ver:'A'}, ...JSON.parse(localStorage.getItem(EK)||'{}') }; X.open=X.open||[]; }catch(e){} }
 const saveX = () => { try{ localStorage.setItem(EK, JSON.stringify(X)); }catch(e){ toast('⚠️ ទំហំទិន្នន័យពេញ'); } };
 
 /* ---------- seeded random ---------- */
@@ -77,10 +78,50 @@ function score(ex, ans){
 }
 
 /* ---------- unit tab UI ---------- */
+/* ---------- 🔓 exam sessions: teacher/admin opens an exam for a class ---------- */
+const meStu = () => { const me=window.Auth&&Auth.user(); return me&&me.role==='student'?me:null; };
+function sessDone(se, me){ return X.results.find(r=>r.sess===se.id && (r.uid===me.id || (r.sid&&r.sid===me.studentId))); }
+function openFor(me){ return (X.open||[]).filter(se=>se.cls===me.classId); }
+function classes(){ const C=(window.Class&&Class.data())||{classes:[]}; return C.classes.filter(c=>!window.Auth||!Auth.user()||Auth.canSeeClass(c)); }
+function openPanel(u){
+  const cs=classes(), list=(X.open||[]).filter(se=>se.n===u.n);
+  return `<div class="panel ex-gate"><div class="row" style="justify-content:space-between"><h3 class="sec" style="margin:0">🔓 បើកឱ្យសិស្សប្រឡង (លើទូរស័ព្ទ/App របស់សិស្ស)</h3><span class="note">សិស្សមើលមិនឃើញប្រឡងទេ រហូតដល់គ្រូបើក</span></div>
+    ${cs.length?`<div class="row" style="margin:10px 0;align-items:end">
+      <label class="km">🏫 ថ្នាក់<select id="exoC" class="cl-in">${cs.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
+      <label class="km">Version<select id="exoV" class="cl-in"><option>A</option><option>B</option></select></label>
+      <label class="km">⏱ នាទី<input id="exoM" type="number" class="cl-in" style="width:70px" min="0" max="180" value="${X.settings.minutes}"></label>
+      <label class="km" style="display:flex;gap:6px;align-items:center"><input id="exoOnce" type="checkbox" checked> ធ្វើបានតែម្តង</label>
+      <button class="btn teal" onclick="Exam.openSess(${u.n})">🔓 បើកប្រឡង</button></div>`:'<p class="note">មិនទាន់មានថ្នាក់</p>'}
+    ${list.length?list.map(se=>{ const c=cs.find(x=>x.id===se.cls)||{name:'?',students:[]}; const done=X.results.filter(r=>r.sess===se.id); const ids=new Set(done.map(r=>r.sid));
+      return `<div class="ex-sess"><span class="live">● កំពុងបើក</span><b>Unit ${se.n} • Version ${se.ver}</b><span>🏫 ${esc(c.name)} • ⏱ ${se.min?se.min+' នាទី':'គ្មានកំណត់'} • ${se.once?'ម្តង':'ច្រើនដង'}</span>
+        <span class="cnt">✅ ${ids.size}/${c.students.length} បានប្រឡង</span><button class="btn sm ghost" style="color:#dc2626" onclick="Exam.closeSess('${se.id}')">⛔ បិទ</button></div>`; }).join(''):''}
+  </div>`;
+}
+function openSess(n){
+  const se={id:Math.random().toString(36).slice(2,10), n, ver:$('#exoV').value, cls:$('#exoC').value, min:+$('#exoM').value||0, once:$('#exoOnce').checked, ts:Date.now(), by:(window.Auth&&Auth.user()&&Auth.user().name)||''};
+  X.open=(X.open||[]).filter(x=>!(x.n===n && x.cls===se.cls)); X.open.push(se); saveX(); toast('🔓 បានបើកប្រឡង Unit '+n+' — សិស្សអាចចូលប្រឡងបានហើយ'); render();
+}
+function closeSess(id){ if(!confirm('បិទប្រឡងនេះ? សិស្សនឹងមិនអាចចូលប្រឡងទៀតទេ')) return; X.open=(X.open||[]).filter(x=>x.id!==id); saveX(); toast('⛔ បានបិទ'); render(); }
+async function studentPage(refresh){
+  const me=meStu(); if(!me) return;
+  if(refresh && window.Cloud && Cloud.refresh){ $('#main').innerHTML='<div class="stu-empty"><div class="spin2"></div><p>កំពុងពិនិត្យ…</p></div>'; try{ await Cloud.refresh(EK); }catch(e){} reloadX(); }
+  const list=openFor(me).sort((a,b)=>a.n-b.n);
+  const mine=X.results.filter(r=>r.uid===me.id||(r.sid&&r.sid===me.studentId)).sort((a,b)=>b.ts-a.ts);
+  setUnitColors(4);
+  $('#main').innerHTML=`<div class="stu-head"><h2>📝 ប្រឡង</h2><button class="btn ghost sm" onclick="Exam.studentPage(true)">🔄</button></div>
+    ${list.length?list.map(se=>{ const u=UNITS[se.n-1], st=UNIT_STYLE[se.n], d=sessDone(se,me), can=!d||!se.once;
+      return `<div class="stu-exam" style="--c1:${st.c1};--c2:${st.c2}"><div class="ic">${st.icon}</div><div class="tx"><b>Unit ${se.n} • ${esc(u.en)}</b><span>50 ពិន្ទុ • ${se.min?'⏱ '+se.min+' នាទី':'គ្មានកំណត់ពេល'}</span>
+        ${d?`<span class="dn">✅ បានប្រឡង • ${d.s}/${d.t} (${d.pct}%)</span>`:''}</div>
+        ${can?`<button class="btn sun" onclick="Exam.start(${se.n},'${se.ver}','${se.id}')">▶ ${d?'ម្តងទៀត':'ចាប់ផ្តើម'}</button>`:'<span class="lock">🔒</span>'}</div>`; }).join('')
+      :`<div class="stu-empty"><div style="font-size:64px">🔒</div><b>មិនទាន់មានប្រឡងបើកទេ</b><p>ពេលគ្រូបើកប្រឡង វានឹងបង្ហាញនៅទីនេះ។ ចុច 🔄 ដើម្បីពិនិត្យម្តងទៀត។</p></div>`}
+    ${mine.length?`<h3 class="stu-sub">📊 លទ្ធផលរបស់ខ្ញុំ</h3>${mine.map(r=>`<div class="stu-res"><b>Unit ${r.n}</b><span>${new Date(r.ts).toLocaleDateString('en-GB')}</span><em style="background:${r.pct>=80?'#16a34a':r.pct>=50?'#2563eb':'#dc2626'}">${r.s}/${r.t} • ${r.pct}%</em></div>`).join('')}`:''}`;
+}
+
 function tab(u){
+  if(meStu()){ go('exams'); return; }
   const teach = S.mode==='teach', me=window.Auth&&Auth.user(), res=X.results.filter(r=>r.n===u.n && (!me||me.role!=='student'||r.uid===me.id||(r.sid&&r.sid===me.studentId))).sort((a,b)=>b.ts-a.ts);
   const ex=build(u.n,'A');
-  $('#tab').innerHTML = `<div class="ex-hero panel">
+  $('#tab').innerHTML = (teach?openPanel(u):'') + `<div class="ex-hero panel">
     <div class="ex-hi"><div class="ex-ico">📝</div><div><h3 class="sec" style="margin:0">ប្រឡងបញ្ចប់មេរៀន Unit ${u.n} — ${esc(u.en)}</h3>
       <div class="note">${ex.total} ពិន្ទុ • ${ex.parts.length} ផ្នែក • ${ex.parts.reduce((a,p)=>a+p.qs.length,0)} សំណួរ • ពេល ${X.settings.minutes} នាទី</div></div></div>
     <div class="ex-parts">${ex.parts.map(p=>`<div><b>${p.id}</b><span>${p.km}</span><i>${p.qs.length*p.pts}</i></div>`).join('')}</div>
@@ -107,9 +148,10 @@ function tab(u){
 
 /* ---------- in-app exam ---------- */
 let RUN=null;
-function start(n, ver){
+function start(n, ver, sessId){
+  if(meStu()){ const se=(X.open||[]).find(x=>x.id===sessId && x.cls===meStu().classId); if(!se) return toast('🔒 ប្រឡងនេះមិនទាន់បើក ឬបានបិទហើយ'); if(se.once && sessDone(se,meStu())) return toast('✅ អ្នកបានប្រឡងរួចហើយ'); }
   const me=window.Auth&&Auth.user();
-  if(me&&me.role==='student'){ const ex0=build(n,ver); modal(`<h3>📝 ${esc(ex0.title)} • Version ${ver}</h3><p class="km">👤 ${esc(me.name)} • ${ex0.total} ពិន្ទុ • ${X.settings.minutes?X.settings.minutes+' នាទី':'គ្មានកំណត់ពេល'}</p><p class="note">សូមត្រៀមខ្លួន ហើយធ្វើដោយខ្លួនឯង 💪</p><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" onclick="Exam.begin(${n},'${ver}')">▶ ចាប់ផ្តើមប្រឡង</button></div>`); return; }
+  if(me&&me.role==='student'){ const ex0=build(n,ver), se0=(X.open||[]).find(x=>x.id===sessId)||{}; modal(`<h3>📝 ${esc(ex0.title)} • Version ${ver}</h3><p class="km">👤 ${esc(me.name)} • ${ex0.total} ពិន្ទុ • ${se0.min?se0.min+' នាទី':'គ្មានកំណត់ពេល'}</p><p class="note">សូមត្រៀមខ្លួន ហើយធ្វើដោយខ្លួនឯង 💪</p><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" onclick="Exam.begin(${n},'${ver}','${sessId||''}')">▶ ចាប់ផ្តើមប្រឡង</button></div>`); return; }
   const ex=build(n,ver), st=(window.Class&&Class.studentsForPicker())||[];
   modal(`<h3>📝 ${esc(ex.title)} • Version ${ver}</h3>
     <p class="km">${ex.total} ពិន្ទុ • ${X.settings.minutes?X.settings.minutes+' នាទី':'គ្មានកំណត់ពេល'}</p>
@@ -118,17 +160,18 @@ function start(n, ver){
     <input id="exName" class="cl-in" style="width:100%" placeholder="ឈ្មោះ">
     <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" onclick="Exam.begin(${n},'${ver}')">▶ ចាប់ផ្តើមប្រឡង</button></div>`);
 }
-function begin(n, ver){
+function begin(n, ver, sessId){
   const sel=$('#exWho'), st=(window.Class&&Class.studentsForPicker())||[], me=window.Auth&&Auth.user();
   const s = me&&me.role==='student' ? {id:me.studentId, name:me.name} : sel && sel.value ? st.find(x=>x.id===sel.value) : null;
   const name = s ? s.name : ($('#exName').value.trim());
   if(!name) return toast('សូមជ្រើស ឬវាយឈ្មោះសិស្ស');
   closeModal();
-  RUN={ex:build(n,ver), ans:{}, name, sid:s?s.id:null, t0:Date.now(), part:0};
+  const se=sessId?(X.open||[]).find(x=>x.id===sessId):null;
+  RUN={ex:build(n,ver), ans:{}, name, sid:s?s.id:null, t0:Date.now(), part:0, sess:sessId||null, min:se?se.min:X.settings.minutes};
   const el=document.createElement('div'); el.id='exam'; document.body.appendChild(el); document.body.classList.add('exam-open');
   el.innerHTML = examShell(RUN.ex, name, false);
   wireExam(el, RUN, ()=>finish());
-  if(X.settings.minutes) startTimer(X.settings.minutes);
+  if(RUN.min) startTimer(RUN.min);
 }
 function startTimer(min){ const end=RUN.t0+min*60000; const tick=()=>{ if(!RUN) return; const left=Math.max(0,end-Date.now()), m=Math.floor(left/60000), sec=Math.floor(left%60000/1000), el=$('#exTime'); if(el){ el.textContent=`⏱ ${m}:${String(sec).padStart(2,'0')}`; el.classList.toggle('warn',left<60000); } if(left<=0){ toast('⏰ អស់ម៉ោង — ប្រគល់ដោយស្វ័យប្រវត្តិ'); finish(true); return; } RUN.timer=setTimeout(tick,500); }; tick(); }
 
@@ -178,7 +221,7 @@ function finish(force){
   if(!force && k<total && !confirm(`នៅសល់ ${total-k} សំណួរមិនទាន់ឆ្លើយ។ ប្រគល់ប្រឡងឥឡូវ?`)) return;
   clearTimeout(RUN.timer);
   const sc=score(ex,RUN.ans);
-  X.results.push({n:ex.n, ver:ex.ver, name:RUN.name, sid:RUN.sid, uid:(window.Auth&&Auth.user()&&Auth.role()==='student')?Auth.user().id:null, s:sc.s, t:ex.total, pct:sc.pct, by:sc.by, ts:Date.now(), via:'app', mins:Math.round((Date.now()-RUN.t0)/60000)});
+  X.results.push({n:ex.n, ver:ex.ver, name:RUN.name, sid:RUN.sid, sess:RUN.sess, uid:(window.Auth&&Auth.user()&&Auth.role()==='student')?Auth.user().id:null, s:sc.s, t:ex.total, pct:sc.pct, by:sc.by, ts:Date.now(), via:'app', mins:Math.round((Date.now()-RUN.t0)/60000)});
   saveX();
   $('#exam').innerHTML = resultHtml(ex, RUN.ans, sc, RUN.name, false);
   if(sc.pct>=80 && window.pageConfetti) pageConfetti();
@@ -390,6 +433,6 @@ const EXAM_CSS = `
 `;
 const st=document.createElement('style'); st.textContent=EXAM_CSS; document.head.appendChild(st);
 
-window.Exam = { build, score, tab, start, begin, quit, print, online, importCodes, doImport, toScores, doScores, csv, clear,
+window.Exam = { studentPage, openSess, closeSess, reload:reloadX, build, score, tab, start, begin, quit, print, online, importCodes, doImport, toScores, doScores, csv, clear,
   setting:(k,v)=>{ X.settings[k]=v; saveX(); }, data:()=>X };
 })();

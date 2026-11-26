@@ -7,7 +7,7 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.26f';
+const VER='2026.11.26g';
 const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam.js','track.js','auth.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
@@ -189,6 +189,7 @@ async function restoreMedia(){
 
 /* ---------- admin panel section ---------- */
 function qrSvg(text, cell){ try{ const q=qrcode(0,'L'); q.addData(text); q.make(); return q.createSvgTag({cellSize:cell||4, margin:2}); }catch(e){ return ''; } }
+async function refreshKey(k){ if(!db) return false; const r=await fetchOne(k); if(r.v!=null && r.v!==_get.call(localStorage,k) && !Q.has(k)){ _set.call(localStorage,k,r.v); BASE[k]=r.v; return true; } return false; }
 /* ---------- 🔢 class code (short code → school) ---------- */
 const ALPH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789', META=PREFIX+'-meta';
 const DEF = () => window.BS_DEFAULT_CFG || null;
@@ -318,6 +319,6 @@ async function boot(){
   setBase();
   loadScripts();
 }
-window.Cloud={ roleLink, makeCode, _code, _codeKey:codeKey, code:()=>meta().code, flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _join, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
+window.Cloud={ refresh:refreshKey, roleLink, makeCode, _code, _codeKey:codeKey, code:()=>meta().code, flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _join, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
 boot();
 })();

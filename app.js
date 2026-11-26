@@ -138,6 +138,7 @@ function render(){
   if(!ROLE_NOW) return;
   if(ROLE_NOW==='student' && (view.name==='class'||view.name==='admin')) view.name='home';
   if(ROLE_NOW!=='admin' && view.name==='admin') view.name='home';
+  if(ROLE_NOW==='student'){ stuNav(); if(view.name==='home') return renderStuHome(); if(view.name==='units') return renderStuUnits(); if(view.name==='exams') return Exam.studentPage(); }
   view.name==='home' ? renderHome() : view.name==='class' ? Class.render(view.tab) : view.name==='me' ? Auth.renderMe() : view.name==='admin' ? Auth.renderAdmin(view.tab) : renderUnit(); }
 window.render = render;
 
@@ -159,6 +160,33 @@ const HERO_SVG = `<svg class="ill" viewBox="0 0 260 220" aria-hidden="true">
   </g>
   <g stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"><path d="M150 40 q14 14 0 28"/><path d="M162 30 q24 24 0 48" opacity=".6"/></g>
 </svg>`;
+
+/* ---------- 🎓 student (mobile-first) ---------- */
+const STU_NAV=[['home','🏠','ដើម'],['units','📚','មេរៀន'],['exams','📝','ប្រឡង'],['me','📊','ខ្ញុំ']];
+function stuNav(){
+  let n=document.getElementById('stuNav'); if(!n){ n=document.createElement('nav'); n.id='stuNav'; document.body.appendChild(n); }
+  const cur=view.name==='unit'?'units':view.name;
+  n.innerHTML=STU_NAV.map(([k,i,t])=>`<button class="${cur===k?'on':''}" onclick="go('${k}')"><span>${i}</span><b>${t}</b>${k==='exams'&&stuOpenExams().length?`<i>${stuOpenExams().length}</i>`:''}</button>`).join('');
+}
+function stuOpenExams(){ const me=Auth.user(), X=(window.Exam&&Exam.data())||{}; return (X.open||[]).filter(se=>se.cls===me.classId && !(se.once && (X.results||[]).some(r=>r.sess===se.id && (r.uid===me.id||r.sid===me.studentId)))); }
+function unitPct(u){ const kp=knownCount(u.n)/u.vocab.length, tp=tracksDone(u.n)/Math.max(1,unitTracks(u.n).length), q=(S.quiz[u.n]||0)/100; return Math.round((kp+tp+q)/3*100); }
+function renderStuHome(){
+  const me=Auth.user(), nu=nextUnit(), u=U(nu), st=UNIT_STYLE[nu]; setUnitColors(nu);
+  const totalW=UNITS.reduce((a,x)=>a+x.vocab.length,0), knownW=UNITS.reduce((a,x)=>a+knownCount(x.n),0), passed=Object.values(S.quiz).filter(v=>v>=80).length;
+  const ox=stuOpenExams(), first=(me.name||'').trim().split(/\s+/).slice(-1)[0];
+  $('#main').innerHTML=`<div class="stu-hi"><div>${Auth.avatarFor(me,52)}</div><div><small>សួស្តី 👋</small><b>${esc(first)}</b></div></div>
+    ${ox.length?`<button class="stu-alert" onclick="go('exams')"><span>📝</span><div><b>មានប្រឡង ${ox.length} កំពុងបើក</b><small>ចុចដើម្បីចូលប្រឡង</small></div><i>›</i></button>`:''}
+    <div class="stu-cont" style="--c1:${st.c1};--c2:${st.c2}">
+      <small>បន្តរៀន</small><div class="r"><div class="n">${nu}</div><div><b>${esc(u.en)}</b><span>${u.km}</span></div><div class="e">${st.icon}</div></div>
+      <div class="bar"><i style="width:${unitPct(u)}%"></i></div>
+      <div class="b"><button class="btn white" onclick="Deck.open(${nu})">▶ រៀនជាស្លាយ</button><button class="btn ghost" onclick="go('unit',${nu})">📚 មេរៀន</button></div>
+    </div>
+    <div class="stu-stats"><div><b>${knownW}</b><span>🔤 ពាក្យចេះ</span></div><div><b>${Object.keys(S.listened).length}</b><span>🎧 បទស្តាប់</span></div><div><b>${passed}<small>/14</small></b><span>🏅 មេរៀនឆ្លង</span></div></div>
+    <h3 class="stu-sub">📚 មេរៀនទាំងអស់</h3>${stuUnitList()}`;
+}
+function stuUnitList(){ return `<div class="stu-units">${UNITS.map((u,i)=>{ const st=UNIT_STYLE[u.n], p=unitPct(u), q=S.quiz[u.n];
+  return `<button class="stu-u" style="--c1:${st.c1};--c2:${st.c2};animation-delay:${Math.min(i,10)*0.03}s" onclick="go('unit',${u.n})"><span class="n">${u.n}</span><span class="t"><b>${esc(u.en)}</b><small>${u.km}</small><span class="bar"><i style="width:${p}%"></i></span></span><span class="s">${q>=80?'✅':st.icon}</span></button>`; }).join('')}</div>`; }
+function renderStuUnits(){ setUnitColors(2); $('#main').innerHTML=`<div class="stu-head"><h2>📚 មេរៀន</h2></div>${stuUnitList()}`; }
 
 /* ---------- home ---------- */
 function renderHome(){
@@ -214,7 +242,7 @@ const TABS_TEACH = [['plan','📋 ផែនការបង្រៀន'],['works
 function renderUnit(){
   const u = U(view.unit), st = UNIT_STYLE[u.n];
   setUnitColors(u.n);
-  const tabs = TABS_LEARN.concat(S.mode==='teach'?TABS_TEACH:[]);
+  const tabs = ROLE_NOW==='student' ? TABS_LEARN.filter(t=>t[0]!=='exam') : TABS_LEARN.concat(S.mode==='teach'?TABS_TEACH:[]);
   if(!tabs.find(t=>t[0]===view.tab)) view.tab='path';
   $('#main').innerHTML = `
   <div class="uhero">
@@ -554,6 +582,7 @@ if(window.Auth && Auth.gate()){
 }
 Deck.init();
 Book.init();
+if(ROLE_NOW==='student'){ Book.open=()=>toast('📖 សូមបើកសៀវភៅពិតរបស់អ្នក'); window.openBook=()=>toast('📖 សូមបើកសៀវភៅពិតរបស់អ្នក'); window.openPdf=()=>{}; if(Deck.bookToggle) Deck.bookToggle=()=>{}; }
 if(TRACKING){ const _dO=Deck.open, _bO=Book.open; Deck.open=(n,p)=>{ track('slides', n); return _dO(n,p); }; Book.open=p=>{ track('book', p==null?'':p); return _bO(p); }; }
 if(ROLE_NOW) setMode(S.mode||'learn');
 window.addEventListener('resize', ()=>{ if(!ROLE_NOW) return; const b=(S.mode==='learn'?$('#mLearn'):$('#mTeach')); const pill=$('#mPill'); pill.style.left=b.offsetLeft+'px'; pill.style.width=b.offsetWidth+'px'; });

@@ -180,7 +180,7 @@ function prev(){
 function goto(i){ D.i=Math.max(0,Math.min(D.slides.length-1,i)); D.step=0; draw(0); }
 function curtain(c){ D.black = D.black===c ? null : c; $('#dCurtain').className = D.black ? 'show '+c : ''; }
 function laser(){ D.laser=!D.laser; $('#deck').classList.toggle('laser-on',D.laser); }
-function bookToggle(){ D.book=!D.book; $('#deck').classList.toggle('book-on',D.book); if(D.book) bookSync(); }
+function bookToggle(){ if(typeof ROLE_NOW!=='undefined'&&ROLE_NOW==='student') return; D.book=!D.book; $('#deck').classList.toggle('book-on',D.book); if(D.book) bookSync(); }
 function bookSync(){ const p=D.slides[D.i].page, f=$('#dBook'); const url=window.bookUrl(1,p); if(f.dataset.p!=String(p)){ f.dataset.p=p; f.src=url; } }
 function playSlide(){
   const s=D.slides[D.i]; const A=document.getElementById('audio');
