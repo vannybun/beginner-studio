@@ -29,12 +29,15 @@ function rows(c){
   const B=J(BK)||{}, users=(window.Auth&&Auth.data().users)||[], staff=window.Auth&&Auth.role()!=='student';
   return c.students.map(s=>{ const u=users.find(x=>x.role==='student'&&x.classId===c.id&&x.studentId===s.id); let e=u&&B[u.id];
     const P=staff&&u&&J('beginner-studio-v1:'+u.id); if(P) e=summ(P);
-    return {s, uid:u&&u.id, e:e||{d:{},p:0,l:0,w:0,lv:{},r:0,rm:{},cu:1,sr:0,pc:0}}; });
+    return {s, uid:u&&u.id, e:net(e||{d:{},p:0,l:0,w:0,lv:{},r:0,rm:{},cu:1,sr:0,pc:0}, c, s.id)}; });
 }
+/* 🙋 attendance fines (class data, set by the teacher) are taken off the money the student earned */
+function net(e, c, sid){ const F=window.Class&&Class.fines?Class.fines(c, sid):null; if(!F||!F.t) return e;
+  const rm={...(e.rm||{})}; Object.entries(F.m).forEach(([k,v])=>{ rm[k]=(rm[k]||0)-v; }); return {...e, r:(e.r||0)-F.t, rm, fine:F.t}; }
 function weekRange(off){ const n=new Date(); n.setHours(12,0,0,0); const dow=(n.getDay()+6)%7; const a=new Date(n.getTime()-(dow+7*off)*864e5); return [dk(a), dk(a.getTime()+6*864e5)]; }
 function monthKey(off){ const n=new Date(); const d=new Date(n.getFullYear(), n.getMonth()-off, 15); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function rankBy(list, val, tie){ const r=list.map(x=>({...x, v:val(x), t:tie?tie(x):0})).sort((a,b)=>b.v-a.v||b.t-a.t);
-  r.forEach((x,i)=>{ x.rank = !x.v ? null : i>0&&r[i-1].v===x.v&&r[i-1].t===x.t ? r[i-1].rank : i+1; }); return r; }
+  r.forEach((x,i)=>{ x.rank = !(x.v>0) ? null : i>0&&r[i-1].v===x.v&&r[i-1].t===x.t ? r[i-1].rank : i+1; }); return r; }
 const riel=n=>(Math.round(n||0)).toLocaleString('en-US')+'៛';
 
 const av=(s,n)=>window.Class&&Class._avatar?Class._avatar(s,n):'';
@@ -102,5 +105,5 @@ function unit(n){ UNIT=n; redraw(); }
 function month(m){ MON=m; redraw(); }
 function redraw(){ if(target) target(); }
 function share(k){ Class._share(k); redraw(); }
-window.Rank={ summ, rows, riel, sub, unit, push, page, stuPage, set, month, share, _target:f=>{ target=f; }, key:BK };
+window.Rank={ summ, rows, net, riel, sub, unit, push, page, stuPage, set, month, share, _target:f=>{ target=f; }, key:BK };
 })();

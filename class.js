@@ -75,7 +75,7 @@ function resizePhoto(file, cb){
 }
 
 /* ---------- main render ---------- */
-const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['notify','📣 ជូនដំណឹង'],['chat','💬 ឆាតសិស្ស'],['unlock','🔓 បើក/កាលវិភាគមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
+const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['attend','🙋 វត្តមាន'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['notify','📣 ជូនដំណឹង'],['chat','💬 ឆាតសិស្ស'],['unlock','🔓 បើក/កាលវិភាគមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
 let tab='students';
 function render(t){ applyProfiles();
   if(t) tab=t;
@@ -100,7 +100,7 @@ function render(t){ applyProfiles();
     return;
   }
   $('#main').innerHTML = head + `<div class="tabs">${TABS.map(x=>`<button class="${x[0]===tab?'on':''}" onclick="Class.render('${x[0]}')">${x[1]}</button>`).join('')}</div><div id="clTab"></div>`;
-  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, notify:c=>{ if(window.Notify) Notify.teacherTab($('#clTab'), c); }, chat:c=>{ if(window.Chat) Chat.teacherTab($('#clTab'), c); }, rank:c=>{ Rank._target(()=>Class.render('rank')); Rank.page($('#clTab'), c, {staff:true, head:false}); }, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
+  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, attend:tAttend, notify:c=>{ if(window.Notify) Notify.teacherTab($('#clTab'), c); }, chat:c=>{ if(window.Chat) Chat.teacherTab($('#clTab'), c); }, rank:c=>{ Rank._target(()=>Class.render('rank')); Rank.page($('#clTab'), c, {staff:true, head:false}); }, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
 }
 
 /* ---------- 🔓 teacher unlocks units (for students who studied before) ---------- */
@@ -604,10 +604,65 @@ function yearRows(c){ const ms=monthsWithData(c), mt=maxTotal(c); return {ms, ro
 function csvYear(){ const c=cls(), {ms,rows}=yearRows(c); download(`${c.name} - សរុបឆ្នាំ.csv`, '﻿'+[[c.name+' — សរុបពិន្ទុគ្រប់ខែ (%)'],['ល.រ','ឈ្មោះ','ឈ្មោះឡាតាំង','ភេទ','ថ្ងៃកំណើត',...ms.map(monthName),'មធ្យមភាគ %','និទ្ទេស'],...rows.map((r,i)=>[i+1,r.s.name,r.s.latin||'',gname(r.s.g),fmtDob(r.s.dob),...r.ps.map(p=>p==null?'':p.toFixed(1)),r.avg==null?'':r.avg.toFixed(1),r.avg==null?'':grade(r.avg)[1]+' '+grade(r.avg)[2]])].map(r=>r.map(csvEsc).join(',')).join('\r\n'),'text/csv;charset=utf-8'); }
 function printYear(){ const c=cls(), {ms,rows}=yearRows(c); $('#printArea').innerHTML=`<div class="cl-print"><h1>${esc(c.name)} — សរុបលទ្ធផលសិក្សាប្រចាំខែ</h1><table><thead><tr><th>ល.រ</th><th>ឈ្មោះ</th><th>ឈ្មោះឡាតាំង</th><th>ភេទ</th>${ms.map(m=>`<th>${monthName(m)}</th>`).join('')}<th>មធ្យមភាគ %</th><th>និទ្ទេស</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td style="text-align:left">${esc(r.s.name)}</td><td style="text-align:left">${esc(r.s.latin||'')}</td><td>${gname(r.s.g)}</td>${r.ps.map(p=>`<td>${p==null?'':p.toFixed(1)}</td>`).join('')}<td><b>${r.avg==null?'':r.avg.toFixed(1)}</b></td><td>${r.avg==null?'':grade(r.avg)[1]+' '+grade(r.avg)[2]}</td></tr>`).join('')}</tbody></table></div>`; window.print(); }
 
+/* ---------- 🙋 សម្រង់វត្តមាន: c.att[YYYY-MM-DD][sid] = {st:'p'|'l'|'e'|'a', f:fine, n:note} ----------
+   a = អវត្តមានឥតច្បាប់ (ដក 4,000៛ ស្វ័យប្រវត្តិ) • e = មានច្បាប់ (គ្រូកំណត់ ដក ឬមិនដក) • l = មកយឺត */
+const FINE_A = 4000;
+const AST = {p:['✅','មក','#16a34a'], l:['⏰','យឺត','#d97706'], e:['📝','មានច្បាប់','#2563eb'], a:['❌','ឥតច្បាប់','#dc2626']};
+const dkey = d => { d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const dkm = k => { const [y,m,d]=k.split('-'); return `${+d}/${+m}/${y}`; };
+let AT={d:null, m:null};
+function fines(c, sid){ const out={t:0, m:{}, log:[]}; Object.entries((c&&c.att)||{}).forEach(([d,day])=>{ const r=day&&day[sid]; const f=r?Math.round(+r.f||0):0; if(!f) return;
+    out.t+=f; const mk=d.slice(0,7); out.m[mk]=(out.m[mk]||0)+f; out.log.push([new Date(d+'T12:00:00').getTime(), -f, (r.st==='a'?'❌ អវត្តមានឥតច្បាប់':r.st==='e'?'📝 អវត្តមានមានច្បាប់':'⏰ មកយឺត')+' '+dkm(d)+(r.n?' — '+r.n:'')]); });
+  out.log.sort((a,b)=>b[0]-a[0]); return out; }
+function tAttend(c){
+  if(!c.students.length){ $('#clTab').innerHTML=`<div class="panel cl-empty"><p class="km">សូមបន្ថែមសិស្សជាមុនសិន</p></div>`; return; }
+  const d=AT.d||(AT.d=dkey()), day=(c.att||{})[d]||{}, cnt={p:0,l:0,e:0,a:0,x:0};
+  c.students.forEach(s=>{ const r=day[s.id]; cnt[r?r.st:'x']++; });
+  const row=s=>{ const r=day[s.id]||{}, st=r.st||'', f=+r.f||0;
+    return `<div class="at-row ${st?'at-'+st:''}"><div class="at-who">${avatar(s,36)}<span><b>${esc(s.name)}</b>${s.latin?`<small>${esc(s.latin)}</small>`:''}</span></div>
+      <div class="at-btns">${Object.entries(AST).map(([k,[i,t]])=>`<button class="${st===k?'on':''}" onclick="Class.att('${s.id}','${k}')">${i} ${t}</button>`).join('')}</div>
+      ${st==='a'?`<div class="at-fine"><b>−${FINE_A.toLocaleString('en-US')}៛</b><small>ដកស្វ័យប្រវត្តិ</small></div>`:''}
+      ${st==='e'||st==='l'?`<div class="at-fine ed"><span>ដក:</span>${[0,1000,2000,4000].map(v=>`<button class="${f===v?'on':''}" onclick="Class.attFine('${s.id}',${v})">${v?v.toLocaleString('en-US'):'មិនដក'}</button>`).join('')}<input type="number" min="0" step="500" value="${f||''}" placeholder="ផ្សេង" onchange="Class.attFine('${s.id}',this.value)">៛
+        <input class="at-note" value="${esc(r.n||'')}" placeholder="មូលហេតុ (ឈឺ, ធុរៈគ្រួសារ…)" onchange="Class.attNote('${s.id}',this.value)"></div>`:''}</div>`; };
+  const mk=d.slice(0,7), m=AT.m||mk, days=Object.keys(c.att||{}).filter(k=>k.startsWith(m)).sort();
+  const sum=c.students.map(s=>{ const o={p:0,l:0,e:0,a:0,f:0}; days.forEach(k=>{ const r=c.att[k][s.id]; if(r){ o[r.st]++; o.f+=+r.f||0; } }); return [s,o]; });
+  const months=[...new Set([mk, ...Object.keys(c.att||{}).map(k=>k.slice(0,7))])].sort().reverse();
+  $('#clTab').innerHTML=`<div class="panel at-panel">
+    <div class="at-top"><h3 class="sec" style="margin:0">🙋 សម្រង់វត្តមាន</h3>
+      <button class="btn ghost sm" onclick="Class.attDay(-1)">‹</button><input type="date" value="${d}" onchange="Class.attDay(this.value)"><button class="btn ghost sm" onclick="Class.attDay(1)">›</button>
+      ${d!==dkey()?`<button class="btn ghost sm" onclick="Class.attDay(0)">ថ្ងៃនេះ</button>`:''}<span class="grow"></span>
+      <button class="btn teal sm" onclick="Class.attAll()">✅ ដែលនៅសល់ = មក</button>
+      ${Object.keys(day).length?`<button class="btn ghost sm" onclick="Class.attClear()">🗑 លុបថ្ងៃនេះ</button>`:''}</div>
+    <div class="at-cnt"><span style="--c:#16a34a">✅ មក <b>${cnt.p}</b></span><span style="--c:#d97706">⏰ យឺត <b>${cnt.l}</b></span><span style="--c:#2563eb">📝 មានច្បាប់ <b>${cnt.e}</b></span><span style="--c:#dc2626">❌ ឥតច្បាប់ <b>${cnt.a}</b></span>${cnt.x?`<span style="--c:#94a3b8">⬜ មិនទាន់ស្រង់ <b>${cnt.x}</b></span>`:''}</div>
+    <p class="note">💡 អវត្តមានឥតច្បាប់ ដក <b>4,000៛</b> ពីលុយសិស្សភ្លាម • មានច្បាប់/មកយឺត គ្រូជ្រើសដក ឬមិនដកក៏បាន • ចុចប៊ូតុងដដែលម្តងទៀតដើម្បីលុប</p>
+    <div class="at-list">${c.students.map(row).join('')}</div>
+    ${cnt.a+cnt.e?`<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost sm" onclick="Class.attTell()">📣 ជូនដំណឹងទៅសិស្សអវត្តមាន</button></div>`:''}</div>
+  <div class="panel at-panel"><div class="at-top"><h3 class="sec" style="margin:0">📊 សរុបវត្តមានប្រចាំខែ</h3><select onchange="Class.attMon(this.value)">${months.map(x=>`<option value="${x}" ${x===m?'selected':''}>${monthName(x)}</option>`).join('')}</select>
+    <span class="grow"></span><small class="note">${days.length} ថ្ងៃបានស្រង់</small><button class="btn ghost sm" onclick="Class.attPrint()">🖨 បោះពុម្ព</button></div>
+    <div class="cl-tablewrap"><table class="cl-table at-sum"><thead><tr><th>#</th><th>ឈ្មោះ</th><th>✅ មក</th><th>⏰ យឺត</th><th>📝 មានច្បាប់</th><th>❌ ឥតច្បាប់</th><th>% វត្តមាន</th><th>💸 ដកលុយ</th></tr></thead>
+    <tbody>${sum.map(([s,o],i)=>{ const n=o.p+o.l+o.e+o.a, pc=n?Math.round((o.p+o.l)/n*100):null; return `<tr><td>${i+1}</td><td class="nm">${esc(s.name)}</td><td>${o.p||''}</td><td>${o.l||''}</td><td>${o.e||''}</td><td class="${o.a?'bad':''}">${o.a||''}</td><td>${pc==null?'—':pc+'%'}</td><td class="${o.f?'bad':''}">${o.f?'−'+o.f.toLocaleString('en-US')+'៛':''}</td></tr>`; }).join('')}</tbody></table></div></div>`;
+}
+function attDo(fn){ const c=cls(), d=AT.d||dkey(); c.att=c.att||{}; const day=c.att[d]=c.att[d]||{}; fn(day,c); if(!Object.keys(day).length) delete c.att[d]; saveC(); tAttend(c); }
+function att(sid, st){ attDo(day=>{ const r=day[sid]; if(r&&r.st===st){ delete day[sid]; return; } day[sid]={st, f:st==='a'?FINE_A:0}; if(r&&r.n&&(st==='e'||st==='l')) day[sid].n=r.n; }); }
+function attFine(sid, v){ v=Math.max(0, Math.round(+v||0)); attDo(day=>{ if(day[sid]&&day[sid].st!=='a') day[sid].f=v; }); }
+function attNote(sid, v){ attDo(day=>{ if(day[sid]){ v=String(v||'').trim().slice(0,80); if(v) day[sid].n=v; else delete day[sid].n; } }); }
+function attAll(){ attDo((day,c)=>c.students.forEach(s=>{ if(!day[s.id]) day[s.id]={st:'p', f:0}; })); toast('✅ បានស្រង់វត្តមាន'); }
+function attClear(){ if(!confirm('លុបវត្តមានថ្ងៃ '+dkm(AT.d||dkey())+' ទាំងអស់? (លុយដែលបានដកនឹងត្រឡប់ទៅសិស្សវិញ)')) return; const c=cls(); if(c.att) delete c.att[AT.d||dkey()]; saveC(); tAttend(c); }
+function attDay(v){ if(v===0) AT.d=dkey(); else if(typeof v==='number'){ const t=new Date((AT.d||dkey())+'T12:00:00'); t.setDate(t.getDate()+v); AT.d=dkey(t); } else if(v) AT.d=v; AT.m=null; tAttend(cls()); }
+function attTell(){ const c=cls(), d=AT.d||dkey(), day=(c.att||{})[d]||{}, users=(window.Auth&&Auth.data().users)||[]; if(!window.Notify) return; let n=0;
+  c.students.forEach(s=>{ const r=day[s.id]; if(!r||(r.st!=='a'&&r.st!=='e')) return; const u=users.find(x=>x.role==='student'&&x.classId===c.id&&x.studentId===s.id); if(!u) return; n++;
+    Notify.post(c.id, {to:u.id, kind:'ann', t:r.st==='a'?`❌ អ្នកអវត្តមានឥតច្បាប់ ថ្ងៃ ${dkm(d)}`:`📝 អវត្តមានមានច្បាប់ ថ្ងៃ ${dkm(d)}`, x:(r.f?`ត្រូវបានដក ${r.f.toLocaleString('en-US')}៛ ពីលុយរបស់អ្នក។ `:'មិនដកលុយទេ។ ')+(r.n?'មូលហេតុ: '+r.n:'')+' សូមកុំភ្លេចរៀនមេរៀនដែលខកខាន 📚'}); });
+  toast(n?`📣 បានផ្ញើដំណឹងទៅសិស្ស ${n} នាក់`:'⚠️ សិស្សទាំងនេះមិនទាន់មានគណនី'); }
+function attPrint(){ const c=cls(), m=AT.m||(AT.d||dkey()).slice(0,7), days=Object.keys(c.att||{}).filter(k=>k.startsWith(m)).sort(), L={p:'✓',l:'L',e:'P',a:'A'};
+  $('#printArea').innerHTML=`<div class="cl-print"><h1>${esc(c.name)} — តារាងវត្តមាន ${monthName(m)}</h1><table><thead><tr><th>#</th><th>ឈ្មោះ</th>${days.map(k=>`<th>${+k.slice(8)}</th>`).join('')}<th>A</th><th>P</th><th>ដក (៛)</th></tr></thead><tbody>
+    ${c.students.map((s,i)=>{ let a=0,e=0,f=0; const cells=days.map(k=>{ const r=c.att[k][s.id]; if(!r) return '<td></td>'; if(r.st==='a') a++; if(r.st==='e') e++; f+=+r.f||0; return `<td>${L[r.st]}</td>`; }).join(''); return `<tr><td>${i+1}</td><td style="text-align:left">${esc(s.name)}</td>${cells}<td>${a||''}</td><td>${e||''}</td><td>${f?f.toLocaleString('en-US'):''}</td></tr>`; }).join('')}</tbody></table>
+    <p style="font-size:11px">✓ មក • L មកយឺត • P អវត្តមានមានច្បាប់ • A អវត្តមានឥតច្បាប់ (ដក 4,000៛)</p></div>`; window.print(); }
+
 /* ---------- groups ---------- */
 const GNAMES = [['🦁','Lions','#ea580c'],['🐯','Tigers','#d97706'],['🐘','Elephants','#64748b'],['🦅','Eagles','#2563eb'],['🐬','Dolphins','#0891b2'],['🐼','Pandas','#334155'],['🦊','Foxes','#c2410c'],['🐢','Turtles','#15803d'],['🦋','Butterflies','#a21caf'],['🐝','Bees','#ca8a04'],['🦉','Owls','#7c3aed'],['🐧','Penguins','#0f766e']];
 let G={mode:'count', n:4, how:'random', absent:new Set()};
 function tGroups(c){
+  const td=(c.att||{})[dkey()]; if(td && G.attC!==c.id+dkey()){ G.attC=c.id+dkey(); G.absent=new Set(Object.keys(td).filter(k=>td[k].st==='a'||td[k].st==='e')); }
   if(!c.students.length){ $('#clTab').innerHTML=`<div class="panel cl-empty"><p class="km">សូមបន្ថែមសិស្សជាមុនសិន</p></div>`; return; }
   const present=c.students.filter(s=>!G.absent.has(s.id));
   $('#clTab').innerHTML = `<div class="cols" style="grid-template-columns:340px 1fr;align-items:start">
@@ -754,7 +809,7 @@ function studentsForPicker(){ const c=cls(); return c?c.students:[]; }
 function setBook(id){ const c=cls(); if(!c) return; c.book=id; saveC(); render(); }
 function share(k){ const c=cls(); if(!c) return; c.share=c.share||{}; c.share[k]=!c.share[k]; saveC(); toast(c.share[k]?'👁 សិស្សអាចមើលបានហើយ':'🔒 បានបិទមិនឱ្យសិស្សមើល'); }
 function shareBtn(c,k){ const on=c.share&&c.share[k]; return `<button class="btn sm ${on?'teal':'ghost'}" onclick="Class._share('${k}');Class.render('${k==='res'?'results':'year'}')" title="សិស្សមើលឃើញក្នុង 🏆 ចំណាត់ថ្នាក់">${on?'👁 សិស្សកំពុងមើលបាន':'🙈 សិស្សមើលមិនឃើញ'}</button>`; }
-window.Class = { _save:saveC, gate, gateAuto, copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
+window.Class = { _save:saveC, att, attFine, attNote, attAll, attClear, attDay, attTell, attPrint, attMon:m=>{ AT.m=m; tAttend(cls()); }, fines, FINE_A, gate, gateAuto, copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
   editStudent, pickPhoto, noPhoto:()=>{ editPhoto=null; $('#clPrev').innerHTML=avatar({name:$('#clN').value},140); }, cam, camStop, saveStudent, photo, delStudent, bulk, impMode, impFile, impPreview, impApply, infoTable, infoSave, template, age:ageOf, sortStudents,
   setMonth:m=>{ if(m){ C.month=m; saveC(); render(); } }, cols, colAdd, colSave, csv, printMonth, csvYear, printYear, certs, certSet, certGrade, certPrint, sigFile, sigDraw, sigScale, sigReset, certShow:i=>{ ctSel=i; certRefresh(); },
   gset:(k,v)=>{ G[k]=v; tGroups(cls()); }, gabs:id=>{ G.absent.has(id)?G.absent.delete(id):G.absent.add(id); tGroups(cls()); }, makeGroups, groupsToScore, groupsFull, printGroups,

@@ -1549,3 +1549,31 @@ body.role-student .tools .nt-bell{display:flex!important;align-items:center;just
 /* 👁 staff viewing a student account */
 .as-bar{position:sticky;top:0;z-index:3000;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;padding:8px 12px;background:#7c3aed;color:#fff;font:13px var(--kh);text-align:center}
 .as-bar button{border:0;background:#fff;color:#7c3aed;font:700 13px var(--kh);border-radius:999px;padding:5px 14px;cursor:pointer}
+/* 🙋 attendance */
+.at-panel{margin-bottom:14px}
+.at-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.at-top input[type=date],.at-top select{padding:6px 8px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}
+.at-cnt{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.at-cnt span{border:1px solid var(--c);color:var(--c);border-radius:999px;padding:3px 12px;font-size:14px;background:#fff}
+.at-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.at-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid #e2e8f0;border-left:5px solid #cbd5e1;border-radius:10px;background:#fff}
+.at-row.at-p{border-left-color:#16a34a}.at-row.at-l{border-left-color:#d97706;background:#fffbeb}.at-row.at-e{border-left-color:#2563eb;background:#eff6ff}.at-row.at-a{border-left-color:#dc2626;background:#fef2f2}
+.at-who{display:flex;align-items:center;gap:8px;min-width:190px;flex:1}
+.at-who span{display:flex;flex-direction:column;line-height:1.25}.at-who small{color:#64748b;font-size:12px}
+.at-btns{display:flex;gap:4px;flex-wrap:wrap}
+.at-btns button{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:6px 10px;font:inherit;font-size:14px;cursor:pointer}
+.at-btns button:hover{background:#f1f5f9}
+.at-p .at-btns button.on{background:#16a34a;color:#fff;border-color:#16a34a}
+.at-l .at-btns button.on{background:#d97706;color:#fff;border-color:#d97706}
+.at-e .at-btns button.on{background:#2563eb;color:#fff;border-color:#2563eb}
+.at-a .at-btns button.on{background:#dc2626;color:#fff;border-color:#dc2626}
+.at-fine{display:flex;align-items:center;gap:6px;flex-wrap:wrap;width:100%;padding-left:46px;font-size:14px}
+.at-fine b{color:#dc2626}.at-fine small{color:#64748b}
+.at-fine.ed button{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:13px;cursor:pointer}
+.at-fine.ed button.on{background:#334155;color:#fff;border-color:#334155}
+.at-fine input{padding:4px 8px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;font-size:13px;width:90px}
+.at-fine input.at-note{flex:1;min-width:180px;width:auto}
+.at-sum td.bad{color:#dc2626;font-weight:700}.at-sum td.nm{text-align:left}
+.wal-top b.neg,.stu-wallet b.neg{color:#dc2626}
+.wal-top em.wal-fine{display:block;color:#b91c1c;font-size:13px;margin-top:2px}
+.wal-how .minus b,.wal-log .minus b{color:#dc2626}

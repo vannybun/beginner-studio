@@ -29,8 +29,12 @@ function earn(id, amt, why){
 }
 function coinPop(amt, why){ const d=document.createElement('div'); d.className='coin-pop'; d.innerHTML=`<b>+${RIEL(amt)}</b><span>💰 ${why}</span>`;
   const n=document.querySelectorAll('.coin-pop').length; d.style.top=(80+n*62)+'px'; document.body.appendChild(d); setTimeout(()=>d.remove(),3200); }
-function walletInfo(){ const M=S.money||{}, mk=dayKey().slice(0,7);
-  modal(`<div class="wal"><div class="wal-top"><span>💰</span><small>លុយរបស់ខ្ញុំ</small><b>${RIEL(M.t)}</b><em>ខែនេះ +${RIEL((M.m||{})[mk])}</em></div>
+/* 🙋 my attendance fines (from the class data the teacher keeps) */
+function myFines(){ try{ const me=Auth.user(); if(!me||me.role!=='student'||!window.Class) return {t:0,m:{},log:[]}; return Class.fines(mapClass(), me.studentId); }catch(e){ return {t:0,m:{},log:[]}; } }
+function myMoney(){ const M=S.money||{}, F=myFines(), mk=dayKey().slice(0,7); return {t:(M.t||0)-F.t, m:((M.m||{})[mk]||0)-(F.m[mk]||0), fine:F.t, log:[...(M.log||[]), ...F.log].sort((a,b)=>b[0]-a[0])}; }
+const sRIEL = n => (n>0?'+':n<0?'−':'')+RIEL(Math.abs(n||0));
+function walletInfo(){ const W=myMoney();
+  modal(`<div class="wal"><div class="wal-top"><span>💰</span><small>លុយរបស់ខ្ញុំ</small><b class="${W.t<0?'neg':''}">${W.t<0?'−'+RIEL(-W.t):RIEL(W.t)}</b><em>ខែនេះ ${sRIEL(W.m)}</em>${W.fine?`<em class="wal-fine">❌ ដកដោយសារអវត្តមាន −${RIEL(W.fine)}</em>`:''}</div>
     <h4>🪙 របៀបរកលុយ</h4><div class="wal-how">
       <div><span>📖 រៀនចប់ផ្នែកមួយ</span><b>500៛</b></div>
       <div><span>✍️ លំហាត់ក្នុងផ្នែក (ត្រូវលើកទីមួយ +100៛/សំណួរ)</span><b>200៛+</b></div>
@@ -38,8 +42,10 @@ function walletInfo(){ const M=S.money||{}, mk=dayKey().slice(0,7);
       <div><span>📄 សន្លឹកលំហាត់ពីគ្រូ</span><b>≤2,000៛</b></div>
       <div><span>📝 ប្រឡងបញ្ចប់មេរៀន</span><b>≤3,000៛</b></div>
       <div><span>🏁 ឆ្លងកម្រិត (≥80%)</span><b>5,000៛</b></div>
-      <div><span>🏆 រៀនចប់ Unit មួយ</span><b>10,000៛</b></div></div>
-    <h4>📜 ប្រវត្តិថ្មីៗ</h4><div class="wal-log">${(M.log||[]).slice(0,20).map(([t,a,w])=>`<div><span>${esc(w)}<small>${new Date(t).toLocaleDateString('en-GB')}</small></span><b>+${RIEL(a)}</b></div>`).join('')||'<p class="note">មិនទាន់មាន — ចាប់ផ្តើមរៀនដើម្បីរកលុយ!</p>'}</div>
+      <div><span>🏆 រៀនចប់ Unit មួយ</span><b>10,000៛</b></div>
+      <div class="minus"><span>❌ អវត្តមានឥតច្បាប់ (ម្តង)</span><b>−4,000៛</b></div>
+      <div class="minus"><span>📝 អវត្តមានមានច្បាប់ / មកយឺត</span><b>គ្រូសម្រេច</b></div></div>
+    <h4>📜 ប្រវត្តិថ្មីៗ</h4><div class="wal-log">${W.log.slice(0,25).map(([t,a,w])=>`<div class="${a<0?'minus':''}"><span>${esc(w)}<small>${new Date(t).toLocaleDateString('en-GB')}</small></span><b>${sRIEL(a)}</b></div>`).join('')||'<p class="note">មិនទាន់មាន — ចាប់ផ្តើមរៀនដើម្បីរកលុយ!</p>'}</div>
     <button class="btn teal" style="width:100%;justify-content:center;margin-top:10px" onclick="closeModal();Rank.set('rich');go('rank')">💰 មើលអ្នកមានប្រចាំថ្នាក់</button></div>`); }
 window.earn=earn; window.RIEL=RIEL;
 window.Me={ profile:()=>S.profile||null, setProfile:p=>{ S.profile=p; save(); } };
@@ -214,7 +220,7 @@ function renderStuHome(){
   const totalW=UNITS.reduce((a,x)=>a+x.vocab.length,0), knownW=UNITS.reduce((a,x)=>a+knownCount(x.n),0), passed=Object.values(S.quiz).filter(v=>v>=80).length;
   const ox=stuOpenExams(), wp=WS.pending(), first=(((S.profile||{}).name)||me.name||'').trim().split(/\s+/).slice(-1)[0];
   $('#main').innerHTML=`<div class="stu-hi"><div>${Auth.avatarFor(me,52)}</div><div><small>សួស្តី 👋</small><b>${esc(first)}</b><button class="stu-edit" onclick="Auth.editMe()">✏️ កែព័ត៌មាន</button></div>${(()=>{const cc=(window.Class&&Auth.user().classId)?(JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===Auth.user().classId):null, b=courseOf(cc); return `<span class="stu-book">${b.icon} ${esc(b.name)}</span>`;})()}</div>
-    <button class="stu-wallet" onclick="walletInfo()"><span>💰</span><div><small>លុយរបស់ខ្ញុំ</small><b>${RIEL((S.money||{}).t)}</b></div><em>ខែនេះ +${RIEL(((S.money||{}).m||{})[dayKey().slice(0,7)])}</em><i>›</i></button>
+    <button class="stu-wallet" onclick="walletInfo()"><span>💰</span><div><small>លុយរបស់ខ្ញុំ</small>${(W=>`<b class="${W.t<0?'neg':''}">${W.t<0?'−'+RIEL(-W.t):RIEL(W.t)}</b></div><em>ខែនេះ ${sRIEL(W.m)}</em>`)(myMoney())}<i>›</i></button>
     ${window.Cloud&&Cloud.installBanner?Cloud.installBanner():''}
     ${window.Notify&&Notify.perm()==='default'&&window.Cloud&&Cloud.live&&Cloud.live.ok()?`<button class="stu-alert" style="background:linear-gradient(135deg,#fef3c7,#fde68a);color:#78350f" onclick="Notify.ask()"><span>🔔</span><div><b>បើកការជូនដំណឹង</b><small>ដឹងភ្លាមៗពេលមានកិច្ចការ មេរៀនថ្មី ឬមិត្តហៅ</small></div><i>›</i></button>`:''}
     ${ox.length||wp?`<button class="stu-alert" onclick="go('exams')"><span>📝</span><div><b>${[ox.length?`ប្រឡង ${ox.length}`:'',wp?`សន្លឹកលំហាត់ ${wp}`:''].filter(Boolean).join(' • ')} កំពុងរង់ចាំ</b><small>ចុចដើម្បីធ្វើ</small></div><i>›</i></button>`:''}
@@ -276,7 +282,7 @@ function mapHtml(){
 /* 👥 classmates on the map: who is at which unit, %, stars, money */
 function mapClass(){ try{ if(PREVIEW()&&window.Class) return Class._cur(); const me=Auth.user(); return (JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===me.classId); }catch(e){ return null; } }
 function mapRows(){ const c=mapClass(); if(!c||!window.Rank) return []; const me=Auth.user(), R=Rank.rows(c);
-  if(me&&me.role==='student'){ const mine=R.find(r=>r.s.id===me.studentId); if(mine){ mine.e={...mine.e,...Rank.summ(S)}; mine.me=true; if(S.profile&&S.profile.photo) mine.s={...mine.s,photo:S.profile.photo}; } }
+  if(me&&me.role==='student'){ const mine=R.find(r=>r.s.id===me.studentId); if(mine){ mine.e=Rank.net({...mine.e,...Rank.summ(S)}, c, me.studentId); mine.me=true; if(S.profile&&S.profile.photo) mine.s={...mine.s,photo:S.profile.photo}; } }
   return R; }
 function mapPeople(pts,W){ const R=mapRows(); if(!R.length) return '';
   return UNITS.map((u,i)=>{ const here=R.filter(r=>(r.e.cu||1)===u.n).sort((a,b)=>(b.me?1:0)-(a.me?1:0)||(b.e.pc||0)-(a.e.pc||0)); if(!here.length) return '';
