@@ -171,7 +171,7 @@ function render(){
   if(!ROLE_NOW) return;
   if(ROLE_NOW==='student' && (view.name==='class'||view.name==='admin')) view.name='home';
   if(ROLE_NOW!=='admin' && view.name==='admin') view.name='home';
-  if(stuUI() && view.name!=='class' && view.name!=='admin'){ stuNav(); if(view.name==='home') return renderStuHome(); if(view.name==='units') return renderStuUnits(); if(view.name==='exams') return PREVIEW()?renderPreviewTasks():Exam.studentPage(); if(view.name==='me' && PREVIEW()) return renderPreviewMe(); if(view.name==='rank'){ if(PREVIEW()){ Rank._target(()=>render()); return Rank.page($('#main'), Class._cur(), {staff:true}); } return Rank.stuPage(); } }
+  if(stuUI() && view.name!=='class' && view.name!=='admin'){ stuNav(); if(view.name==='home') return renderStuHome(); if(view.name==='units') return renderStuUnits(); if(view.name==='exams') return PREVIEW()?renderPreviewTasks():Exam.studentPage(); if(view.name==='me' && PREVIEW()) return renderPreviewMe(); if(view.name==='chat'){ if(PREVIEW()){ view={name:'class',unit:view.unit,tab:'chat'}; setMode('teach'); return; } return Chat.page($('#main')); } if(view.name==='rank'){ if(PREVIEW()){ Rank._target(()=>render()); return Rank.page($('#main'), Class._cur(), {staff:true}); } return Rank.stuPage(); } }
   else { const n=document.getElementById('stuNav'); if(n) n.remove(); }
   if(view.name==='rank'){ view={name:'class',unit:view.unit,tab:'rank'}; }
   view.name==='home' ? renderHome() : view.name==='class' ? Class.render(view.tab) : view.name==='me' ? Auth.renderMe() : view.name==='admin' ? Auth.renderAdmin(view.tab) : renderUnit(); }
@@ -197,11 +197,12 @@ const HERO_SVG = `<svg class="ill" viewBox="0 0 260 220" aria-hidden="true">
 </svg>`;
 
 /* ---------- 🎓 student (mobile-first) ---------- */
-const STU_NAV=[['home','🏠','ដើម'],['units','🗺','ផែនទី'],['exams','📝','កិច្ចការ'],['rank','🏆','ចំណាត់ថ្នាក់'],['me','📊','ខ្ញុំ']];
+const STU_NAV=[['home','🏠','ដើម'],['units','🗺','ផែនទី'],['exams','📝','កិច្ចការ'],['rank','🏆','ចំណាត់ថ្នាក់'],['chat','💬','មិត្ត'],['me','📊','ខ្ញុំ']];
 function stuNav(){
   let n=document.getElementById('stuNav'); if(!n){ n=document.createElement('nav'); n.id='stuNav'; document.body.appendChild(n); }
   const cur=view.name==='unit'?'units':view.name;
-  n.innerHTML=STU_NAV.map(([k,i,t])=>`<button class="${cur===k?'on':''}" onclick="go('${k}')"><span>${i}</span><b>${t}</b>${k==='exams'&&(stuOpenExams().length+WS.pending())?`<i>${stuOpenExams().length+WS.pending()}</i>`:''}</button>`).join('');
+  if(window.Chat&&Auth.role()==='student') Chat.start();
+  n.innerHTML=STU_NAV.map(([k,i,t])=>`<button class="${cur===k?'on':''}" onclick="go('${k}')"><span>${i}</span><b>${t}</b>${k==='chat'?`<i data-chat-badge hidden></i>`:''}${k==='exams'&&(stuOpenExams().length+WS.pending())?`<i>${stuOpenExams().length+WS.pending()}</i>`:''}</button>`).join('');
 }
 function stuOpenExams(){ const me=Auth.user(), X=(window.Exam&&Exam.data())||{}; const m=new Map(); (X.open||[]).forEach(se=>{ const k=se.n+'|'+se.cls, o=m.get(k); if(!o||se.ts>o.ts) m.set(k,se); }); return [...m.values()].filter(se=>se.cls===me.classId && !(se.once && (X.results||[]).some(r=>r.sess===se.id && (r.uid===me.id||r.sid===me.studentId)))); }
 function unitPct(u){ const kp=knownCount(u.n)/u.vocab.length, sp=((S.sec||{})[u.n]||[]).length/LESSONS[u.n].sections.length, q=(S.quiz[u.n]||0)/100; return Math.round((kp+sp+q)/3*100); }
