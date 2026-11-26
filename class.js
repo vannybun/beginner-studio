@@ -75,7 +75,7 @@ function resizePhoto(file, cb){
 }
 
 /* ---------- main render ---------- */
-const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['unlock','🔓 បើកមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
+const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['unlock','🔓 បើក/កាលវិភាគមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
 let tab='students';
 function render(t){ applyProfiles();
   if(t) tab=t;
@@ -111,7 +111,17 @@ function tUnlock(c){
   const cell=(sid,n,pass)=>{ const all=L.all.includes(n), on=all||(sid!=='*'&&(L.s[sid]||[]).includes(n)); const lock=n===1;
     return `<td><button class="ul-c ${pass?'pass':on?'on':''} ${lock?'first':''}" ${lock||(sid!=='*'&&all)?'disabled':''} title="Unit ${n}" onclick="Class.unl('${sid}',${n})">${pass?'✅':lock||on?'🔓':'🔒'}</button></td>`; };
   const upto=sid=>`<select class="ul-to" onchange="Class.unlTo('${sid}',+this.value);this.value=''"><option value="">បើកដល់…</option>${N.slice(1).map(n=>`<option value="${n}">Unit ${n}</option>`).join('')}<option value="0">🔒 បិទវិញទាំងអស់</option></select>`;
-  $('#clTab').innerHTML=`<div class="panel">
+  const G=c.gate||{on:false,d:{}}, td=new Date(), tk=td.getFullYear()+'-'+String(td.getMonth()+1).padStart(2,'0')+'-'+String(td.getDate()).padStart(2,'0');
+  $('#clTab').innerHTML=`<div class="panel gt-panel">
+    <div class="row" style="justify-content:space-between"><h3 class="sec" style="margin:0">📅 កាលវិភាគបើកមេរៀន</h3>
+      <label class="gt-sw ${G.on?'on':''}"><input type="checkbox" ${G.on?'checked':''} onchange="Class.gate('on',this.checked)" hidden><span></span>${G.on?'កំពុងប្រើ':'បិទ'}</label></div>
+    <p class="note" style="margin:6px 0 10px">ពេលបើក៖ Unit នីមួយៗបើកឱ្យសិស្សរៀនតែចាប់ពីថ្ងៃដែលគ្រូកំណត់ប៉ុណ្ណោះ <b>ទោះសិស្សឆ្លងមេរៀនមុនរួចហើយក៏ដោយ</b> — ការពារមិនឱ្យរៀនលឿនជាងថ្នាក់។ សិស្សឃើញថ្ងៃបើកលើផែនទី។ Unit ដែលមិនទាន់កំណត់ថ្ងៃ = «រង់ចាំគ្រូ»។ (ការបើកសោផ្ទាល់ខាងក្រោម នៅតែបើកបានជានិច្ច)</p>
+    ${G.on?`<div class="gt-auto">⚡ បំពេញស្វ័យប្រវត្តិ៖ ចាប់ពី <input type="date" id="gtS" value="${tk}"> រៀងរាល់ <input type="number" id="gtE" value="14" min="1" max="60" style="width:60px"> ថ្ងៃ/Unit <button class="btn ghost sm" onclick="Class.gateAuto()">បំពេញ</button></div>
+    <div class="gt-list">${N.map(n=>{ const d=(G.d||{})[n]||'', st=n===1?'ok':!d?'wait':d<=tk?'ok':'soon';
+      return `<div class="gt-row ${st}"><span class="gt-u" style="--c:${UNIT_STYLE[n].c1}">${n}</span><b>${esc(UNITS[n-1].en)}</b>
+        ${n===1?'<em>✅ បើកជានិច្ច</em>':`<input type="date" value="${d}" onchange="Class.gate('d',[${n},this.value])"><em>${st==='ok'?'✅ បើកហើយ':st==='soon'?'📅 រង់ចាំថ្ងៃ':'⏳ មិនទាន់កំណត់'}</em><button class="btn ghost sm" onclick="Class.gate('d',[${n},'${tk}'])">បើកថ្ងៃនេះ</button>`}</div>`; }).join('')}</div>`:''}
+  </div>
+  <div class="panel">
     <h3 class="sec" style="margin:0 0 6px">🔓 បើកសោមេរៀនឱ្យសិស្ស</h3>
     <p class="note" style="margin:0 0 12px">សម្រាប់សិស្សដែលធ្លាប់រៀនខ្លះហើយ — ចុច 🔒 ដើម្បីបើក Unit នោះឱ្យសិស្សចូលរៀនបានភ្លាម ដោយមិនចាំបាច់ឆ្លង Unit មុន។ ចុចម្តងទៀតដើម្បីបិទវិញ។ ក្រោយបើក Unit ណាមួយ សិស្សនៅតែត្រូវឆ្លងកម្រិត Unit នោះ ទើប Unit បន្ទាប់បើកដោយខ្លួនឯង។<br>🔓 = បើក • 🔒 = ចាក់សោ • ✅ = ឆ្លងរួច</p>
     <div class="ul-wrap"><table class="ul-t"><thead><tr><th>សិស្ស</th>${N.map(n=>`<th style="color:${UNIT_STYLE[n].c1}">${n}</th>`).join('')}<th></th></tr></thead><tbody>
@@ -119,6 +129,14 @@ function tUnlock(c){
       ${c.students.map((s,i)=>{ const P=passedOf(c,s); return `<tr><td><span class="ul-n">${i+1}. ${esc(s.name)}</span></td>${N.map(n=>cell(s.id,n,P(n))).join('')}<td>${upto(s.id)}</td></tr>`; }).join('')}
     </tbody></table></div></div>`;
 }
+function gate(k,v){ const c=cls(); c.gate=c.gate||{on:false,d:{}}; c.gate.d=c.gate.d||{};
+  if(k==='on'){ c.gate.on=!!v; toast(v?'📅 បានបើកកាលវិភាគ — Unit បើកតាមថ្ងៃដែលគ្រូកំណត់':'🔓 បានបិទកាលវិភាគ'); }
+  else { const [n,d]=v; if(d) c.gate.d[n]=d; else delete c.gate.d[n]; }
+  saveC(); tUnlock(c); }
+function gateAuto(){ const c=cls(), s=document.getElementById('gtS').value, e=+document.getElementById('gtE').value||14; if(!s) return;
+  if(!confirm(`បំពេញថ្ងៃបើក Unit 2–14 ចាប់ពី ${s} រៀងរាល់ ${e} ថ្ងៃ? (ជំនួសថ្ងៃចាស់)`)) return;
+  const b=new Date(s+'T12:00:00'); c.gate.d={}; for(let n=2;n<=14;n++){ const d=new Date(b.getTime()+(n-2)*e*864e5); c.gate.d[n]=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  saveC(); tUnlock(c); toast('✅ បានបំពេញកាលវិភាគ'); }
 function unl(sid,n){ const c=cls(), L=UL(c), a=sid==='*'?L.all:(L.s[sid]=L.s[sid]||[]); const i=a.indexOf(n); i>=0?a.splice(i,1):a.push(n); saveC(); tUnlock(c); toast(i>=0?`🔒 បិទ Unit ${n} វិញ`:`🔓 បានបើក Unit ${n}${sid==='*'?' ឱ្យថ្នាក់ទាំងមូល':''}`); }
 function unlTo(sid,n){ if(isNaN(n)) return; const c=cls(), L=UL(c), v=n?[...Array(n-1)].map((_,i)=>i+2):[]; if(sid==='*') L.all=v; else L.s[sid]=v; saveC(); tUnlock(c); toast(n?`🔓 បានបើក Unit 1–${n}`:'🔒 បានបិទវិញ'); }
 
@@ -736,7 +754,7 @@ function studentsForPicker(){ const c=cls(); return c?c.students:[]; }
 function setBook(id){ const c=cls(); if(!c) return; c.book=id; saveC(); render(); }
 function share(k){ const c=cls(); if(!c) return; c.share=c.share||{}; c.share[k]=!c.share[k]; saveC(); toast(c.share[k]?'👁 សិស្សអាចមើលបានហើយ':'🔒 បានបិទមិនឱ្យសិស្សមើល'); }
 function shareBtn(c,k){ const on=c.share&&c.share[k]; return `<button class="btn sm ${on?'teal':'ghost'}" onclick="Class._share('${k}');Class.render('${k==='res'?'results':'year'}')" title="សិស្សមើលឃើញក្នុង 🏆 ចំណាត់ថ្នាក់">${on?'👁 សិស្សកំពុងមើលបាន':'🙈 សិស្សមើលមិនឃើញ'}</button>`; }
-window.Class = { copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
+window.Class = { gate, gateAuto, copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
   editStudent, pickPhoto, noPhoto:()=>{ editPhoto=null; $('#clPrev').innerHTML=avatar({name:$('#clN').value},140); }, cam, camStop, saveStudent, photo, delStudent, bulk, impMode, impFile, impPreview, impApply, infoTable, infoSave, template, age:ageOf, sortStudents,
   setMonth:m=>{ if(m){ C.month=m; saveC(); render(); } }, cols, colAdd, colSave, csv, printMonth, csvYear, printYear, certs, certSet, certGrade, certPrint, sigFile, sigDraw, sigScale, sigReset, certShow:i=>{ ctSel=i; certRefresh(); },
   gset:(k,v)=>{ G[k]=v; tGroups(cls()); }, gabs:id=>{ G.absent.has(id)?G.absent.delete(id):G.absent.add(id); tGroups(cls()); }, makeGroups, groupsToScore, groupsFull, printGroups,

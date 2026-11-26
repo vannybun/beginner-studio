@@ -206,7 +206,7 @@ function stuNav(){
 function stuOpenExams(){ const me=Auth.user(), X=(window.Exam&&Exam.data())||{}; const m=new Map(); (X.open||[]).forEach(se=>{ const k=se.n+'|'+se.cls, o=m.get(k); if(!o||se.ts>o.ts) m.set(k,se); }); return [...m.values()].filter(se=>se.cls===me.classId && !(se.once && (X.results||[]).some(r=>r.sess===se.id && (r.uid===me.id||r.sid===me.studentId)))); }
 function unitPct(u){ const kp=knownCount(u.n)/u.vocab.length, sp=((S.sec||{})[u.n]||[]).length/LESSONS[u.n].sections.length, q=(S.quiz[u.n]||0)/100; return Math.round((kp+sp+q)/3*100); }
 function renderStuHome(){
-  if(window.Cloud&&Cloud.refresh&&Date.now()-(renderStuHome.t||0)>15000){ renderStuHome.t=Date.now(); Promise.all([Cloud.refresh('beginner-studio-exams-v1'),Cloud.refresh(WS.key),Cloud.refresh('beginner-studio-class-v1')]).then(([a,b,c])=>{ if(a) Exam.reload(); if(b) WS.reload(); if(c) tUnlocked.c=null; if(a||b||c){ if(view.name==='home') render(); else stuNav(); } }).catch(()=>{}); }
+  if(window.Cloud&&Cloud.refresh&&Date.now()-(renderStuHome.t||0)>15000){ renderStuHome.t=Date.now(); Promise.all([Cloud.refresh('beginner-studio-exams-v1'),Cloud.refresh(WS.key),Cloud.refresh('beginner-studio-class-v1')]).then(([a,b,c])=>{ if(a) Exam.reload(); if(b) WS.reload(); if(c){ tUnlocked.c=null; myGate.t=0; } if(a||b||c){ if(view.name==='home') render(); else stuNav(); } }).catch(()=>{}); }
   if(window.Rank) Rank.push(S);
   const me=Auth.user(), nu=nextUnit(), u=U(nu), st=UNIT_STYLE[nu]; setUnitColors(nu);
   const totalW=UNITS.reduce((a,x)=>a+x.vocab.length,0), knownW=UNITS.reduce((a,x)=>a+knownCount(x.n),0), passed=Object.values(S.quiz).filter(v=>v>=80).length;
@@ -215,6 +215,7 @@ function renderStuHome(){
     <button class="stu-wallet" onclick="walletInfo()"><span>💰</span><div><small>លុយរបស់ខ្ញុំ</small><b>${RIEL((S.money||{}).t)}</b></div><em>ខែនេះ +${RIEL(((S.money||{}).m||{})[dayKey().slice(0,7)])}</em><i>›</i></button>
     ${window.Cloud&&Cloud.installBanner?Cloud.installBanner():''}
     ${ox.length||wp?`<button class="stu-alert" onclick="go('exams')"><span>📝</span><div><b>${[ox.length?`ប្រឡង ${ox.length}`:'',wp?`សន្លឹកលំហាត់ ${wp}`:''].filter(Boolean).join(' • ')} កំពុងរង់ចាំ</b><small>ចុចដើម្បីធ្វើ</small></div><i>›</i></button>`:''}
+    ${!PREVIEW()&&!unitOpen(nu)&&!schedOK(nu)?`<div class="stu-wait">📅 <div><b>Unit ${nu} នឹងបើក${schedDate(nu)?'នៅថ្ងៃ '+kmDate(schedDate(nu)):'ពេលគ្រូអនុញ្ញាត'}</b><small>ពូកែណាស់! ចាំរៀនជាមួយថ្នាក់ — ពេលនេះអាចរំលឹកមេរៀនចាស់ ឬធ្វើលំហាត់ដើម្បីរកលុយ 💰</small></div></div>`:''}
     <div class="stu-cont" style="--c1:${st.c1};--c2:${st.c2}">
       <small>បន្តរៀន</small><div class="r"><div class="n">${nu}</div><div><b>${esc(u.en)}</b><span>${u.km}</span></div><div class="e">${ANIMALS[nu-1]}</div></div>
       <div class="bar"><i style="width:${unitPct(u)}%"></i></div>
@@ -240,7 +241,16 @@ function unitPassed(n){ return lessonDone(n) && (lvl(n)||0)>=PASS; }
 function tUnlocked(n){ if(!window.Auth||Auth.role()!=='student') return false; const now=Date.now();
   if(!tUnlocked.c||now-tUnlocked.t>1500){ tUnlocked.t=now; try{ const me=Auth.user(), c=(JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===me.classId), L=(c&&c.unlock)||{}; tUnlocked.c=new Set([...(L.all||[]),...((L.s||{})[me.studentId]||[])]); }catch(e){ tUnlocked.c=new Set(); } }
   return tUnlocked.c.has(n); }
-function unitOpen(n){ return PREVIEW() || n===1 || unitPassed(n-1) || tUnlocked(n); }
+/* 📅 teacher schedule: class.gate = {on, d:{unit:'YYYY-MM-DD'}} — a unit opens only from its date, even if the student already passed the previous one */
+function myGate(){ if(!window.Auth||Auth.role()!=='student') return null; const now=Date.now();
+  if(myGate.t&&now-myGate.t<1500) return myGate.g; myGate.t=now;
+  try{ const me=Auth.user(), c=(JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===me.classId); myGate.g=(c&&c.gate&&c.gate.on)?c.gate:null; }catch(e){ myGate.g=null; }
+  return myGate.g; }
+const todayKey=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+function schedDate(n){ const g=myGate(); return g?((g.d||{})[n]||''):null; }   // null = no schedule, '' = waiting for teacher
+function schedOK(n){ if(n===1) return true; const d=schedDate(n); return d===null || (!!d && d<=todayKey()); }
+const kmDate=d=>{ const [y,m,dd]=d.split('-'); return `${+dd}/${+m}/${y}`; };
+function unitOpen(n){ return PREVIEW() || tUnlocked(n) || (schedOK(n) && (n===1 || unitPassed(n-1))); }
 function secOpen(n,i){ return PREVIEW() || i===0 || ((S.sec||{})[n]||[]).includes(i-1); }
 function stars(n){ return (lessonDone(n)?1:0) + ((lvl(n)||0)>=PASS?1:0) + ((lvl(n)||0)>=95?1:0); }
 function mapHtml(){
@@ -251,10 +261,11 @@ function mapHtml(){
   const doneN=UNITS.filter(u=>unitPassed(u.n)).length, curY=pts[cur-1].y;
   return `<div class="map-wrap"><div class="map" style="height:${H}px" data-cury="${curY}">
     <svg class="map-path" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path d="${path}" class="bg"/><path d="${path}" class="fg" style="stroke-dasharray:${doneN/13*100} 100" pathLength="100"/></svg>
-    ${UNITS.map((u,i)=>{ const p=pts[i], open=unitOpen(u.n), pass=unitPassed(u.n), isCur=u.n===cur && !pass, st=UNIT_STYLE[u.n], sN=stars(u.n);
+    ${UNITS.map((u,i)=>{ const p=pts[i], open=unitOpen(u.n), pass=unitPassed(u.n), isCur=u.n===cur && !pass && open, st=UNIT_STYLE[u.n], sN=stars(u.n);
       return `<button class="mnode ${pass?'pass':open?'open':'lock'} ${isCur?'cur':''}" style="left:${p.x/W*100}%;top:${p.y}px;--c1:${st.c1};--c2:${st.c2};animation-delay:${i*0.05}s" onclick="Stu.unit(${u.n})">
         ${isCur?'<span class="mstart">▶ រៀន</span>':''}
         <span class="mcirc"><span class="ma">${open?ANIMALS[i]:'🔒'}</span>${pass?'<span class="mok">✓</span>':''}</span>
+        ${!PREVIEW()&&!schedOK(u.n)?`<span class="mdate">📅 ${schedDate(u.n)?kmDate(schedDate(u.n)):'រង់ចាំគ្រូ'}</span>`:''}
         <span class="mlab"><b>Unit ${u.n}</b><small>${esc(u.en)}</small>${open?`<span class="mst">${'★'.repeat(sN)}<i>${'★'.repeat(3-sN)}</i></span>`:''}</span></button>`; }).join('')}
     ${mapPeople(pts,W)}
     <div class="mflag" style="top:${H-40}px">🏆</div></div></div>`;
@@ -342,7 +353,8 @@ function tabLesson(u){
     return `<div class="les-s ${on?'on':''} ${ok?'ok':''}" style="--kc:${K.c||'var(--c1)'}"><button class="les-h" onclick="Stu.open(${u.n},${si})"><span class="ki">${ok?'✓':K.i}</span><span class="tt"><small>${K.km}</small><b>${esc(s.t)}</b>${on?'':`<em>${s.km}</em>`}</span><span class="ch">${on?'−':'+'}</span></button>${on?`<div class="les-b"><p class="km les-d">${s.km}</p>${body}</div>`:''}</div>`; }).join('')}</div>`;
 }
 window.Stu = {
-  unit:n=>{ if(!unitOpen(n)) return toast(`🔒 ឆ្លង Unit ${n-1} ជាមុនសិន (រៀនគ្រប់ផ្នែក + 🏁 លំហាត់ឆ្លងកម្រិត ${PASS}%) ឬសុំគ្រូបើកសោឱ្យ`); go('unit',n,'lesson'); },
+  unit:n=>{ if(!unitOpen(n) && !schedOK(n)){ const d=schedDate(n); return toast(d?`📅 Unit ${n} នឹងបើកនៅថ្ងៃ ${kmDate(d)} — សូមរង់ចាំរៀនជាមួយថ្នាក់ 🙂`:`📅 Unit ${n} រង់ចាំគ្រូបើក — សូមរៀនជាមួយថ្នាក់ 🙂`); }
+    if(!unitOpen(n)) return toast(`🔒 ឆ្លង Unit ${n-1} ជាមុនសិន (រៀនគ្រប់ផ្នែក + 🏁 លំហាត់ឆ្លងកម្រិត ${PASS}%) ឬសុំគ្រូបើកសោឱ្យ`); go('unit',n,'lesson'); },
   open:(n,i)=>{ openSec={n, i: openSec&&openSec.n===n&&openSec.i===i ? -1 : i}; tabLesson(U(n)); const el=document.querySelectorAll('.les-s')[i]; if(el&&openSec.i===i) el.scrollIntoView({behavior:'smooth',block:'start'}); },
   done:(n,i)=>{ if(!PREVIEW() && window.LEX && !LEX.ready(n,i)) return toast('✍️ ធ្វើលំហាត់ផ្នែកនេះឱ្យត្រូវទាំងអស់សិន'); const d=secDone(n); if(!d.includes(i)){ d.push(i); track('lesson', n+':'+i); save(); earn(`sec:${n}:${i}`, 500, `រៀនចប់ផ្នែក Unit ${n}`); } const L=LESSONS[n]; const nx=L.sections.findIndex((x,k)=>k>i&&!d.includes(k)); if(nx>=0){ openSec={n,i:nx}; renderUnit(); setTimeout(()=>{ const el=document.querySelectorAll('.les-s')[nx]; el&&el.scrollIntoView({behavior:'smooth',block:'start'}); },60); } else { toast('🎉 រៀនគ្រប់ផ្នែកហើយ! តោះធ្វើលំហាត់'); renderUnit(); } }
 };
@@ -403,7 +415,7 @@ function renderUnit(){
   setUnitColors(u.n);
   const tabs = stuUI() ? TABS_STU() : TABS_LEARN.concat(S.mode==='teach'?TABS_TEACH:[]);
   if(!tabs.find(t=>t[0]===view.tab)) view.tab=tabs[0][0];
-  if(stuUI()){ if(!unitOpen(u.n)){ toast(`🔒 សូមឆ្លង Unit ${u.n-1} ជាមុនសិន`); view={name:'units',unit:u.n,tab:'lesson'}; return render(); } return renderStuUnit(u, tabs); }
+  if(stuUI()){ if(!unitOpen(u.n)){ toast(!schedOK(u.n)?(schedDate(u.n)?`📅 Unit ${u.n} នឹងបើកនៅថ្ងៃ ${kmDate(schedDate(u.n))}`:`📅 Unit ${u.n} រង់ចាំគ្រូបើក`):`🔒 សូមឆ្លង Unit ${u.n-1} ជាមុនសិន`); view={name:'units',unit:u.n,tab:'lesson'}; return render(); } return renderStuUnit(u, tabs); }
   $('#main').innerHTML = `
   <div class="uhero">
     <div class="big">${u.n}</div>
