@@ -1,5 +1,5 @@
 // Beginner English Studio — service worker: makes the website open fast on phones (and offline)
-const CACHE='bs-2026.11.27b';
+const CACHE='bs-2026.11.27c';
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', e => {
@@ -15,4 +15,12 @@ self.addEventListener('fetch', e => {
   }
   // scripts / styles / fonts / images / Firebase SDK: cache first (files are versioned with ?v=)
   e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => { if (r.ok) { const c = r.clone(); caches.open(CACHE).then(x => x.put(req, c)); } return r; })));
+});
+// 🔔 tap on a notification → open/focus the app and jump to the right page
+self.addEventListener('notificationclick', e => {
+  e.notification.close(); const go = (e.notification.data && e.notification.data.go) || 'inbox';
+  e.waitUntil(self.clients.matchAll({type:'window', includeUncontrolled:true}).then(cs => {
+    for (const c of cs) { if ('focus' in c) { c.postMessage({go}); return c.focus(); } }
+    return self.clients.openWindow('./?n=' + go);
+  }));
 });

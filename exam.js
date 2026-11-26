@@ -107,7 +107,7 @@ function openPanel(u){
 }
 function openSess(n){
   const se={id:Math.random().toString(36).slice(2,10), n, ver:$('#exoV').value, cls:$('#exoC').value, min:+$('#exoM').value||0, once:$('#exoOnce').checked, ts:Date.now(), by:(window.Auth&&Auth.user()&&Auth.user().name)||''};
-  X.open=(X.open||[]).filter(x=>!(x.n===n && x.cls===se.cls)); X.open.push(se); saveX(); toast('🔓 បានបើកប្រឡង Unit '+n+' — សិស្សអាចចូលប្រឡងបានហើយ'); render();
+  X.open=(X.open||[]).filter(x=>!(x.n===n && x.cls===se.cls)); X.open.push(se); saveX(); if(window.Notify) Notify.task(se.cls, `ប្រឡង Unit ${n} បើកហើយ`, 'ចូល 📝 កិច្ចការ ដើម្បីចាប់ផ្តើមប្រឡង • សំណាងល្អ! 🍀'); toast('🔓 បានបើកប្រឡង Unit '+n+' — សិស្សអាចចូលប្រឡងបានហើយ'); render();
 }
 function closeSess(id){ if(!confirm('បិទប្រឡងនេះ? សិស្សនឹងមិនអាចចូលប្រឡងទៀតទេ')) return; const se=(X.open||[]).find(x=>x.id===id); X.open=(X.open||[]).filter(x=>x.id!==id && !(se && x.n===se.n && x.cls===se.cls)); saveX(); toast('⛔ បានបិទ'); render(); }
 let lastRef=0;

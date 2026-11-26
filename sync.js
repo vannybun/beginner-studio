@@ -7,8 +7,8 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.27b';
-const FILES=['tts.js','qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','rank.js','chat.js','exam.js','worksheet.js','track.js','qrscan.js','auth.js','ctx.js','lessonex.js','app.js'];
+const VER='2026.11.27c';
+const FILES=['tts.js','qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','rank.js','chat.js','notify.js','exam.js','worksheet.js','track.js','qrscan.js','auth.js','ctx.js','lessonex.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -368,6 +368,7 @@ const live = {
   watchCol(path, cb, n){ if(!db) return ()=>{}; const q=F.query(lcol(...path), F.orderBy('ts'), F.limitToLast(n||150)); return F.onSnapshot(q, s=>cb(s.docs.map(d=>({id:d.id,...d.data()}))), ()=>cb(null)); },
   add(path, data){ if(!db) return Promise.reject('off'); return F.addDoc(lcol(...path), data); },
   set(path, data){ if(!db) return Promise.resolve(); return F.setDoc(lref(...path), data, {merge:true}); },
+  get(path){ if(!db) return Promise.resolve(null); return F.getDoc(lref(...path)).then(d=>d.exists()?d.data():null); },
   rm(path){ if(!db) return Promise.resolve(); return F.deleteDoc(lref(...path)).catch(()=>{}); },
   upd(path, data){ if(!db) return Promise.resolve(); return F.updateDoc(lref(...path), data).catch(()=>{}); }
 };

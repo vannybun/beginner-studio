@@ -86,7 +86,7 @@ function send(){
   if(!CUR || !total(CUR)) return toast('សូមជ្រើសចំនួនសំណួរ');
   const mode=(document.querySelector('input[name=wsM]:checked')||{}).value||'do';
   const a={id:uid(), n:CUR.n, cls:$('#wsCls').value, mode, show:$('#wsShow').checked, once:$('#wsOnce').checked, open:true, ts:Date.now(), by:(window.Auth&&Auth.user()&&Auth.user().name)||'', ws:CUR};
-  W.list.push(a); saveW(); toast(mode==='do'?'📲 បានផ្ញើ — សិស្សអាចធ្វើលើទូរស័ព្ទបានហើយ':'📲 បានផ្ញើ — សិស្សអាចមើល ហើយសរសេរក្នុងសៀវភៅ'); render();
+  W.list.push(a); saveW(); if(window.Notify) Notify.task(a.cls, `សន្លឹកលំហាត់ Unit ${a.n}`, mode==='do'?'ធ្វើលើទូរស័ព្ទ — ចូល 📝 កិច្ចការ':'មើល ហើយសរសេរក្នុងសៀវភៅ — ចូល 📝 កិច្ចការ'); toast(mode==='do'?'📲 បានផ្ញើ — សិស្សអាចធ្វើលើទូរស័ព្ទបានហើយ':'📲 បានផ្ញើ — សិស្សអាចមើល ហើយសរសេរក្នុងសៀវភៅ'); render();
 }
 function toggle(id){ const a=W.list.find(x=>x.id===id); a.open=!a.open; saveW(); render(); }
 function del(id){ if(!confirm('លុបសន្លឹកនេះ និងលទ្ធផលរបស់វា?')) return; W.list=W.list.filter(x=>x.id!==id); W.results=W.results.filter(r=>r.wid!==id); saveW(); render(); }

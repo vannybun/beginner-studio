@@ -207,10 +207,10 @@ function applyRole(){
   document.body.classList.add('role-'+u.role);
   document.addEventListener('DOMContentLoaded', ()=>{});
 }
-function headerChip(){
+function headerChip(bell){
   const u=user(); if(!u) return '';
-  const pf=myProf(u);
-  return `<button class="au-chip" onclick="Auth.menu()">${avatarFor(u,30)}<span><b>${esc((pf&&pf.name)||u.name)}</b><i>${ROLE[u.role].i} ${ROLE[u.role].km}</i></span></button>`;
+  const pf=myProf(u), B=(bell!==false&&u.role==='student')?`<button class="nt-bell" onclick="go('inbox')" title="ដំណឹង">🔔<i data-ntf-badge hidden></i></button>`:'';
+  return B+`<button class="au-chip" onclick="Auth.menu()">${avatarFor(u,30)}<span><b>${esc((pf&&pf.name)||u.name)}</b><i>${ROLE[u.role].i} ${ROLE[u.role].km}</i></span></button>`;
 }
 function menu(){
   const u=user();
@@ -401,7 +401,7 @@ function mePic(f){ if(!f){ EP.photo=''; document.getElementById('meP').innerHTML
   const fr=new FileReader(); fr.onload=()=>{ const im=new Image(); im.onload=()=>{ const sz=Math.min(im.width,im.height), cv=document.createElement('canvas'); cv.width=cv.height=240; cv.getContext('2d').drawImage(im,(im.width-sz)/2,(im.height-sz)/2*0.6,sz,sz,0,0,240,240); EP.photo=cv.toDataURL('image/jpeg',0.8); document.getElementById('meP').innerHTML=`<img src="${EP.photo}">`; }; im.src=fr.result; }; fr.readAsDataURL(f); }
 function meSave(){ const u=user(), n=document.getElementById('meN').value.trim(); if(n.length<2) return toast('សូមបញ្ចូលឈ្មោះ');
   const prof={name:n, latin:document.getElementById('meL').value.trim(), dob:document.getElementById('meD').value, phone:document.getElementById('meT').value.trim(), photo:EP.photo, ts:Date.now()};
-  if(window.Me) Me.setProfile(prof); closeModal(); const ch=document.querySelector('.au-chip'); if(ch) ch.outerHTML=headerChip(); toast('✅ បានរក្សាទុក — គ្រូនឹងឃើញព័ត៌មានថ្មី'); if(window.render) render(); }
+  if(window.Me) Me.setProfile(prof); closeModal(); const ch=document.querySelector('.au-chip'); if(ch) ch.outerHTML=headerChip(false); toast('✅ បានរក្សាទុក — គ្រូនឹងឃើញព័ត៌មានថ្មី'); if(window.render) render(); }
 function renameUser(cid,sid,name){ const u=A.users.find(x=>x.role==='student'&&x.classId===cid&&x.studentId===sid); if(u&&name&&u.name!==name){ u.name=name; saveA(); } }
 window.Auth = { qrZip, editMe, _mePic:mePic, _meSave:meSave, _rename:renameUser, moveStudent, about, _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
   editUser, delUser, backupAll, restoreAll, log, data:()=>A,

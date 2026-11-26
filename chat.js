@@ -66,7 +66,8 @@ function draw(){
       : r==='sent'?`<button class="btn ghost sm" onclick="Chat.cancel('${m.uid}')">⏳ បានស្នើ</button>`
       : r==='incoming'?`<button class="btn sun sm" onclick="Chat.accept('${m.uid}')">✅ ទទួល</button><button class="btn ghost sm" onclick="Chat.decline('${m.uid}')">✕</button>`
       : `<button class="btn ghost sm" onclick="Chat.add('${m.uid}')">➕ Add Friend</button>`;
-    return `<div class="ch-row"><span class="ch-av ${on?'on':''}">${av(m.s,44)}</span><span class="ch-nm"><b>${esc(m.name)}</b><small>${on?'🟢 Online':ST.pres[m.uid]?'⚪ '+ago(ST.pres[m.uid]):'⚪ Offline'}${r==='friend'?' • 🤝 មិត្ត':''}</small></span><span class="ch-act">${btn}</span></div>`; };
+    const callB = window.Notify ? `<button class="btn ghost sm ch-call" title="ហៅ" onclick="Notify.call('${m.uid}')">📞</button>` : '';
+    return `<div class="ch-row"><span class="ch-av ${on?'on':''}">${av(m.s,44)}</span><span class="ch-nm"><b>${esc(m.name)}</b><small>${on?'🟢 Online':ST.pres[m.uid]?'⚪ '+ago(ST.pres[m.uid]):'⚪ Offline'}${r==='friend'?' • 🤝 មិត្ត':''}</small></span><span class="ch-act">${btn}${callB}</span></div>`; };
   const convRow=m=>{ const k=pairId(u.id,m.uid), c=ST.convs[k], un=c&&c.last&&c.last.f!==u.id&&c.ts>lastRead(k);
     return `<button class="ch-row conv ${un?'unread':''}" onclick="Chat.open('${m.uid}')"><span class="ch-av ${online(m.uid)?'on':''}">${av(m.s,44)}</span><span class="ch-nm"><b>${esc(m.name)}</b><small>${c&&c.last?esc((c.last.f===u.id?'អ្នក៖ ':'')+c.last.x).slice(0,60):'ចាប់ផ្តើមឆាត 👋'}</small></span><span class="ch-tm">${c?ago(c.ts):''}${un?'<i></i>':''}</span></button>`; };
   host.innerHTML=`<div class="stu-head"><h2>💬 មិត្តភក្តិ</h2><span class="ch-online">🟢 ${onN} Online</span></div>
@@ -87,7 +88,7 @@ function open(uid, conv){
   if(ST.msgUnsub) ST.msgUnsub(); ST.msgs=null;
   const w=document.createElement('div'); w.id='chatWin'; w.className='ch-win'; document.body.appendChild(w);
   const ttl = other ? `${av(other.s,36)}<span><b>${esc(other.name)}</b><small>${online(uid)?'🟢 Online':'⚪ Offline'}</small></span>` : `<span><b>👀 ${esc(convTitle(cid,k))}</b><small>មើលជាគ្រូ (Read-only)</small></span>`;
-  w.innerHTML=`<div class="ch-top"><button onclick="Chat.close()">‹</button>${ttl}<span class="grow"></span>${other&&isStu()?`<button title="លុបមិត្ត" onclick="Chat.unfriend('${uid}')">⋯</button>`:''}</div>
+  w.innerHTML=`<div class="ch-top"><button onclick="Chat.close()">‹</button>${ttl}<span class="grow"></span>${other&&isStu()&&window.Notify?`<button title="ហៅ" onclick="Notify.call('${uid}')">📞</button>`:''}${other&&isStu()?`<button title="លុបមិត្ត" onclick="Chat.unfriend('${uid}')">⋯</button>`:''}</div>
     <div class="ch-msgs" id="chMsgs"><div class="rk-empty"><p>កំពុងផ្ទុក…</p></div></div>
     ${ST.open.ro?'':`<div class="ch-stk">${STICK.map(e=>`<button onclick="Chat.send('${e}')">${e}</button>`).join('')}</div>
     <form class="ch-in" onsubmit="event.preventDefault();Chat.send()"><input id="chTxt" maxlength="300" placeholder="សរសេរសារ… (English ក៏បាន!)" autocomplete="off"><button class="btn teal">➤</button></form>`}`;
@@ -137,6 +138,6 @@ function teacherTab(el, c){
   ST.tHost=el; ST.tCls=c;
 }
 function allow(v){ const c=window.Class&&Class._cur(); if(!c) return; c.chat=v?true:false; Class._save(); toast(v?'💬 បានអនុញ្ញាតឆាត':'🔕 បានបិទឆាតសម្រាប់ថ្នាក់នេះ'); teacherTab(ST.tHost,c); }
-window.Chat={ page, start, stop, badge, add:addFriend, accept, decline, cancel, unfriend, open, close:closeChat, send, report, delMsg,
+window.Chat={ isFriend:uid=>{ try{ return rel(uid)==='friend'; }catch(e){ return false; } }, page, start, stop, badge, add:addFriend, accept, decline, cancel, unfriend, open, close:closeChat, send, report, delMsg,
   view:k=>open(null,k), tab:t=>{ ST.tab=t; draw(); }, allow, teacherTab, unread };
 })();

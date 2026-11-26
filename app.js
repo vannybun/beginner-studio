@@ -171,7 +171,7 @@ function render(){
   if(!ROLE_NOW) return;
   if(ROLE_NOW==='student' && (view.name==='class'||view.name==='admin')) view.name='home';
   if(ROLE_NOW!=='admin' && view.name==='admin') view.name='home';
-  if(stuUI() && view.name!=='class' && view.name!=='admin'){ stuNav(); if(view.name==='home') return renderStuHome(); if(view.name==='units') return renderStuUnits(); if(view.name==='exams') return PREVIEW()?renderPreviewTasks():Exam.studentPage(); if(view.name==='me' && PREVIEW()) return renderPreviewMe(); if(view.name==='chat'){ if(PREVIEW()){ view={name:'class',unit:view.unit,tab:'chat'}; setMode('teach'); return; } return Chat.page($('#main')); } if(view.name==='rank'){ if(PREVIEW()){ Rank._target(()=>render()); return Rank.page($('#main'), Class._cur(), {staff:true}); } return Rank.stuPage(); } }
+  if(stuUI() && view.name!=='class' && view.name!=='admin'){ stuNav(); if(view.name==='home') return renderStuHome(); if(view.name==='units') return renderStuUnits(); if(view.name==='exams') return PREVIEW()?renderPreviewTasks():Exam.studentPage(); if(view.name==='me' && PREVIEW()) return renderPreviewMe(); if(view.name==='inbox'){ if(PREVIEW()){ view={name:'class',unit:view.unit,tab:'notify'}; setMode('teach'); return; } return Notify.page($('#main')); } if(view.name==='chat'){ if(PREVIEW()){ view={name:'class',unit:view.unit,tab:'chat'}; setMode('teach'); return; } return Chat.page($('#main')); } if(view.name==='rank'){ if(PREVIEW()){ Rank._target(()=>render()); return Rank.page($('#main'), Class._cur(), {staff:true}); } return Rank.stuPage(); } }
   else { const n=document.getElementById('stuNav'); if(n) n.remove(); }
   if(view.name==='rank'){ view={name:'class',unit:view.unit,tab:'rank'}; }
   view.name==='home' ? renderHome() : view.name==='class' ? Class.render(view.tab) : view.name==='me' ? Auth.renderMe() : view.name==='admin' ? Auth.renderAdmin(view.tab) : renderUnit(); }
@@ -202,6 +202,7 @@ function stuNav(){
   let n=document.getElementById('stuNav'); if(!n){ n=document.createElement('nav'); n.id='stuNav'; document.body.appendChild(n); }
   const cur=view.name==='unit'?'units':view.name;
   if(window.Chat&&Auth.role()==='student') Chat.start();
+  if(window.Notify&&Auth.role()==='student'){ Notify.start(); setTimeout(Notify.bellUI,50); }
   n.innerHTML=STU_NAV.map(([k,i,t])=>`<button class="${cur===k?'on':''}" onclick="go('${k}')"><span>${i}</span><b>${t}</b>${k==='chat'?`<i data-chat-badge hidden></i>`:''}${k==='exams'&&(stuOpenExams().length+WS.pending())?`<i>${stuOpenExams().length+WS.pending()}</i>`:''}</button>`).join('');
 }
 function stuOpenExams(){ const me=Auth.user(), X=(window.Exam&&Exam.data())||{}; const m=new Map(); (X.open||[]).forEach(se=>{ const k=se.n+'|'+se.cls, o=m.get(k); if(!o||se.ts>o.ts) m.set(k,se); }); return [...m.values()].filter(se=>se.cls===me.classId && !(se.once && (X.results||[]).some(r=>r.sess===se.id && (r.uid===me.id||r.sid===me.studentId)))); }
@@ -215,6 +216,7 @@ function renderStuHome(){
   $('#main').innerHTML=`<div class="stu-hi"><div>${Auth.avatarFor(me,52)}</div><div><small>សួស្តី 👋</small><b>${esc(first)}</b><button class="stu-edit" onclick="Auth.editMe()">✏️ កែព័ត៌មាន</button></div>${(()=>{const cc=(window.Class&&Auth.user().classId)?(JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===Auth.user().classId):null, b=courseOf(cc); return `<span class="stu-book">${b.icon} ${esc(b.name)}</span>`;})()}</div>
     <button class="stu-wallet" onclick="walletInfo()"><span>💰</span><div><small>លុយរបស់ខ្ញុំ</small><b>${RIEL((S.money||{}).t)}</b></div><em>ខែនេះ +${RIEL(((S.money||{}).m||{})[dayKey().slice(0,7)])}</em><i>›</i></button>
     ${window.Cloud&&Cloud.installBanner?Cloud.installBanner():''}
+    ${window.Notify&&Notify.perm()==='default'&&window.Cloud&&Cloud.live&&Cloud.live.ok()?`<button class="stu-alert" style="background:linear-gradient(135deg,#fef3c7,#fde68a);color:#78350f" onclick="Notify.ask()"><span>🔔</span><div><b>បើកការជូនដំណឹង</b><small>ដឹងភ្លាមៗពេលមានកិច្ចការ មេរៀនថ្មី ឬមិត្តហៅ</small></div><i>›</i></button>`:''}
     ${ox.length||wp?`<button class="stu-alert" onclick="go('exams')"><span>📝</span><div><b>${[ox.length?`ប្រឡង ${ox.length}`:'',wp?`សន្លឹកលំហាត់ ${wp}`:''].filter(Boolean).join(' • ')} កំពុងរង់ចាំ</b><small>ចុចដើម្បីធ្វើ</small></div><i>›</i></button>`:''}
     ${!PREVIEW()&&!unitOpen(nu)&&!schedOK(nu)?`<div class="stu-wait">📅 <div><b>Unit ${nu} នឹងបើក${schedDate(nu)?'នៅថ្ងៃ '+kmDate(schedDate(nu)):'ពេលគ្រូអនុញ្ញាត'}</b><small>ពូកែណាស់! ចាំរៀនជាមួយថ្នាក់ — ពេលនេះអាចរំលឹកមេរៀនចាស់ ឬធ្វើលំហាត់ដើម្បីរកលុយ 💰</small></div></div>`:''}
     <div class="stu-cont" style="--c1:${st.c1};--c2:${st.c2}">
@@ -645,6 +647,7 @@ function finishQ(){ setTimeout(()=>{ if(window.Rank) Rank.push(S,true); },300);
   if(LV){ S.level=S.level||{}; if(S.level[Q.n]==null || pct>S.level[Q.n]) S.level[Q.n]=pct; } else if(S.quiz[Q.n]==null || pct>S.quiz[Q.n]){ S.quiz[Q.n]=pct; } save();
   if(LV && pct>=80) earn(`lv:${Q.n}`, 5000, `ឆ្លងកម្រិត Unit ${Q.n}`);
   if(!LV && pct>=50) earn(`q:${Q.n}:${Q.type}:${dayKey()}`, Math.min(1000, Math.round(pct/10)*100), `លំហាត់ Unit ${Q.n} (${pct}%)`);
+  if(stuUI() && !wasPass && unitPassed(Q.n) && window.Notify) Notify.passed(Q.n);
   if(stuUI() && !wasPass && unitPassed(Q.n)) earn(`unit:${Q.n}`, 10000, `រៀនចប់ Unit ${Q.n} 🎉`);
   if(stuUI() && !wasPass && unitPassed(Q.n)){ setTimeout(()=>{ if(window.pageConfetti) pageConfetti(); toast(`🏆 បានឆ្លង Unit ${Q.n}!`+(Q.n<14?` Unit ${Q.n+1} ${ANIMALS[Q.n]} បានដោះសោ`:'')); },600); }
   $('#tab').innerHTML=`<div class="panel result"><div style="font-size:64px" class="pop">${pct>=80?'🏆':pct>=50?'👍':'💪'}</div><div class="score">${pct}%</div>
