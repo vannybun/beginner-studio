@@ -171,8 +171,11 @@ function disconnect(){ if(!confirm('ផ្តាច់ Cloud ពីម៉ាស�
 function setupScreen(force){
   const el=document.createElement('div'); el.id='auth'; document.body.appendChild(el); document.body.classList.add('auth-open');
   el.innerHTML=`<div class="au-bg"><i></i><i></i><i></i></div><div class="au-card"><div class="au-logo">☁️</div><h1>Beginner English Studio</h1>
-    <div class="cloud-opt"><b>🎓 សិស្ស / 👩‍🏫 គ្រូ</b><p class="km">សូមបើក <b>តំណចូលថ្នាក់</b> ឬស្កេន <b>QR</b> ដែលគ្រូ/Admin ផ្ញើឱ្យ</p></div>
-    <details class="cloud-opt" ${force?'open':''}><summary><b>🛡️ Admin៖ ភ្ជាប់ Firebase ជាលើកដំបូង</b></summary>
+    <div class="cloud-opt"><b>🎓 សិស្ស / 👩‍🏫 គ្រូ / 🛡️ Admin</b><p class="km">ស្កេន <b>QR</b> ឬបើក <b>តំណចូលថ្នាក់</b> — ឬបិទភ្ជាប់តំណនៅទីនេះ៖</p>
+      <input id="joinIn" class="cl-in" style="width:100%;box-sizing:border-box" placeholder="https://…#join=…" onkeydown="if(event.key==='Enter')Cloud._join()"><div class="au-err" id="joinErr"></div>
+      <button class="au-btn" onclick="Cloud._join()">🔗 ចូលថ្នាក់</button></div>
+    <details class="cloud-opt" ${force?'open':''}><summary><b>⚙️ បង្កើតសាលាថ្មីលើ Firebase (Admin តែលើកដំបូងប៉ុណ្ណោះ)</b></summary>
+      <p class="km" style="text-align:left;color:#b45309">⚠️ បើសាលាបានភ្ជាប់រួចហើយ កុំប្រើផ្នែកនេះ — វានឹងបង្កើតសាលាថ្មីទទេ។ សូមប្រើតំណចូលថ្នាក់ខាងលើវិញ។</p>
       <p class="km" style="text-align:left">បិទភ្ជាប់ <code>firebaseConfig</code> ពី Firebase Console (Project settings → Your apps → Web)</p>
       <textarea id="cfgIn" class="cl-in" style="width:100%;height:140px;font:12px monospace" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;...&quot;,&#10;  authDomain: &quot;...&quot;,&#10;  projectId: &quot;...&quot;,&#10;  appId: &quot;...&quot;&#10;};"></textarea>
       <div class="au-err" id="auErr"></div><button class="au-btn" onclick="Cloud._connect()">☁️ ភ្ជាប់ ហើយបង្កើតសាលាថ្មី</button></details>
@@ -193,6 +196,7 @@ async function _connect(){
   for(const k of Object.keys(localStorage).filter(k=>k.startsWith(PREFIX))) await writeOne(k,_get.call(localStorage,k),0);
   location.reload();
 }
+function _join(){ const v=document.getElementById('joinIn').value.trim(), m=v.match(/join=([\w-]+)/); if(!m){ document.getElementById('joinErr').textContent='តំណមិនត្រឹមត្រូវ — ត្រូវមាន #join=…'; return; } location.hash='join='+m[1]; location.reload(); }
 function _local(){ _set.call(localStorage,CK+'-local','1'); location.reload(); }
 
 /* ---------- boot ---------- */
@@ -221,6 +225,6 @@ async function boot(){
   }
   loadScripts();
 }
-window.Cloud={ flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
+window.Cloud={ flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _join, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
 boot();
 })();
