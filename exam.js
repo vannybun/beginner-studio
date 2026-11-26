@@ -238,6 +238,7 @@ function sign(str){ return hashStr(SECRET+str).toString(36).slice(-5).toUpperCas
 function b64e(s){ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function b64d(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; return decodeURIComponent(escape(atob(s))); }
 function online(n, ver){
+  if(!window.EXAM_FONT_CSS && window.IS_WEB){ const sc=document.createElement('script'); sc.src='exam-font.js'; sc.onload=()=>online(n,ver); sc.onerror=()=>{ window.EXAM_FONT_CSS=' '; online(n,ver); }; document.head.appendChild(sc); toast('⏳ កំពុងរៀបចំ…'); return; }
   const ex=build(n,ver);
   const hide = b64e(JSON.stringify(ex)).split('').reverse().join('');
   const css = EXAM_CSS;

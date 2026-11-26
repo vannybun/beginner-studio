@@ -1059,3 +1059,5 @@ body.is-web .bk-page.missing::before{content:none}
 .cloud-code{display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(135deg,#eef2ff,#ecfeff);border:2px dashed #818cf8;border-radius:18px;padding:14px 18px;margin:12px 0}
 .cloud-code span{display:block;font-size:13.5px;color:#475569}.cloud-code b{display:block;font:800 38px/1.1 ui-monospace,Consolas,monospace;letter-spacing:6px;color:#3730a3}.cloud-code small{color:#64748b}
 .au-pc .code{font:700 13pt ui-monospace,Consolas,monospace;letter-spacing:2px;color:#3730a3}
+#bootL button{margin-top:18px;background:none;border:1px solid #6366f188;color:#c7d2fe;border-radius:999px;padding:8px 16px;font:13px var(--kh);opacity:0;animation:fadeLate .3s 4s forwards}
+@keyframes fadeLate{to{opacity:1}}

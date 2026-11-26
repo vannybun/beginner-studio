@@ -7,8 +7,8 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.26c';
-const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam-font.js','exam.js','track.js','auth.js','app.js'];
+const VER='2026.11.26d';
+const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam.js','track.js','auth.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -17,6 +17,13 @@ const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/
 const _get=Storage.prototype.getItem, _set=Storage.prototype.setItem, _rm=Storage.prototype.removeItem;
 let cloud=null; try{ cloud=JSON.parse(_get.call(localStorage,CK)||'null'); }catch(e){}
 const MEDIA = window.MEDIA = {audio:{}, book:{}, pdf:{}};
+const SYK='bs-sync', IDX='_index';
+const syncMap = () => { try{ return JSON.parse(_get.call(localStorage,SYK)||'{}'); }catch(e){ return {}; } };
+const saveSync = m => _set.call(localStorage,SYK,JSON.stringify(m));
+// ⚡ start downloading app scripts + Firebase SDK in parallel with data sync
+FILES.forEach(f=>{ const l=document.createElement('link'); l.rel='preload'; l.as='script'; l.href=f+'?v='+VER; document.head.appendChild(l); });
+if(cloud) ['firebase-app.js','firebase-auth.js','firebase-firestore.js'].forEach(f=>{ const l=document.createElement('link'); l.rel='modulepreload'; l.crossOrigin='anonymous'; l.href=FB+f; document.head.appendChild(l); });
+if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
 
 /* ---------- join link ---------- */
 function joinLink(){ return location.href.split('#')[0]+'#join='+b64e(JSON.stringify({c:cloud.cfg, s:cloud.school})); }
@@ -38,7 +45,7 @@ const dref = id => F.doc(db,'schools',cloud.school,'kv',id);
 async function fetchAll(){
   const snap=await F.getDocs(col()); const main={}, parts={};
   snap.forEach(d=>{ const v=d.data(), id=d.id, i=id.lastIndexOf('~'); if(i>0 && /^\d+$/.test(id.slice(i+1))) (parts[id.slice(0,i)]=parts[id.slice(0,i)]||[])[+id.slice(i+1)]=v.d; else main[id]=v; });
-  const out={}; Object.entries(main).forEach(([k,v])=>{ out[k]=v.n ? (parts[k]||[]).slice(0,v.n).join('') : v.d; }); return {out, main};
+  delete main[IDX]; const out={}; Object.entries(main).forEach(([k,v])=>{ out[k]=v.n ? (parts[k]||[]).slice(0,v.n).join('') : v.d; }); return {out, main};
 }
 async function fetchOne(k){
   const m=await F.getDoc(dref(k)); if(!m.exists()) return {v:null,n:0}; const v=m.data();
@@ -46,11 +53,36 @@ async function fetchOne(k){
   const ps=await Promise.all(Array.from({length:v.n},(_,i)=>F.getDoc(dref(k+'~'+i)))); return {v:ps.map(p=>p.exists()?p.data().d:'').join(''), n:v.n};
 }
 async function writeOne(k, str, oldN){
-  const b=F.writeBatch(db), who=(window.Auth&&Auth.user()&&Auth.user().name)||'';
-  if(str==null){ b.delete(dref(k)); for(let i=0;i<oldN;i++) b.delete(dref(k+'~'+i)); return b.commit(); }
-  if(str.length<=CHUNK){ b.set(dref(k),{d:str,n:0,ts:Date.now(),by:who}); for(let i=0;i<oldN;i++) b.delete(dref(k+'~'+i)); }
-  else { const n=Math.ceil(str.length/CHUNK); for(let i=0;i<n;i++) b.set(dref(k+'~'+i),{d:str.slice(i*CHUNK,(i+1)*CHUNK)}); for(let i=n;i<oldN;i++) b.delete(dref(k+'~'+i)); b.set(dref(k),{n,ts:Date.now(),by:who}); }
-  return b.commit();
+  const b=F.writeBatch(db), who=(window.Auth&&Auth.user&&Auth.user()&&Auth.user().name)||'', ts=Date.now();
+  if(str==null){ b.delete(dref(k)); for(let i=0;i<oldN;i++) b.delete(dref(k+'~'+i)); b.set(dref(IDX),{[k]:F.deleteField()},{merge:true}); }
+  else if(str.length<=CHUNK){ b.set(dref(k),{d:str,n:0,ts,by:who}); for(let i=0;i<oldN;i++) b.delete(dref(k+'~'+i)); b.set(dref(IDX),{[k]:{ts,n:0}},{merge:true}); }
+  else { const n=Math.ceil(str.length/CHUNK); for(let i=0;i<n;i++) b.set(dref(k+'~'+i),{d:str.slice(i*CHUNK,(i+1)*CHUNK)}); for(let i=n;i<oldN;i++) b.delete(dref(k+'~'+i)); b.set(dref(k),{n,ts,by:who}); b.set(dref(IDX),{[k]:{ts,n}},{merge:true}); }
+  await b.commit();
+  const m=syncMap(); if(str==null) delete m[k]; else m[k]=ts; saveSync(m);
+}
+
+/* ---------- ⚡ delta pull: read the small _index doc, fetch only keys that changed ---------- */
+const PROG=PREFIX+'-v1:';
+function sessionUser(){ try{ const ss=JSON.parse(sessionStorage.getItem(PREFIX+'-session')||'null'); if(!ss) return null; const A=JSON.parse(_get.call(localStorage,PREFIX+'-auth-v1')||'{}'); return (A.users||[]).find(u=>u.id===ss.uid)||null; }catch(e){ return null; } }
+async function pull(skipKeys){
+  const ix=await F.getDoc(dref(IDX)); let idx;
+  if(!ix.exists()){            // first time: full download, then build the index
+    const {out,main}=await fetchAll(); idx={}; Object.entries(main).forEach(([k,v])=>{ idx[k]={ts:v.ts||1,n:v.n||0}; });
+    try{ const b=F.writeBatch(db); b.set(dref(IDX),idx,{merge:true}); await b.commit(); }catch(e){}
+    const m={}; Object.entries(out).forEach(([k,v])=>{ if(!(skipKeys&&skipKeys.has(k))) _set.call(localStorage,k,v); m[k]=idx[k].ts; }); saveSync(m);
+  } else {
+    idx=ix.data(); const SY=syncMap();
+    const fetchKeys=async keys=>{ await Promise.all(keys.map(async k=>{ const r=await fetchOne(k); if(r.v!=null && !(skipKeys&&skipKeys.has(k))){ _set.call(localStorage,k,r.v); SY[k]=idx[k].ts; } })); };
+    const stale=k=>SY[k]!==idx[k].ts || _get.call(localStorage,k)==null;
+    await fetchKeys(Object.keys(idx).filter(k=>!k.startsWith(PROG) && stale(k)));          // 1) shared data
+    const me=sessionUser(), staff=me&&me.role!=='student';                                  // 2) progress: staff = all, student = own
+    const wantP=k=>staff || (me && k===PROG+me.id);
+    await fetchKeys(Object.keys(idx).filter(k=>k.startsWith(PROG) && wantP(k) && stale(k)));
+    Object.keys(localStorage).filter(k=>k.startsWith(PROG) && !wantP(k) && !(skipKeys&&skipKeys.has(k))).forEach(k=>_rm.call(localStorage,k));
+    saveSync(SY);
+  }
+  Object.keys(localStorage).filter(k=>k.startsWith(PREFIX) && k!==PREFIX+'-session' && !(k in idx) && !(skipKeys&&skipKeys.has(k)) && !Q.has(k)).forEach(k=>_rm.call(localStorage,k));
+  return idx;
 }
 
 /* ---------- 3-way merge (base = value when this page loaded) ---------- */
@@ -85,9 +117,9 @@ function allowed(k){
   if(r==='student') return k===PREFIX+'-exams-v1' || k===PREFIX+'-auth-v1' || k.startsWith(PREFIX+'-v1:');
   return true;
 }
-function queue(k){ if(!db || !k.startsWith(PREFIX) || k===PREFIX+'-session') return; Q.set(k,1); setStatus('wait'); clearTimeout(timer); timer=setTimeout(flush,900); }
+function queue(k){ if(!cloud || !k.startsWith(PREFIX) || k===PREFIX+'-session') return; Q.set(k,1); if(!db) return; setStatus('wait'); clearTimeout(timer); timer=setTimeout(flush,900); }
 async function flush(){
-  if(busy){ clearTimeout(timer); timer=setTimeout(flush,500); return; } if(!Q.size) return;
+  if(!db) return; if(busy){ clearTimeout(timer); timer=setTimeout(flush,500); return; } if(!Q.size) return;
   busy=true; const keys=[...Q.keys()]; Q.clear();
   try{
     for(const k of keys){ if(!allowed(k)) continue;
@@ -231,29 +263,36 @@ function _join(){ const v=document.getElementById('joinIn').value.trim(), m=v.ma
 function _local(){ _set.call(localStorage,CK+'-local','1'); location.reload(); }
 
 /* ---------- boot ---------- */
-function loader(on){ let l=document.getElementById('bootL'); if(on&&!l){ l=document.createElement('div'); l.id='bootL'; l.innerHTML='<div class="spin"></div><p>☁️ កំពុងទាញទិន្នន័យថ្នាក់…</p>'; document.body.appendChild(l); } if(!on&&l) l.remove(); }
+function loader(on, msg){ let l=document.getElementById('bootL'); if(on&&!l){ l=document.createElement('div'); l.id='bootL'; l.innerHTML='<div class="spin"></div><p></p><button onclick="this.parentNode.dataset.skip=1">⏭ ប្រើទិន្នន័យចាស់ក្នុងទូរស័ព្ទសិន</button>'; document.body.appendChild(l); } if(l&&msg) l.querySelector('p').textContent=msg; if(!on&&l) l.remove(); }
 function loadScripts(){ FILES.forEach(f=>{ const s=document.createElement('script'); s.src=f+'?v='+VER; s.async=false; document.body.appendChild(s); });
   const last=document.querySelector('script[src^="app.js"]'); last.addEventListener('load',afterApp); }
 function afterApp(){
   const tl=document.querySelector('header .tools'); if(!tl) return;
   const r=window.Auth&&Auth.role(); if(!r) return;
   if(r!=='student') tl.insertAdjacentHTML('afterbegin','<button onclick="Cloud.pickMedia()" title="ភ្ជាប់ Folder សៀវភៅ/សំឡេង ពីកុំព្យូទ័រនេះ">📂<span>ឯកសារ</span></button>');
-  tl.insertAdjacentHTML('afterbegin','<button id="cloudChip" class="cloud-chip" onclick="location.reload()"></button>'); setStatus(db?(status==='err'?'err':'ok'):'off');
+  tl.insertAdjacentHTML('afterbegin','<button id="cloudChip" class="cloud-chip" onclick="location.reload()"></button>'); setStatus(!cloud?'off':status==='wait'?'wait':status==='err'||!db?'err':'ok');
   if(r!=='student') restoreMedia();
 }
 async function boot(){
   const hasLocal=Object.keys(localStorage).some(k=>k.startsWith(PREFIX)) || _get.call(localStorage,CK+'-local');
   if(!cloud && !hasLocal){ setupScreen(); return; }
+  const setBase=()=>Object.keys(localStorage).filter(k=>k.startsWith(PREFIX)).forEach(k=>{ BASE[k]=_get.call(localStorage,k); });
   if(cloud){
-    loader(true);
-    try{ await initFB(); const {out,main}=await fetchAll();
-      Object.keys(localStorage).filter(k=>k.startsWith(PREFIX)&&!(k in out)).forEach(k=>_rm.call(localStorage,k));
-      Object.entries(out).forEach(([k,v])=>{ _set.call(localStorage,k,v); BASE[k]=v; N[k]=main[k].n||0; });
-      Object.keys(localStorage).filter(k=>k.startsWith(PREFIX)).forEach(k=>{ if(BASE[k]===undefined) BASE[k]=null; });
-      status='ok';
-    }catch(e){ console.warn(e); status='err'; db=null; setTimeout(()=>window.toast&&toast('⚠️ ភ្ជាប់ Cloud មិនបាន — កំពុងប្រើទិន្នន័យចុងក្រោយក្នុងម៉ាស៊ីននេះ'),1500); }
+    const cached = !!_get.call(localStorage,SYK) && Object.keys(localStorage).some(k=>k.startsWith(PREFIX+'-auth'));
+    loader(true, cached ? '⚡ កំពុងពិនិត្យទិន្នន័យថ្មី…' : '☁️ កំពុងទាញទិន្នន័យថ្នាក់ (លើកដំបូង)…');
+    const late=new Set(); let started=false;
+    const job=(async()=>{ await initFB(); await pull(late); })();
+    // returning device: never wait long — start with cached data and keep syncing in background
+    const winner = await Promise.race([ job.then(()=>'ok',e=>{ console.warn(e); return 'err'; }),
+      new Promise(res=>{ const t0=Date.now(); const iv=setInterval(()=>{ const l=document.getElementById('bootL'); if((cached && Date.now()-t0>3000) || (l&&l.dataset.skip)){ clearInterval(iv); res('slow'); } },150); }) ]);
+    if(winner==='slow'){
+      setBase(); started=true; Object.keys(BASE).forEach(k=>late.add(k)); status='wait';
+      job.then(()=>{ status='ok'; setStatus('ok'); if(Q.size) flush(); }).catch(()=>{ status='err'; setStatus('err'); });
+    } else if(winner==='err'){ status='err'; setTimeout(()=>window.toast&&toast('⚠️ ភ្ជាប់ Cloud មិនបាន — កំពុងប្រើទិន្នន័យចុងក្រោយក្នុងម៉ាស៊ីននេះ'),1500); }
+    else status='ok';
     loader(false);
   }
+  setBase();
   loadScripts();
 }
 window.Cloud={ makeCode, _code, _codeKey:codeKey, code:()=>meta().code, flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _join, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
