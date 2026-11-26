@@ -1262,3 +1262,23 @@ body.stu-ui.preview header .brand small{display:block}
 .lvl-card .go{width:44px;height:44px;border-radius:50%;background:#fff;color:#ef4444;display:grid;place-items:center;font-size:18px}.lvl-card.ok .go{color:#16a34a}
 .lvl-top{background:linear-gradient(135deg,#fef3c7,#fee2e2);border-radius:12px;padding:8px 12px;margin-bottom:10px;font:600 14px var(--kh);color:#9a3412;text-align:center}
 #auSU{text-align:center;font:600 20px ui-monospace,Consolas,monospace!important;letter-spacing:1px}
+/* ================= ✍️ section exercises ================= */
+.lex{margin-top:12px;background:linear-gradient(180deg,#f0fdfa,#fff);border:2px solid #99f6e4;border-radius:18px;padding:12px}
+.lex-h{display:flex;justify-content:space-between;align-items:center;font-family:var(--kh)}.lex-h b{font-size:15.5px}.lex-h span{background:#0d9488;color:#fff;border-radius:999px;padding:1px 10px;font-weight:700;font-size:13px}
+.lex-bar{height:6px;border-radius:6px;background:#ccfbf1;margin:8px 0 10px;overflow:hidden}.lex-bar i{display:block;height:100%;background:#0d9488;transition:width .4s}
+.lex-i{background:#fff;border-radius:14px;padding:10px 12px;margin-bottom:8px;border:1px solid #e2e8f0}.lex-i.done{border-color:#86efac;background:#f0fdf4}
+.lex-i.shake{animation:auShake .4s}
+.lex-q{display:flex;gap:10px;align-items:flex-start;font-size:15.5px;line-height:1.5}.lex-q .no{flex:none;width:24px;height:24px;border-radius:50%;background:#e2e8f0;display:grid;place-items:center;font-size:12px;font-weight:700}.lex-q .no.ok{background:#16a34a;color:#fff}
+.lex-q small{display:block;color:#64748b}.lex-hint{color:#0f766e!important}
+.lex-say{background:#f0fdfa;border-radius:8px;padding:0 6px;font-size:14px}
+.lex-o{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}.lex-o button{padding:10px;border-radius:12px;background:#f8fafc;border:2px solid #e2e8f0;font-size:15px;text-align:left;transition:.15s}
+.lex-o.km button{font-family:var(--kh)}.lex-o button.right{border-color:#16a34a;background:#dcfce7;font-weight:700}.lex-o button.wrong{border-color:#fca5a5;background:#fef2f2;color:#b91c1c;text-decoration:line-through}
+.lex-ans{min-height:44px;margin:8px 0;padding:6px;border-radius:12px;border:2px dashed #cbd5e1;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.lex-ans .ph{color:#94a3b8;font:13px var(--kh)}
+.lex-ans button,.lex-tiles button{padding:7px 11px;border-radius:10px;background:#fff;border:2px solid #0d9488;font-size:15px;font-weight:600;box-shadow:0 2px 0 #0d948855}
+.lex-tiles{display:flex;flex-wrap:wrap;gap:6px}.lex-tiles button:disabled{opacity:.25;box-shadow:none}
+.lex-row{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}
+.lex-fb{margin-top:6px;font-size:14px;color:#15803d}.lex-fb.no{color:#b91c1c;font-family:var(--kh)}
+.lex-done{display:flex;align-items:center;gap:10px;background:#fef9c3;border-radius:14px;padding:10px 12px;font-family:var(--kh)}.lex-done span{font-size:30px}.lex-done div{flex:1}.lex-done b{display:block}.lex-done small{color:#78716c}
+.lex-tip{margin:4px 2px 0;color:#64748b;font:12.5px var(--kh)}
+.btn.lockd{opacity:.45;cursor:not-allowed}
+@media(max-width:420px){.lex-o{grid-template-columns:1fr}}

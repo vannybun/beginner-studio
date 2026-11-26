@@ -278,7 +278,9 @@ function tabLesson(u){
       if(s.qs&&s.qs.length) body+=`<div class="les-q"><h4>❓ សំណួរ — ឆ្លើយដោយខ្លួនឯង</h4>${s.qs.map((q,qi)=>`<div onclick="${say(q)}"><span>${qi+1}</span>${esc(q)} 🔊</div>`).join('')}</div>`;
       if(s.k==='review') body+=`<div class="les-rev">🏁 ធ្វើលំហាត់ដើម្បីពិនិត្យខ្លួនឯង <button class="btn teal" onclick="go('unit',${u.n},'practice')">✍️ ធ្វើលំហាត់</button></div>`;
       if(!body) body=`<p class="note">📘 សូមបើកសៀវភៅទំព័រ ${s.p} ហើយធ្វើតាមការណែនាំរបស់គ្រូ</p>`;
-      body+=`<div class="les-foot"><span class="note">📘 សៀវភៅ p${s.p}</span><button class="btn ${ok?'ghost':'teal'}" onclick="Stu.done(${u.n},${si})">${ok?'✓ រៀនរួច':si<L.sections.length-1?'✅ រៀនរួច → បន្ទាប់':'✅ រៀនរួច'}</button></div>`;
+      if(window.LEX) body+=LEX.block(u.n,si);
+      const rdy=PREVIEW()||!window.LEX||LEX.ready(u.n,si);
+      body+=`<div class="les-foot"><span class="note">📘 សៀវភៅ p${s.p}</span><button data-lexfoot="${u.n}-${si}" class="btn ${ok?'ghost':'teal'} ${rdy?'':'lockd'}" ${rdy?'':'disabled'} onclick="Stu.done(${u.n},${si})">${ok?'✓ រៀនរួច':si<L.sections.length-1?'✅ រៀនរួច → បន្ទាប់':'✅ រៀនរួច'}</button></div>`;
     }
     const lk=!secOpen(u.n,si);
     if(lk) return `<div class="les-s lock"><button class="les-h" onclick="toast('🔒 រៀនផ្នែកមុនឱ្យចប់សិន')"><span class="ki">🔒</span><span class="tt"><small>${K.km}</small><b>${esc(s.t)}</b></span></button></div>`;
@@ -287,7 +289,7 @@ function tabLesson(u){
 window.Stu = {
   unit:n=>{ if(!unitOpen(n)) return toast(`🔒 ឆ្លង Unit ${n-1} ជាមុនសិន (រៀនគ្រប់ផ្នែក + 🏁 លំហាត់ឆ្លងកម្រិត ${PASS}%)`); go('unit',n,'lesson'); },
   open:(n,i)=>{ openSec={n, i: openSec&&openSec.n===n&&openSec.i===i ? -1 : i}; tabLesson(U(n)); const el=document.querySelectorAll('.les-s')[i]; if(el&&openSec.i===i) el.scrollIntoView({behavior:'smooth',block:'start'}); },
-  done:(n,i)=>{ const d=secDone(n); if(!d.includes(i)){ d.push(i); track('lesson', n+':'+i); save(); } const L=LESSONS[n]; const nx=L.sections.findIndex((x,k)=>k>i&&!d.includes(k)); if(nx>=0){ openSec={n,i:nx}; renderUnit(); setTimeout(()=>{ const el=document.querySelectorAll('.les-s')[nx]; el&&el.scrollIntoView({behavior:'smooth',block:'start'}); },60); } else { toast('🎉 រៀនគ្រប់ផ្នែកហើយ! តោះធ្វើលំហាត់'); renderUnit(); } }
+  done:(n,i)=>{ if(!PREVIEW() && window.LEX && !LEX.ready(n,i)) return toast('✍️ ធ្វើលំហាត់ផ្នែកនេះឱ្យត្រូវទាំងអស់សិន'); const d=secDone(n); if(!d.includes(i)){ d.push(i); track('lesson', n+':'+i); save(); } const L=LESSONS[n]; const nx=L.sections.findIndex((x,k)=>k>i&&!d.includes(k)); if(nx>=0){ openSec={n,i:nx}; renderUnit(); setTimeout(()=>{ const el=document.querySelectorAll('.les-s')[nx]; el&&el.scrollIntoView({behavior:'smooth',block:'start'}); },60); } else { toast('🎉 រៀនគ្រប់ផ្នែកហើយ! តោះធ្វើលំហាត់'); renderUnit(); } }
 };
 
 /* ---------- home ---------- */
