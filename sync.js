@@ -7,7 +7,7 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam-font.js','exam.js','auth.js','app.js'];
+const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam-font.js','exam.js','track.js','auth.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

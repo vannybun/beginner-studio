@@ -67,7 +67,7 @@ function resizePhoto(file, cb){
 }
 
 /* ---------- main render ---------- */
-const TABS = [['students','👩‍🎓 សិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['accounts','🔑 គណនីសិស្ស']];
+const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['accounts','🔑 គណនីសិស្ស']];
 let tab='students';
 function render(t){
   if(t) tab=t;
@@ -92,7 +92,7 @@ function render(t){
     return;
   }
   $('#main').innerHTML = head + `<div class="tabs">${TABS.map(x=>`<button class="${x[0]===tab?'on':''}" onclick="Class.render('${x[0]}')">${x[1]}</button>`).join('')}</div><div id="clTab"></div>`;
-  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
+  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
 }
 
 /* ---------- students ---------- */

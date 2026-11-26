@@ -18,6 +18,22 @@ const ROLE_NOW = window.Auth ? Auth.role() : 'admin';
 let S = { mode:'learn', known:{}, quiz:{}, listened:{}, names:'', teams:[{n:'ក្រុម A',s:0},{n:'ក្រុម B',s:0},{n:'ក្រុម C',s:0}], voice:'', rate:0.9, lastUnit:1 };
 try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch(e){}
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+/* ---------- 📊 activity tracking (students only) ---------- */
+const TRACKING = window.Auth && Auth.role && Auth.role()==='student';
+const dayKey = (t=new Date()) => t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+function act(){ S.act = S.act || {d:{}, u:{}, ev:[]}; return S.act; }
+function track(type, detail){ if(!TRACKING) return; const a=act(); a.ev.unshift([Date.now(), type, detail==null?'':detail]); a.ev=a.ev.slice(0,200); a.last=Date.now(); if(!a.first) a.first=Date.now(); }
+let lastInput=Date.now(), hbN=0;
+['pointerdown','keydown','wheel','touchstart'].forEach(e=>addEventListener(e,()=>{ lastInput=Date.now(); },{passive:true,capture:true}));
+if(TRACKING) setInterval(()=>{
+  if(document.visibilityState!=='visible' || Date.now()-lastInput>120000) return;
+  const a=act(), k=dayKey(); a.d[k]=(a.d[k]||0)+15; a.last=Date.now(); if(!a.first) a.first=Date.now();
+  const deckOn=document.getElementById('deck')&&document.getElementById('deck').classList.contains('show');
+  const un = deckOn&&window.Deck&&Deck.D ? Deck.D.n : (typeof view!=='undefined'&&view.name==='unit' ? view.unit : null);
+  if(un) a.u[un]=(a.u[un]||0)+15;
+  if(++hbN%4===0) save();
+}, 15000);
+addEventListener('visibilitychange',()=>{ if(TRACKING && document.visibilityState==='hidden') save(); });
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
@@ -69,7 +85,7 @@ const P = {
     $('#pSub').textContent = t.text;
     $('#player').classList.add('show');
     if(autoplay) A.play().catch(()=>toast(window.IS_WEB&&!(window.MEDIA&&MEDIA.audio[t.file]) ? '🎧 សូមចុច 📂 ភ្ជាប់ Folder សំឡេងសិន (ក្នុងកុំព្យូទ័រនេះ)' : 'រកឯកសារសំឡេងមិនឃើញ: '+t.file));
-    S.listened[t.id]=true; save();
+    S.listened[t.id]=true; track('listen', t.id); save();
     document.querySelectorAll('.trk').forEach(el=>el.classList.toggle('on', el.dataset.id===t.id));
   },
   toggle(){ if(!A.src) return; A.paused ? A.play() : A.pause(); },
@@ -110,7 +126,7 @@ let idleT; document.addEventListener('mousemove', ()=>{ const d=$('#deck'); if(!
 
 /* ---------- routing ---------- */
 let view = {name:'home', unit:S.lastUnit||1, tab:'path'};
-function go(name, unit, tab){ view = {name, unit:unit||view.unit, tab:tab||(name==='class'?'students':name==='admin'?'users':'path')}; if(name==='unit'){ S.lastUnit=view.unit; save(); } render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function go(name, unit, tab){ view = {name, unit:unit||view.unit, tab:tab||(name==='class'?'students':name==='admin'?'users':'path')}; if(name==='unit') track('unit', view.unit+':'+view.tab); if(name==='unit'){ S.lastUnit=view.unit; save(); } render(); window.scrollTo({top:0,behavior:'smooth'}); }
 function setMode(m){
   if(ROLE_NOW==='student') m='learn';
   S.mode=m; save(); document.body.classList.toggle('teach', m==='teach');
@@ -402,7 +418,7 @@ function feedback(ok,ans){
 }
 function finishQ(){
   const pct=Math.round(Q.score/Q.qs.length*100);
-  if(S.quiz[Q.n]==null || pct>S.quiz[Q.n]){ S.quiz[Q.n]=pct; save(); }
+  track('quiz', Q.n+':'+pct); if(S.quiz[Q.n]==null || pct>S.quiz[Q.n]){ S.quiz[Q.n]=pct; } save();
   $('#tab').innerHTML=`<div class="panel result"><div style="font-size:64px" class="pop">${pct>=80?'🏆':pct>=50?'👍':'💪'}</div><div class="score">${pct}%</div>
     <p class="km" style="font-size:18px">${pct>=80?'🎉 អស្ចារ្យ! អ្នកឆ្លងមេរៀននេះហើយ':pct>=50?'👍 ល្អ! ហាត់បន្ថែមបន្តិចទៀត':'💪 កុំបោះបង់! រៀនវាក្យសព្ទម្តងទៀត ហើយសាកល្បងម្តងទៀត'}</p>
     <p class="note">ត្រូវ ${Q.score} / ${Q.qs.length}</p>
@@ -538,5 +554,6 @@ if(window.Auth && Auth.gate()){
 }
 Deck.init();
 Book.init();
+if(TRACKING){ const _dO=Deck.open, _bO=Book.open; Deck.open=(n,p)=>{ track('slides', n); return _dO(n,p); }; Book.open=p=>{ track('book', p==null?'':p); return _bO(p); }; }
 if(ROLE_NOW) setMode(S.mode||'learn');
 window.addEventListener('resize', ()=>{ if(!ROLE_NOW) return; const b=(S.mode==='learn'?$('#mLearn'):$('#mTeach')); const pill=$('#mPill'); pill.style.left=b.offsetLeft+'px'; pill.style.width=b.offsetWidth+'px'; });

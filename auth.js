@@ -184,6 +184,7 @@ function renderMe(){
   setUnitColors(5);
   $('#main').innerHTML = `<div class="uhero"><div>${avatarFor(u,92)}</div><div><h2>${esc(u.name)}</h2><div class="kmt">${c?'🏫 '+esc(c.name):''} ${s&&s.latin?'• '+esc(s.latin):''}</div><div class="pgs">📊 លទ្ធផល និងវឌ្ឍនភាពរបស់ខ្ញុំ</div></div><div class="emo float">🏆</div></div>
     <div class="statbox" style="margin-bottom:16px"><div class="stat"><div class="ic">🔤</div><b>${knownW}</b><span>ពាក្យចេះ / ${totalW}</span></div><div class="stat"><div class="ic">🎧</div><b>${Object.keys(prog.listened||{}).length}</b><span>បទបានស្តាប់</span></div><div class="stat"><div class="ic">📝</div><b>${ex.length}</b><span>ប្រឡងបានធ្វើ</span></div></div>
+    ${window.Track?`<div class="panel" style="margin-bottom:16px"><h3 class="sec">📅 ការរៀនរបស់ខ្ញុំ — ${(()=>{ const d=(prog.act||{}).d||{}; let w=0; Object.entries(d).forEach(([k,v])=>{ if(Date.now()-new Date(k+'T12:00:00')<7*86400000) w+=v; }); return 'សប្តាហ៍នេះ '+Track.fmtMin(w); })()}</h3>${Track.heat((prog.act||{}).d,12)}</div>`:''}
     <div class="cols"><div class="panel"><h3 class="sec">📅 ពិន្ទុប្រចាំខែ</h3>${months||'<p class="note">មិនទាន់មានពិន្ទុប្រចាំខែទេ</p>'}</div>
     <div class="panel"><h3 class="sec">📝 ប្រឡងបញ្ចប់មេរៀន</h3>${ex.length?ex.map(r=>`<div class="me-ex"><b>Unit ${r.n}</b><span>Version ${r.ver} • ${new Date(r.ts).toLocaleDateString('en-GB')}</span><em style="background:${r.pct>=80?'#16a34a':r.pct>=50?'#2563eb':'#dc2626'}">${r.s}/${r.t} • ${r.pct}%</em></div>`).join(''):'<p class="note">មិនទាន់បានប្រឡងទេ</p>'}</div></div>`;
 }
