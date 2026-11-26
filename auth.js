@@ -43,8 +43,47 @@ function avatarFor(u, size){ size=size||36; let photo=u.photo; if(u.role==='stud
   const ini=(u.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('');
   return `<span class="au-av ini" style="width:${size}px;height:${size}px;font-size:${size*.38}px;background:${ROLE[u.role].c}">${esc(ini)}</span>`; }
 
+/* ---------- 📱 personal QR codes (scan → that account's login) ---------- */
+function qrLinkOf(u){
+  const code=window.Cloud&&Cloud.code&&Cloud.code(); if(!code) return null;
+  const base=Cloud.roleLink(u.role==='student'?'student':u.role==='admin'?'admin':'teacher', code);
+  return base+'#u='+encodeURIComponent(u.username)+(u.role==='student'&&u.pin?'&p='+u.pin:'');
+}
+function qrObj(text){ try{ const q=qrcode(0,'M'); q.addData(text); q.make(); return q; }catch(e){ return null; } }
+function qrSvgOf(text, size){ const q=qrObj(text); if(!q) return ''; const n=q.getModuleCount(); let d=''; for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(q.isDark(r,c)) d+=`M${c+2} ${r+2}h1v1h-1z`; return `<svg viewBox="0 0 ${n+4} ${n+4}" width="${size||200}" height="${size||200}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="${d}" fill="#0f172a"/></svg>`; }
+function qrPng(u){
+  const L=qrLinkOf(u), q=qrObj(L); if(!q) return;
+  const n=q.getModuleCount(), cell=Math.floor(520/(n+4)), W=600, H=820, cv=document.createElement('canvas'); cv.width=W; cv.height=H; const x=cv.getContext('2d');
+  const g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,ROLE[u.role].c); g.addColorStop(1,'#0f172a'); x.fillStyle=g; x.fillRect(0,0,W,H);
+  x.fillStyle='#fff'; x.beginPath(); x.roundRect(30,140,540,560,28); x.fill();
+  const off=(W-cell*(n+4))/2; x.fillStyle='#0f172a'; for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(q.isDark(r,c)) x.fillRect(off+(c+2)*cell, 150+(r+2)*cell, cell, cell);
+  x.fillStyle='#fff'; x.textAlign='center'; x.font='bold 30px "Kantumruy Pro",sans-serif'; x.fillText('📚 Beginner English Studio',W/2,60);
+  x.font='26px "Kantumruy Pro",sans-serif'; x.fillText(ROLE[u.role].i+' '+ROLE[u.role].km,W/2,110);
+  x.font='bold 36px "Kantumruy Pro",sans-serif'; x.fillText(u.name||'',W/2,760); x.font='22px sans-serif'; x.fillText('@'+u.username,W/2,800);
+  const a=document.createElement('a'); a.href=cv.toDataURL('image/png'); a.download=`QR - ${u.name} (${u.username}).png`; a.click();
+}
+function showQR(id){
+  const u=A.users.find(x=>x.id===id), L=qrLinkOf(u);
+  if(!L) return modal(`<h3>📱 QR</h3><p class="km">QR ប្រើបានតែលើ <b>Website</b> (vannybun.github.io/beginner-studio) ដែលភ្ជាប់ Cloud រួច។</p>`);
+  const st=u.role==='student';
+  modal(`<div class="qr-card" style="--rc:${ROLE[u.role].c}"><div class="h">${avatarFor(u,54)}<div><b>${esc(u.name)}</b><span>${ROLE[u.role].i} ${ROLE[u.role].km} • @${esc(u.username)}</span></div></div>
+    <div class="q">${qrSvgOf(L,260)}</div>
+    <p class="km">${st?'📱 ស្កេន QR នេះដោយកាមេរ៉ាទូរស័ព្ទ → <b>ចូលប្រព័ន្ធដោយស្វ័យប្រវត្តិ</b> (មិនចាំបាច់វាយ PIN)':'📱 ស្កេន QR → បើកទំព័រចូលប្រព័ន្ធ ហើយមាន Username រួចជាស្រេច → វាយតែពាក្យសម្ងាត់'}</p>
+    <div class="row" style="justify-content:center"><button class="btn teal" onclick="Auth.qrPng('${u.id}')">⬇ ទាញយក QR (PNG)</button><button class="btn ghost" onclick="navigator.clipboard.writeText(${JSON.stringify(L).replace(/"/g,'&quot;')}).then(()=>toast('✅ បានចម្លងតំណ'))">📋 ចម្លងតំណ</button></div>
+    ${st?'<p class="note">⚠️ QR សិស្សមាន PIN នៅខាងក្នុង — អ្នកណាស្កេនបាន អាចចូលគណនីនោះបាន។ ឱ្យសិស្សរក្សាទុកដូចកាតសម្ងាត់។</p>':''}</div>`);
+}
+
 /* ---------- gate: setup / login screen ---------- */
 function gate(){
+  const H=new URLSearchParams(location.hash.slice(1)), qu=(H.get('u')||'').toLowerCase(), qp=H.get('p')||'';
+  if(qu){ history.replaceState(null,'',location.pathname+location.search);
+    const t=A.users.find(x=>x.username===qu && !x.disabled);
+    if(t && user() && user().id!==t.id){ sessionStorage.removeItem(SK); SESSION=null; }
+    if(t && !user()){
+      if(t.role==='student'){ LS.tab='student'; LS.cls=t.classId; LS.stu=t.id; LS.pin=''; if(qp) checkPass(t,qp).then(ok=>{ if(ok) login(t); else { LS.pin=''; loginScreen(); err('PIN ក្នុង QR ចាស់ហើយ — សូមវាយ PIN ថ្មី'); } }); }
+      else { LS.tab=t.role==='admin'?'admin':'teacher'; LS.prefill=t.username; }
+    }
+  }
   if(user()){ applyRole(); return true; }
   const el=document.createElement('div'); el.id='auth';
   document.body.appendChild(el); document.body.classList.add('auth-open');
@@ -94,14 +133,14 @@ function loginScreen(tab){
         <div class="au-pad">${[1,2,3,4,5,6,7,8,9,'⌫',0,'✓'].map(k=>`<button onclick="Auth._pin('${k}')">${k}</button>`).join('')}</div>`;
     }
   } else {
-    body=`<label>ឈ្មោះអ្នកប្រើ (Username)<input id="auU" autocomplete="off" autofocus></label>
+    body=`<label>ឈ្មោះអ្នកប្រើ (Username)<input id="auU" autocomplete="off" autofocus value="${esc(LS.prefill||'')}"></label>
       <label>ពាក្យសម្ងាត់<input id="auP" type="password" onkeydown="if(event.key==='Enter')Auth._login()"></label>
       <div class="au-err" id="auErr"></div><button class="au-btn" onclick="Auth._login()">🔓 ចូលប្រព័ន្ធ</button>
       ${LS.tab==='admin'?`<a class="au-link" href="#" onclick="Auth._recover();return false">ភ្លេចពាក្យសម្ងាត់ Admin?</a>`:''}
       ${LS.tab==='teacher'?`<p class="note" style="margin-top:10px">គ្មានគណនី? សូមស្នើ Admin បង្កើតគណនីគ្រូឱ្យ</p>`:''}`;
   }
   $a().innerHTML = shell(`<div class="au-logo">📚</div><h1>Beginner English Studio</h1>${tabs}<div class="au-body">${body}</div>${LS.tab!=='admin'?`<a class="au-link au-adm" href="#" onclick="Auth._tab('admin');return false">🛡️ Admin</a>`:''}`);
-  const f=$('#auU'); if(f) setTimeout(()=>f.focus(),50);
+  const f=$('#auU'); if(f) setTimeout(()=>{ (LS.prefill?$('#auP'):f).focus(); },50);
 }
 async function _login(){
   const un=$('#auU').value.trim().toLowerCase(), p=$('#auP').value;
@@ -213,7 +252,7 @@ function accountsPanel(c){
     <p class="note">សិស្សចូលប្រព័ន្ធដោយចុចរូប/ឈ្មោះខ្លួនឯង រួចវាយ PIN ៤ ខ្ទង់។ វឌ្ឍនភាព និងប្រឡងរបស់សិស្សម្នាក់ៗត្រូវបានរក្សាទុកដាច់ដោយឡែក។</p>
     ${us.length?`<div class="cl-tablewrap"><table class="cl-table"><thead><tr><th></th><th class="l">ឈ្មោះ</th><th class="l">Username</th><th>PIN</th><th>ចូលចុងក្រោយ</th><th></th></tr></thead><tbody>
     ${us.map(u=>`<tr style="${u.disabled?'opacity:.45':''}"><td>${avatarFor(u,32)}</td><td class="l"><b>${esc(u.name)}</b></td><td class="l"><code>${esc(u.username)}</code></td><td><span class="au-pin">${u.pin||'••••'}</span></td><td>${u.last?new Date(u.last).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'}):'—'}</td>
-      <td><button class="btn ghost sm" onclick="Auth._rp('${u.id}','${c.id}')">🔄 PIN ថ្មី</button> <button class="btn ghost sm" onclick="Auth._tg('${u.id}','${c.id}')">${u.disabled?'✅ បើក':'⛔ បិទ'}</button></td></tr>`).join('')}</tbody></table></div>`:''}
+      <td><button class="btn ghost sm" onclick="Auth.showQR('${u.id}')">📱 QR</button> <button class="btn ghost sm" onclick="Auth._rp('${u.id}','${c.id}')">🔄 PIN ថ្មី</button> <button class="btn ghost sm" onclick="Auth._tg('${u.id}','${c.id}')">${u.disabled?'✅ បើក':'⛔ បិទ'}</button></td></tr>`).join('')}</tbody></table></div>`:''}
   </div>`;
 }
 async function _mk(cid){ const k=await makeStudentAccounts(cid); toast(`✅ បានបង្កើតគណនី ${k} នាក់`); render(); }
@@ -224,7 +263,7 @@ function printCards(cid){
   const D=classData(), c=(D.classes||[]).find(x=>x.id===cid), us=A.users.filter(u=>u.role==='student'&&u.classId===cid&&!u.disabled);
   document.getElementById('printArea').innerHTML = `<div class="au-cards">${us.map(u=>{ const s=c.students.find(x=>x.id===u.studentId)||{};
     return `<div class="au-pc"><div class="h">📚 Beginner English Studio</div><div class="b">${s.photo?`<img src="${s.photo}">`:`<div class="ph">${esc((u.name||'?')[0])}</div>`}<div><b>${esc(u.name)}</b>${s.latin?`<small>${esc(s.latin)}</small>`:''}<span>🏫 ${esc(c.name)}</span></div></div>
-      <div class="pinrow"><span>Username: <b>${esc(u.username)}</b></span><span>PIN: <b>${u.pin||'— (ស្នើគ្រូ)'}</b></span></div><div class="t">ចុចរូបខ្លួនឯង → វាយ PIN • កុំប្រាប់អ្នកដទៃ 🤫</div>${QR?`<div class="qrw">${QR}<span>📱 ស្កេនដើម្បីចូលថ្នាក់${Cloud.code&&Cloud.code()?`<br>ឬវាយកូដ <b class="code">${Cloud.code()}</b><br><small>${location.host+location.pathname}</small>`:''}</span></div>`:''}</div>`; }).join('')}</div>`;
+      <div class="pinrow"><span>Username: <b>${esc(u.username)}</b></span><span>PIN: <b>${u.pin||'— (ស្នើគ្រូ)'}</b></span></div><div class="t">ចុចរូបខ្លួនឯង → វាយ PIN • កុំប្រាប់អ្នកដទៃ 🤫</div>${(()=>{ const PL=qrLinkOf(u); return PL?`<div class="qrw">${qrSvgOf(PL,100)}<span>📱 <b>ស្កេន QR = ចូលភ្លាម</b><br>ឬបើក ${esc(location.host+location.pathname)}<br>វាយកូដថ្នាក់ <b class="code">${CC||''}</b></span></div>`:''; })()}</div>`; }).join('')}</div>`;
   const st=document.createElement('style'); st.textContent='@page{size:A4 portrait;margin:10mm}'; document.head.appendChild(st);
   document.body.classList.add('printing-cert'); const done=()=>{ st.remove(); document.body.classList.remove('printing-cert'); window.removeEventListener('afterprint',done); };
   window.addEventListener('afterprint',done); setTimeout(()=>{ window.print(); setTimeout(done,1500); },150);
@@ -246,7 +285,7 @@ function renderAdmin(t){
       <div class="au-grid">${staff.map(u=>`<div class="au-ucard ${u.disabled?'off':''}">${avatarFor(u,56)}<b>${esc(u.name)}</b><code>@${esc(u.username)}</code><span class="au-badge" style="background:${ROLE[u.role].c}">${ROLE[u.role].i} ${ROLE[u.role].km}</span>
         ${u.role==='teacher'?`<small>🏫 ${(D.classes||[]).filter(c=>c.owner===u.id||(u.classIds||[]).includes(c.id)).map(c=>esc(c.name)).join(', ')||'—'}</small>`:''}
         <small>ចូលចុងក្រោយ៖ ${u.last?new Date(u.last).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'}):'—'}</small>
-        <div class="row" style="justify-content:center;gap:4px">${u.role==='teacher'?`<button class="btn ghost sm" title="ផ្ញើតំណចូល" onclick="Auth.invite('${u.id}')">✉️</button>`:''}<button class="btn ghost sm" onclick="Auth.editUser('${u.id}')">✎</button>${u.id!==user().id?`<button class="btn ghost sm" onclick="Auth._tg('${u.id}')">${u.disabled?'✅':'⛔'}</button><button class="btn ghost sm" onclick="Auth.delUser('${u.id}')">🗑</button>`:''}</div></div>`).join('')}</div></div>`;
+        <div class="row" style="justify-content:center;gap:4px"><button class="btn ghost sm" title="QR ចូលប្រព័ន្ធ" onclick="Auth.showQR('${u.id}')">📱</button>${u.role==='teacher'?`<button class="btn ghost sm" title="ផ្ញើតំណចូល" onclick="Auth.invite('${u.id}')">✉️</button>`:''}<button class="btn ghost sm" onclick="Auth.editUser('${u.id}')">✎</button>${u.id!==user().id?`<button class="btn ghost sm" onclick="Auth._tg('${u.id}')">${u.disabled?'✅':'⛔'}</button><button class="btn ghost sm" onclick="Auth.delUser('${u.id}')">🗑</button>`:''}</div></div>`).join('')}</div></div>`;
   } else if(atab==='students'){
     const cs=D.classes||[]; el.innerHTML = cs.length ? cs.map(c=>accountsPanel(c)).join('<div style="height:14px"></div>') : `<div class="panel cl-empty"><p class="km">មិនទាន់មានថ្នាក់ — បង្កើតក្នុង 👥 ថ្នាក់រៀន</p></div>`;
   } else if(atab==='classes'){
@@ -286,10 +325,10 @@ async function _saveUser(id, r){
   if(r==='teacher' && p) setTimeout(()=>teacherInvite(u, p), 300);
 }
 function teacherInvite(u, pass){
-  const code=window.Cloud&&Cloud.code&&Cloud.code(), L=code?Cloud.roleLink('teacher',code):location.href.split(/[?#]/)[0];
+  const code=window.Cloud&&Cloud.code&&Cloud.code(), L=(code&&qrLinkOf(u))||location.href.split(/[?#]/)[0];
   const msg=`👩‍🏫 Beginner English Studio — គណនីគ្រូ\n\n🔗 តំណ៖ ${L}\n👤 Username៖ ${u.username}\n🔑 ពាក្យសម្ងាត់៖ ${pass||'(ស្នើ Admin)'}\n\nបើកតំណ → វាយ Username និងពាក្យសម្ងាត់ → ចូលប្រព័ន្ធ។ សូមប្តូរពាក្យសម្ងាត់ក្រោយចូលលើកដំបូង (ចុចឈ្មោះខាងស្តាំលើ → 🔑)។`;
   modal(`<h3>✉️ ផ្ញើព័ត៌មានចូលប្រព័ន្ធឱ្យ ${esc(u.name)}</h3>
-    ${code&&window.Cloud?`<div style="display:flex;gap:16px;align-items:center;margin:8px 0"><div class="qr" style="width:140px">${Cloud.qrSvg(L,3)}</div><div class="km">📱 គ្រូស្កេន QR នេះ ឬចុចតំណ → វាយ Username និងពាក្យសម្ងាត់</div></div>`:''}
+    ${code&&window.Cloud?`<div style="display:flex;gap:16px;align-items:center;margin:8px 0"><div class="qr" style="width:140px">${qrSvgOf(L,140)}</div><div class="km">📱 គ្រូស្កេន QR នេះ ឬចុចតំណ → វាយ Username និងពាក្យសម្ងាត់</div></div>`:''}
     <textarea class="cl-in" style="width:100%;height:170px;box-sizing:border-box" readonly onclick="this.select()">${esc(msg)}</textarea>
     <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" onclick="closeModal()">បិទ</button>
       <a class="btn ghost" target="_blank" href="https://t.me/share/url?url=${encodeURIComponent(L)}&text=${encodeURIComponent(msg)}">✈️ Telegram</a>
@@ -301,7 +340,7 @@ function _own(cid, tid){ const D=classData(); const c=D.classes.find(x=>x.id===c
 function backupAll(){ const o={}; Object.keys(localStorage).filter(k=>k.startsWith('beginner-studio')).forEach(k=>o[k]=localStorage.getItem(k)); const b=new Blob([JSON.stringify({app:'beginner-studio',v:1,ts:Date.now(),data:o})],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`beginner-studio-FULL-backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); log('Backup ទាំងអស់'); }
 function restoreAll(f){ if(!f) return; f.text().then(t=>{ const d=JSON.parse(t); if(d.app!=='beginner-studio'||!d.data) throw 0; if(!confirm('ជំនួសទិន្នន័យទាំងអស់ដោយ Backup នេះ? (ត្រូវចូលប្រព័ន្ធម្តងទៀត)')) return; Object.keys(localStorage).filter(k=>k.startsWith('beginner-studio')).forEach(k=>localStorage.removeItem(k)); Object.entries(d.data).forEach(([k,v])=>localStorage.setItem(k,v)); sessionStorage.removeItem(SK); reload(); }).catch(()=>toast('ឯកសារ Backup មិនត្រឹមត្រូវ')); }
 
-window.Auth = { invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
+window.Auth = { showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
   editUser, delUser, backupAll, restoreAll, log, data:()=>A,
   _setup, _loginAs, _login, _pin, _recover, _doRecover, _cp, _mk, _rp, _tg, _own, _saveUser,
   _tab:r=>{ LS.tab=r; LS.stu=null; LS.pin=''; loginScreen(); }, _cls:id=>{ LS.cls=id; loginScreen(); }, _stu:id=>{ LS.stu=id; LS.pin=''; loginScreen(); } };

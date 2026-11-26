@@ -1139,3 +1139,42 @@ body.role-student #player #pAB,body.role-student #player #pLoop,body.role-studen
 .ex-gate label{display:flex;flex-direction:column;gap:4px}
 .ex-sess{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid #e2e8f0;margin-top:8px;font-size:14px}
 .ex-sess .live{color:#16a34a;font-weight:700;animation:auBob 1.6s infinite}.ex-sess span{color:#64748b;font-family:var(--kh)}.ex-sess .cnt{margin-left:auto;color:#0f172a;font-weight:600}
+/* ===== student v2: no slides, no folder-only features ===== */
+body.role-student [onclick*="Deck.open"],body.role-student.is-web [onclick*="P.load"],body.role-student.is-web #player{display:none!important}
+.su-hero{position:relative;display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:12px;border-radius:24px;padding:14px 16px;color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2));box-shadow:0 14px 30px -14px var(--c1);margin-bottom:12px;overflow:hidden}
+.su-hero .su-nav{width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.2);color:#fff;font-size:24px;line-height:1}
+.su-hero .n{font:800 44px/1 sans-serif;text-shadow:0 6px 16px rgba(0,0,0,.2)}
+.su-hero .t b{display:block;font-size:19px}.su-hero .t span{font:14px var(--kh);opacity:.92}.su-hero .t small{display:block;font:12px var(--kh);opacity:.85;margin-top:4px}
+.su-hero .bar{height:6px;border-radius:6px;background:rgba(255,255,255,.3);margin-top:6px;overflow:hidden}.su-hero .bar i{display:block;height:100%;background:#fff}
+.su-hero .e{font-size:44px}.su-hero .pn{position:absolute;right:10px;bottom:8px;display:flex;gap:4px}.su-hero .pn button{width:28px;height:24px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:11px}.su-hero .pn button:disabled{opacity:.3}
+.su-tabs{top:58px}
+.les{display:flex;flex-direction:column;gap:10px}
+.les-s{background:#fff;border-radius:20px;box-shadow:0 3px 14px rgba(15,23,42,.05);overflow:hidden;border:2px solid transparent;transition:.2s}
+.les-s.on{border-color:color-mix(in srgb,var(--c1) 45%,#fff);box-shadow:0 10px 26px -12px var(--c1)}
+.les-s.ok:not(.on){opacity:.75}
+.les-h{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px}
+.les-h .ki{flex:none;width:42px;height:42px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:color-mix(in srgb,var(--c1) 12%,#fff)}
+.les-s.ok .ki{background:#dcfce7;color:#16a34a;font-weight:800}
+.les-h .tt{flex:1;min-width:0}.les-h small{display:block;font:12px var(--kh);color:var(--c1)}.les-h b{display:block;font-size:15.5px;color:#0f172a}.les-h em{display:block;font:normal 12.5px var(--kh);color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.les-h .ch{font-size:22px;color:#94a3b8;width:24px;text-align:center}
+.les-b{padding:0 14px 14px;animation:auIn .3s}.les-d{margin:0 0 10px;color:#475569}
+.les-w{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:10px}
+.les-w button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:16px;background:#f8fafc;border:1px solid #eef2f7;transition:.15s}
+.les-w button:active{transform:scale(.96);background:#f0fdfa}.les-w .em{font-size:30px}.les-w b{font-size:15px;color:#0f172a}.les-w small{font:12px var(--kh);color:#64748b}
+.les-phs{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.les-ph{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#f8fafc;cursor:pointer;margin-bottom:6px}.les-ph:active{background:#f0fdfa}
+.les-ph span{font-size:18px}.les-ph b{display:block;font-size:15px;color:#0f172a}.les-ph small{display:block;font:12.5px var(--kh);color:#64748b}
+.les-g{background:#fffbeb;border:1px solid #fde68a;border-radius:16px;padding:12px;margin-bottom:10px}.les-g h4{margin:0 0 4px;font-size:15.5px}.les-g p{margin:0 0 8px}
+.les-form{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}.les-form div{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#fff;border-radius:10px;padding:6px 10px;font-size:15px}
+.les-form .hl{background:color-mix(in srgb,var(--c1) 18%,#fff);color:var(--c1);font-weight:700;border-radius:6px;padding:0 6px}.les-form button{margin-left:auto;font-size:15px}
+.les-err{display:flex;flex-wrap:wrap;gap:10px;font-size:14px;margin-top:4px}.les-err s{color:#dc2626}.les-err b{color:#16a34a}
+.les-q{background:#eff6ff;border-radius:16px;padding:12px;margin-bottom:10px}.les-q h4{margin:0 0 6px;font:700 14.5px var(--kh)}
+.les-q div{display:flex;gap:8px;padding:6px 0;font-size:15px;cursor:pointer}.les-q span{flex:none;width:22px;height:22px;border-radius:50%;background:#2563eb;color:#fff;font-size:12px;display:grid;place-items:center}
+.les-rev{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f0fdf4;border-radius:16px;padding:12px;font-family:var(--kh)}
+.les-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px dashed #e2e8f0}
+@media(min-width:900px){ body.role-student main{max-width:1000px} .les-w{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))} .stu-units{display:grid;grid-template-columns:1fr 1fr} .su-hero{padding:22px 26px}.su-hero .n{font-size:60px}.su-hero .t b{font-size:24px} }
+/* personal QR */
+.qr-card{text-align:center}.qr-card .h{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:10px;text-align:left}.qr-card .h b{display:block;font-size:18px}.qr-card .h span{font-size:13px;color:var(--rc)}
+.qr-card .q{display:inline-block;padding:10px;border-radius:20px;border:4px solid var(--rc);background:#fff;margin:6px 0}.qr-card .q svg{display:block;width:min(260px,70vw);height:auto}
+.au-pc .qrw svg{width:26mm;height:26mm}
+.les-s{scroll-margin-top:118px}

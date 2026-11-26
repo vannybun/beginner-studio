@@ -169,7 +169,7 @@ function stuNav(){
   n.innerHTML=STU_NAV.map(([k,i,t])=>`<button class="${cur===k?'on':''}" onclick="go('${k}')"><span>${i}</span><b>${t}</b>${k==='exams'&&stuOpenExams().length?`<i>${stuOpenExams().length}</i>`:''}</button>`).join('');
 }
 function stuOpenExams(){ const me=Auth.user(), X=(window.Exam&&Exam.data())||{}; return (X.open||[]).filter(se=>se.cls===me.classId && !(se.once && (X.results||[]).some(r=>r.sess===se.id && (r.uid===me.id||r.sid===me.studentId)))); }
-function unitPct(u){ const kp=knownCount(u.n)/u.vocab.length, tp=tracksDone(u.n)/Math.max(1,unitTracks(u.n).length), q=(S.quiz[u.n]||0)/100; return Math.round((kp+tp+q)/3*100); }
+function unitPct(u){ const kp=knownCount(u.n)/u.vocab.length, sp=((S.sec||{})[u.n]||[]).length/LESSONS[u.n].sections.length, q=(S.quiz[u.n]||0)/100; return Math.round((kp+sp+q)/3*100); }
 function renderStuHome(){
   const me=Auth.user(), nu=nextUnit(), u=U(nu), st=UNIT_STYLE[nu]; setUnitColors(nu);
   const totalW=UNITS.reduce((a,x)=>a+x.vocab.length,0), knownW=UNITS.reduce((a,x)=>a+knownCount(x.n),0), passed=Object.values(S.quiz).filter(v=>v>=80).length;
@@ -179,14 +179,54 @@ function renderStuHome(){
     <div class="stu-cont" style="--c1:${st.c1};--c2:${st.c2}">
       <small>បន្តរៀន</small><div class="r"><div class="n">${nu}</div><div><b>${esc(u.en)}</b><span>${u.km}</span></div><div class="e">${st.icon}</div></div>
       <div class="bar"><i style="width:${unitPct(u)}%"></i></div>
-      <div class="b"><button class="btn white" onclick="Deck.open(${nu})">▶ រៀនជាស្លាយ</button><button class="btn ghost" onclick="go('unit',${nu})">📚 មេរៀន</button></div>
+      <div class="b"><button class="btn white" onclick="go('unit',${nu},'lesson')">▶ បន្តរៀន</button><button class="btn ghost" onclick="go('unit',${nu},'practice')">✍️ លំហាត់</button></div>
     </div>
-    <div class="stu-stats"><div><b>${knownW}</b><span>🔤 ពាក្យចេះ</span></div><div><b>${Object.keys(S.listened).length}</b><span>🎧 បទស្តាប់</span></div><div><b>${passed}<small>/14</small></b><span>🏅 មេរៀនឆ្លង</span></div></div>
+    <div class="stu-stats"><div><b>${knownW}</b><span>🔤 ពាក្យចេះ</span></div><div><b>${Object.values(S.sec||{}).reduce((a,x)=>a+x.length,0)}</b><span>📖 ផ្នែករៀនរួច</span></div><div><b>${passed}<small>/14</small></b><span>🏅 មេរៀនឆ្លង</span></div></div>
     <h3 class="stu-sub">📚 មេរៀនទាំងអស់</h3>${stuUnitList()}`;
 }
 function stuUnitList(){ return `<div class="stu-units">${UNITS.map((u,i)=>{ const st=UNIT_STYLE[u.n], p=unitPct(u), q=S.quiz[u.n];
   return `<button class="stu-u" style="--c1:${st.c1};--c2:${st.c2};animation-delay:${Math.min(i,10)*0.03}s" onclick="go('unit',${u.n})"><span class="n">${u.n}</span><span class="t"><b>${esc(u.en)}</b><small>${u.km}</small><span class="bar"><i style="width:${p}%"></i></span></span><span class="s">${q>=80?'✅':st.icon}</span></button>`; }).join('')}</div>`; }
 function renderStuUnits(){ setUnitColors(2); $('#main').innerHTML=`<div class="stu-head"><h2>📚 មេរៀន</h2></div>${stuUnitList()}`; }
+
+/* ---------- 🎓 student unit: lesson cards (no slides) — phone first, roomy on PC ---------- */
+const TABS_STU = () => [['lesson','📖 មេរៀន'],['vocab','🔤 ពាក្យ'],['grammar','📐 វេយ្យាករណ៍'],['practice','✍️ លំហាត់']].concat(window.IS_WEB?[]:[['listen','🎧 ស្តាប់']]);
+function secDone(n){ S.sec=S.sec||{}; return S.sec[n]=S.sec[n]||[]; }
+function renderStuUnit(u, tabs){
+  const st=UNIT_STYLE[u.n], L=LESSONS[u.n], done=secDone(u.n).length;
+  $('#main').innerHTML=`<div class="su-hero" style="--c1:${st.c1};--c2:${st.c2}">
+      <button class="su-nav" onclick="go('units')">‹</button>
+      <div class="n">${u.n}</div><div class="t"><b>${esc(u.en)}</b><span>${u.km}</span><div class="bar"><i style="width:${unitPct(u)}%"></i></div><small>📖 ${done}/${L.sections.length} ផ្នែក • 📘 សៀវភៅ p${u.start}–${u.end}</small></div>
+      <div class="e">${st.icon}</div>
+      <div class="pn"><button ${u.n<=1?'disabled':''} onclick="go('unit',${u.n-1},'${view.tab}')">◀</button><button ${u.n>=14?'disabled':''} onclick="go('unit',${u.n+1},'${view.tab}')">▶</button></div>
+    </div>
+    <div class="tabs su-tabs">${tabs.map(t=>`<button class="${t[0]===view.tab?'on':''}" onclick="go('unit',${u.n},'${t[0]}')">${t[1]}</button>`).join('')}</div>
+    <div id="tab"></div>`;
+  ({lesson:tabLesson, vocab:tabVocab, grammar:tabGrammar, practice:tabPractice, listen:tabListen})[view.tab](u);
+}
+let openSec=null;
+function tabLesson(u){
+  const L=LESSONS[u.n], dn=secDone(u.n); if(openSec==null || openSec.n!==u.n){ const f=L.sections.findIndex((x,i)=>!dn.includes(i)); openSec={n:u.n, i:f<0?0:f}; }
+  const say=t=>`speak(${JSON.stringify(t).replace(/"/g,'&quot;')})`;
+  $('#tab').innerHTML=`<div class="les">${L.sections.map((s,si)=>{ const K=KIND[s.k], on=openSec.i===si, ok=dn.includes(si);
+    let body='';
+    if(on){
+      if(s.w&&s.w.length) body+=`<div class="les-w">${s.w.map(w=>`<button onclick="${say(w[0])}"><span class="em">${w[2]||'🔤'}</span><b>${esc(w[0])}</b><small>${esc(w[1]||'')}</small></button>`).join('')}</div>`;
+      if(s.g) body+=s.g.map(gi=>{ const g=L.grammar[gi]; if(!g) return ''; return `<div class="les-g"><h4>📐 ${esc(g.t)}</h4><p class="km">${g.km}</p>
+        ${g.form?`<div class="les-form">${g.form.map(row=>`<div>${row.map((c,ci)=>`<span class="${ci===1?'hl':''}">${esc(c)}</span>`).join('')}<button onclick="${say(row.join(' '))}">🔊</button></div>`).join('')}</div>`:''}
+        ${g.ex?g.ex.map(e=>`<div class="les-ph" onclick="${say(e)}"><span>🔊</span><b>${esc(e)}</b></div>`).join(''):''}
+        ${g.err?g.err.map(e=>`<div class="les-err"><s>❌ ${esc(e[0])}</s><b>✅ ${esc(e[1])}</b></div>`).join(''):''}</div>`; }).join('');
+      if(s.ph&&s.ph.length) body+=`<div class="les-phs">${s.ph.map(p=>`<div class="les-ph" onclick="${say(p[0])}"><span>🔊</span><div><b>${esc(p[0])}</b><small>${esc(p[1]||'')}</small></div></div>`).join('')}</div>`;
+      if(s.qs&&s.qs.length) body+=`<div class="les-q"><h4>❓ សំណួរ — ឆ្លើយដោយខ្លួនឯង</h4>${s.qs.map((q,qi)=>`<div onclick="${say(q)}"><span>${qi+1}</span>${esc(q)} 🔊</div>`).join('')}</div>`;
+      if(s.k==='review') body+=`<div class="les-rev">🏁 ធ្វើលំហាត់ដើម្បីពិនិត្យខ្លួនឯង <button class="btn teal" onclick="go('unit',${u.n},'practice')">✍️ ធ្វើលំហាត់</button></div>`;
+      if(!body) body=`<p class="note">📘 សូមបើកសៀវភៅទំព័រ ${s.p} ហើយធ្វើតាមការណែនាំរបស់គ្រូ</p>`;
+      body+=`<div class="les-foot"><span class="note">📘 សៀវភៅ p${s.p}</span><button class="btn ${ok?'ghost':'teal'}" onclick="Stu.done(${u.n},${si})">${ok?'✓ រៀនរួច':si<L.sections.length-1?'✅ រៀនរួច → បន្ទាប់':'✅ រៀនរួច'}</button></div>`;
+    }
+    return `<div class="les-s ${on?'on':''} ${ok?'ok':''}" style="--kc:${K.c||'var(--c1)'}"><button class="les-h" onclick="Stu.open(${u.n},${si})"><span class="ki">${ok?'✓':K.i}</span><span class="tt"><small>${K.km}</small><b>${esc(s.t)}</b>${on?'':`<em>${s.km}</em>`}</span><span class="ch">${on?'−':'+'}</span></button>${on?`<div class="les-b"><p class="km les-d">${s.km}</p>${body}</div>`:''}</div>`; }).join('')}</div>`;
+}
+window.Stu = {
+  open:(n,i)=>{ openSec={n, i: openSec&&openSec.n===n&&openSec.i===i ? -1 : i}; tabLesson(U(n)); const el=document.querySelectorAll('.les-s')[i]; if(el&&openSec.i===i) el.scrollIntoView({behavior:'smooth',block:'start'}); },
+  done:(n,i)=>{ const d=secDone(n); if(!d.includes(i)){ d.push(i); track('lesson', n+':'+i); save(); } const L=LESSONS[n]; const nx=L.sections.findIndex((x,k)=>k>i&&!d.includes(k)); if(nx>=0){ openSec={n,i:nx}; renderUnit(); setTimeout(()=>{ const el=document.querySelectorAll('.les-s')[nx]; el&&el.scrollIntoView({behavior:'smooth',block:'start'}); },60); } else { toast('🎉 រៀនគ្រប់ផ្នែកហើយ! តោះធ្វើលំហាត់'); renderUnit(); } }
+};
 
 /* ---------- home ---------- */
 function renderHome(){
@@ -234,7 +274,7 @@ function renderHome(){
       ${q>=80?'<span class="done-badge">✓ ឆ្លង</span>':''}
     </button>`}).join('')}</div>`;
 }
-function nextUnit(){ for(const u of UNITS){ if((S.quiz[u.n]||0)<80) return u.n; } return 14; }
+function nextUnit(){ for(const u of UNITS){ if(ROLE_NOW==='student' ? (((S.sec||{})[u.n]||[]).length<LESSONS[u.n].sections.length || (S.quiz[u.n]||0)<80) : (S.quiz[u.n]||0)<80) return u.n; } return 14; }
 
 /* ---------- unit ---------- */
 const TABS_LEARN = [['path','📚 មេរៀនតាមសៀវភៅ'],['listen','🎧 ស្តាប់'],['vocab','🔤 វាក្យសព្ទ'],['grammar','📐 វេយ្យាករណ៍'],['practice','✍️ លំហាត់'],['exam','📝 ប្រឡងបញ្ចប់មេរៀន']];
@@ -242,8 +282,9 @@ const TABS_TEACH = [['plan','📋 ផែនការបង្រៀន'],['works
 function renderUnit(){
   const u = U(view.unit), st = UNIT_STYLE[u.n];
   setUnitColors(u.n);
-  const tabs = ROLE_NOW==='student' ? TABS_LEARN.filter(t=>t[0]!=='exam') : TABS_LEARN.concat(S.mode==='teach'?TABS_TEACH:[]);
-  if(!tabs.find(t=>t[0]===view.tab)) view.tab='path';
+  const tabs = ROLE_NOW==='student' ? TABS_STU() : TABS_LEARN.concat(S.mode==='teach'?TABS_TEACH:[]);
+  if(!tabs.find(t=>t[0]===view.tab)) view.tab=tabs[0][0];
+  if(ROLE_NOW==='student') return renderStuUnit(u, tabs);
   $('#main').innerHTML = `
   <div class="uhero">
     <div class="big">${u.n}</div>
@@ -582,7 +623,7 @@ if(window.Auth && Auth.gate()){
 }
 Deck.init();
 Book.init();
-if(ROLE_NOW==='student'){ Book.open=()=>toast('📖 សូមបើកសៀវភៅពិតរបស់អ្នក'); window.openBook=()=>toast('📖 សូមបើកសៀវភៅពិតរបស់អ្នក'); window.openPdf=()=>{}; if(Deck.bookToggle) Deck.bookToggle=()=>{}; }
+if(ROLE_NOW==='student'){ Deck.open=(n)=>go('unit',n||nextUnit(),'lesson'); Book.open=()=>toast('📖 សូមបើកសៀវភៅពិតរបស់អ្នក'); window.openBook=()=>toast('📖 សូមបើកសៀវភៅពិតរបស់អ្នក'); window.openPdf=()=>{}; if(Deck.bookToggle) Deck.bookToggle=()=>{}; }
 if(TRACKING){ const _dO=Deck.open, _bO=Book.open; Deck.open=(n,p)=>{ track('slides', n); return _dO(n,p); }; Book.open=p=>{ track('book', p==null?'':p); return _bO(p); }; }
 if(ROLE_NOW) setMode(S.mode||'learn');
 window.addEventListener('resize', ()=>{ if(!ROLE_NOW) return; const b=(S.mode==='learn'?$('#mLearn'):$('#mTeach')); const pill=$('#mPill'); pill.style.left=b.offsetLeft+'px'; pill.style.width=b.offsetWidth+'px'; });
