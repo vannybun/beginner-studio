@@ -11,101 +11,117 @@ const chunk = (a,n) => { const r=[]; for(let i=0;i<a.length;i+=n) r.push(a.slice
 const say = t => `data-say="${esc(String(t).replace(/\(.*?\)/g,'').replace(/[→=↔].*$/,'').trim())}"`;
 const spk = t => `<button class="s-spk" ${say(t)} title="Listen">🔊</button>`;
 
-/* ---------------- build a deck for one unit (book order) ---------------- */
+/* ---------------- build a deck for one unit (book order) ----------------
+   Slides show only lesson content (big & clear). Every teaching instruction — Khmer explanation,
+   the book's exercise rubrics with track numbers, how to run the slide — lives in s.note,
+   shown in the 📋 notes drawer (button / key I). */
+const splitTitle = t => { const parts=String(t).split(/\s+[—•]\s+/); return {main:parts[0], rest:parts.slice(1)}; };
+const titleHtml = (t, cls) => { const {main,rest}=splitTitle(t); return `<h2 class="s-h2 ${cls||''} rise">${esc(main)}</h2>${rest.length?`<div class="s-subs rise d2">${rest.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:''}`; };
+const noteBlock = (title, body) => `<div class="dn-b"><h4>${title}</h4>${body}</div>`;
 function buildDeck(n){
   const u = UNITS[n-1], L = LESSONS[n], st = UNIT_STYLE[n], tr = TRACKS.filter(t=>t.unit===n);
-  const S = [];  // {html, steps, sec, page, tracks:[idx], kind}
-  const trOn = p => tr.filter(t=>t.page===p);
+  const S = [];  // {html, note, steps, sec, page, tracks:[idx], kind}
   const trBetween = (a,b) => tr.filter(t=>t.page>=a && t.page<b);
-  const trackChips = list => list.length ? `<div class="s-tracks">${list.map(t=>`<button class="s-trk" data-track="${tr.indexOf(t)}"><span>▶</span>${t.id}<small>${esc(t.text)}</small></button>`).join('')}</div>` : '';
+  const trackBtns = list => list.length ? `<div class="s-tracks">${list.map(t=>`<button class="s-trk" data-track="${tr.indexOf(t)}" title="${esc(t.text)}"><span>▶</span>${t.id}</button>`).join('')}</div>` : '';
+  const trackNote = list => list.length ? noteBlock('🎧 លំហាត់ក្នុងសៀវភៅ (Audio)', `<ul class="dn-trk">${list.map(t=>`<li><b>🔊 ${t.id}</b> <span>p${t.page}</span> ${esc(t.text)}</li>`).join('')}</ul>`) : '';
+  const how = (...lines) => noteBlock('🎮 របៀបបង្ហាញ', `<ul>${lines.map(x=>`<li>${x}</li>`).join('')}</ul>`);
 
   // 1. Title
-  S.push({kind:'title', page:u.start, sec:'Unit '+n, steps:u.goals.length, html:`
+  S.push({kind:'title', page:u.start, sec:'Unit '+n, steps:0, html:`
     <div class="s-title">
       <div class="s-bigicon float">${st.icon}</div>
       <div class="s-unitno pop">UNIT ${n}</div>
       <h1 class="s-h1 rise">${esc(u.en)}</h1>
       <div class="s-kmt rise d2">${u.km}</div>
-      <ul class="s-goals">${u.goals.map((g,i)=>`<li class="st" data-s="${i+1}">🎯 ${g}</li>`).join('')}</ul>
-      <div class="s-page rise d3">📘 Student's Book p${u.start}–${u.end}</div>
-    </div>`});
-  // 2. Lesson map (agenda in book order)
+    </div>`,
+    note: noteBlock('🎯 គោលបំណងមេរៀន', `<ul>${u.goals.map(g=>`<li>${g}</li>`).join('')}</ul>`) + noteBlock('📘 សៀវភៅ', `<p>Student's Book ទំព័រ ${u.start}–${u.end}</p>`)});
+  // 2. Lesson map
   S.push({kind:'map', page:u.start, sec:'Lesson map', steps:0, html:`
-    <h2 class="s-h2 rise">🗺️ ផែនទីមេរៀន <span class="en">Lesson map</span></h2>
-    <div class="s-map">${L.sections.map((s,i)=>`<div class="s-mapi rise" style="animation-delay:${0.05*i}s"><b>p${s.p}</b><span class="ki">${KIND[s.k].i}</span><span>${esc(s.t)}</span></div>`).join('')}</div>`});
+    <h2 class="s-h2 rise">Lesson map</h2>
+    <div class="s-map">${L.sections.map((s,i)=>`<div class="s-mapi rise" style="animation-delay:${0.04*i}s"><b>p${s.p}</b><span class="ki">${KIND[s.k].i}</span><span>${esc(splitTitle(s.t).main)}</span></div>`).join('')}</div>`,
+    note: noteBlock('🗺 ផែនទីមេរៀន', '<p>បង្ហាញលំដាប់ផ្នែកនៃមេរៀនតាមទំព័រសៀវភៅ ឱ្យសិស្សដឹងថាថ្ងៃនេះនឹងរៀនអ្វីខ្លះ។</p>')});
 
   // 3. Sections in book order
   L.sections.forEach((s, si) => {
-    const next = L.sections[si+1], tlist = trBetween(s.p, next ? next.p : 999);
-    const K = KIND[s.k], secName = `p${s.p} • ${s.t}`;
+    const nx = L.sections[si+1], tlist = trBetween(s.p, nx ? nx.p : 999);
+    const K = KIND[s.k], secName = `p${s.p} • ${splitTitle(s.t).main}`;
     const base = {sec:secName, page:s.p, tracks:tlist.map(t=>tr.indexOf(t)), kind:s.k};
+    const secNote = noteBlock(`${K.i} ${K.en} • ទំព័រ ${s.p}`, `<p>${s.km||''}</p>`) + trackNote(tlist);
     // header
     S.push({...base, steps:0, html:`
       <div class="s-sechead">
-        <div class="s-kind pop"><span>${K.i}</span>${K.en}<em>${K.km}</em></div>
-        <h2 class="s-h2 big rise">${esc(s.t)}</h2>
-        <p class="s-lead rise d2">${s.km}</p>
-        <div class="s-pagebadge rise d3">📘 Student's Book • page ${s.p}</div>
-        ${trackChips(tlist)}
-      </div>`});
+        <div class="s-kind pop"><span>${K.i}</span>${K.en}</div>
+        ${titleHtml(s.t,'big')}
+        <div class="s-pagebadge rise d3">Student's Book • p${s.p}</div>
+        ${trackBtns(tlist)}
+      </div>`, note: secNote + how('ចុចលើលេខ 🔊 ដើម្បីចាក់សំឡេងលំហាត់ក្នុងសៀវភៅ (ឬចុច A)', 'ចុច V ដើម្បីបង្ហាញទំព័រសៀវភៅពិតនៅខាងស្តាំ')});
     // grammar
     (s.g||[]).forEach(gi => {
       const g = L.grammar[gi]; if(!g) return;
       S.push({...base, steps:g.form?1:0, html:`
         <div class="s-gram">
-          <div class="s-tag rise">📐 Grammar • p${g.p}</div>
+          <div class="s-tag rise">Grammar • p${g.p}</div>
           <h2 class="s-h2 rise">${esc(g.t)}</h2>
-          <p class="s-rule rise d2">${g.km}</p>
           ${g.form?`<table class="s-form st" data-s="1">${g.form.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`:''}
-        </div>`});
+          <p class="s-rule rise d2">${g.km}</p>
+        </div>`, note: noteBlock('📐 វេយ្យាករណ៍', `<p>${g.km}</p>`) + (g.form?how('ចុចបន្ទាប់ ដើម្បីបង្ហាញតារាងទម្រង់'):'')});
       S.push({...base, steps:g.ex.length, html:`
-        <div class="s-tag rise">💡 Examples • ${esc(g.t)}</div>
-        <div class="s-exs">${g.ex.map((e,i)=>`<div class="s-ex st" data-s="${i+1}">${spk(e)}<span>${esc(e)}</span></div>`).join('')}</div>`});
+        <div class="s-tag rise">Examples • ${esc(g.t)}</div>
+        <div class="s-exs">${g.ex.map((e,i)=>`<div class="s-ex st" data-s="${i+1}">${spk(e)}<span>${esc(e)}</span></div>`).join('')}</div>`,
+        note: how('ចុចបន្ទាប់ម្តងមួយៗ ដើម្បីបង្ហាញឧទាហរណ៍', 'ចុច 🔊 ឬចុច S ដើម្បីស្តាប់ការអាន', 'ឱ្យសិស្សអានតាម ហើយបង្កើតប្រយោគថ្មីដោយខ្លួនឯង')});
       const extra = (g.more||[]).length + (g.err||[]).length;
       if(extra) S.push({...base, steps:extra, html:`
-        <div class="s-tag rise">🧠 Tips & common mistakes • ${esc(g.t)}</div>
+        <div class="s-tag rise">Tips & common mistakes</div>
         <div class="s-tips">
           ${(g.more||[]).map((m,i)=>`<div class="s-tip st" data-s="${i+1}">💡 ${m}</div>`).join('')}
-          ${(g.err||[]).map((e,i)=>`<div class="s-err st" data-s="${(g.more||[]).length+i+1}"><span class="bad">❌ ${esc(e[0])}</span><span class="arr">→</span><span class="good">✅ ${esc(e[1])}</span></div>`).join('')}
-        </div>`});
+          ${(g.err||[]).map((e,i)=>`<div class="s-err st" data-s="${(g.more||[]).length+i+1}"><span class="bad">✗ ${esc(e[0])}</span><span class="arr">→</span><span class="good">✓ ${esc(e[1])}</span></div>`).join('')}
+        </div>`, note: how('ចុចបន្ទាប់ម្តងមួយៗ', 'សួរសិស្សថា ប្រយោគខុសនៅត្រង់ណា មុនបង្ហាញចម្លើយ')});
     });
     // vocabulary (pictures)
     if((s.w||[]).length){
-      chunk(s.w, 8).forEach((grp,ci,arr) => S.push({...base, steps:1, html:`
-        <div class="s-tag rise">🔤 Vocabulary ${arr.length>1?(ci+1)+'/'+arr.length:''} • ចុចដើម្បីបង្ហាញន័យខ្មែរ</div>
-        <div class="s-vgrid n${grp.length}">${grp.map((w,i)=>`
-          <div class="s-vcard pop" style="animation-delay:${0.06*i}s" ${say(w[0])}>
+      const per = s.w.length>12 ? 10 : s.w.length>8 ? Math.ceil(s.w.length/2) : 8;
+      chunk(s.w, per).forEach((grp,ci,arr) => S.push({...base, steps:1, html:`
+        <div class="s-tag rise">Vocabulary${arr.length>1?' '+(ci+1)+'/'+arr.length:''}</div>
+        <div class="s-vgrid n${Math.min(grp.length,10)}">${grp.map((w,i)=>`
+          <div class="s-vcard pop" style="animation-delay:${0.05*i}s" ${say(w[0])}>
             <div class="em">${w[2]}</div><div class="en">${esc(w[0])}</div><div class="km st" data-s="1">${w[1]}</div>
-          </div>`).join('')}</div>`}));
-      const quiz = s.w.filter(w=>!/^\d+$/.test(w[2])).slice(0,6);
+          </div>`).join('')}</div>`,
+        note: how('ឱ្យសិស្សទាយពាក្យពីរូបភាពសិន', 'ចុចបន្ទាប់ ដើម្បីបង្ហាញន័យខ្មែរ', 'ចុចលើកាត ដើម្បីស្តាប់ការអាន')}));
+      const quiz = s.w.filter(w=>!/^\d+$/.test(w[2]) && !/[↔→\/]/.test(w[0])).slice(0,6);
       if(quiz.length>=3) S.push({...base, steps:quiz.length, html:`
-        <div class="s-tag rise">❓ Quick check — What's this in English?</div>
-        <div class="s-qc">${quiz.map((w,i)=>`<div class="s-qci pop" style="animation-delay:${0.07*i}s"><div class="em">${w[2]}</div><div class="ans st" data-s="${i+1}">${esc(w[0])}</div></div>`).join('')}</div>`});
+        <div class="s-tag rise">Quick check</div>
+        <h2 class="s-h2 rise">What's this in English?</h2>
+        <div class="s-qc">${quiz.map((w,i)=>`<div class="s-qci pop" style="animation-delay:${0.06*i}s"><div class="em">${w[2]}</div><div class="ans st" data-s="${i+1}">${esc(w[0])}</div></div>`).join('')}</div>`,
+        note: how('សួរសិស្សម្តងមួយរូប', 'ចុចបន្ទាប់ ដើម្បីបង្ហាញចម្លើយម្តងមួយៗ')});
     }
     // phrases
     if((s.ph||[]).length){
       chunk(s.ph, 6).forEach(grp => S.push({...base, steps:grp.length, html:`
-        <div class="s-tag rise">💬 Useful language • ឃ្លាសំខាន់ៗ</div>
-        <div class="s-phr">${grp.map((p,i)=>`<div class="s-ph st" data-s="${i+1}">${spk(p[0])}<b>${esc(p[0])}</b><span>${p[1]}</span></div>`).join('')}</div>`}));
+        <div class="s-tag rise">Useful language</div>
+        <div class="s-phr">${grp.map((p,i)=>`<div class="s-ph st" data-s="${i+1}">${spk(p[0])}<b>${esc(p[0])}</b><span>${p[1]}</span></div>`).join('')}</div>`,
+        note: how('ចុចបន្ទាប់ម្តងមួយៗ ដើម្បីបង្ហាញឃ្លា', 'ចុច 🔊 ដើម្បីស្តាប់', 'ឱ្យសិស្សហាត់និយាយជាគូ (Pair work)')}));
     }
     // comprehension questions
     if((s.qs||[]).length) S.push({...base, steps:s.qs.length, html:`
-      <div class="s-tag rise">🤔 ${s.k==='listen'?'Listen and answer':'Read and answer'} • សួរ-ឆ្លើយ</div>
-      <ol class="s-qs">${s.qs.map((q,i)=>`<li class="st" data-s="${i+1}">${spk(q)}${esc(q)}</li>`).join('')}</ol>
-      <p class="s-note rise d3">📘 មើលសៀវភៅទំព័រ ${s.p} • ចុច V ដើម្បីបង្ហាញទំព័រនៅខាងស្តាំ</p>`});
+      <div class="s-tag rise">${s.k==='listen'?'Listen and answer':'Read and answer'}</div>
+      <ol class="s-qs">${s.qs.map((q,i)=>`<li class="st" data-s="${i+1}">${spk(q)}${esc(q)}</li>`).join('')}</ol>`,
+      note: noteBlock('🤔 សួរ-ឆ្លើយ', `<p>ឱ្យសិស្សមើលអត្ថបទក្នុងសៀវភៅទំព័រ ${s.p} (ចុច V ដើម្បីបង្ហាញទំព័រ) ឬស្តាប់សំឡេង រួចឆ្លើយសំណួរ។</p>`) + trackNote(tlist) + how('ចុចបន្ទាប់ ដើម្បីបង្ហាញសំណួរម្តងមួយៗ')});
     // review section → whole-unit wrap-up
     if(s.k==='review'){
       const WL=u.vocab, parts=chunk(WL,12);
       parts.forEach((grp,ci)=>S.push({...base, steps:1, html:`
-        <div class="s-tag rise">📒 Wordlist p${u.wl} • ${ci+1}/${parts.length} • ${WL.length} ពាក្យ — ចុចដើម្បីបង្ហាញន័យខ្មែរ</div>
-        <div class="s-wl">${grp.map((w,i)=>`<div class="s-wli pop" style="animation-delay:${0.03*i}s" ${say(w[0])}><b>${esc(w[0])}<i>${esc(w[1])}</i></b><span class="st" data-s="1">${w[2]}</span></div>`).join('')}</div>`}));
+        <div class="s-tag rise">Wordlist p${u.wl} • ${ci+1}/${parts.length}</div>
+        <div class="s-wl">${grp.map((w,i)=>`<div class="s-wli pop" style="animation-delay:${0.03*i}s" ${say(w[0])}><b>${esc(w[0])}<i>${esc(w[1])}</i></b><span class="st" data-s="1">${w[2]}</span></div>`).join('')}</div>`,
+        note: noteBlock('📒 Wordlist', `<p>ពាក្យទាំង ${WL.length} នៃ Unit ${n} តាមទំព័រ ${u.wl} ក្នុងសៀវភៅ។</p>`) + how('ចុចបន្ទាប់ ដើម្បីបង្ហាញន័យខ្មែរ', 'ចុចលើពាក្យ ដើម្បីស្តាប់')}));
       S.push({...base, steps:L.grammar.length, html:`
-        <div class="s-tag rise">🔁 Grammar review • រំលឹកវេយ្យាករណ៍</div>
-        <div class="s-rev">${L.grammar.map((g,i)=>`<div class="s-revi st" data-s="${i+1}"><b>${esc(g.t)}</b><span>${esc(g.ex[0])}</span></div>`).join('')}</div>`});
+        <div class="s-tag rise">Grammar review</div>
+        <div class="s-rev">${L.grammar.map((g,i)=>`<div class="s-revi st" data-s="${i+1}"><b>${esc(g.t)}</b><span>${esc(g.ex[0])}</span></div>`).join('')}</div>`,
+        note: how('ចុចបន្ទាប់ ដើម្បីរំលឹកវេយ្យាករណ៍ម្តងមួយៗ', 'ឱ្យសិស្សផ្តល់ឧទាហរណ៍ថ្មី')});
       u.quiz.forEach((q,qi) => S.push({...base, kind:'quiz', steps:1, html:`
-        <div class="s-tag rise">🏁 Unit quiz ${qi+1}/${u.quiz.length}</div>
+        <div class="s-tag rise">Unit quiz ${qi+1}/${u.quiz.length}</div>
         <div class="s-quiz"><div class="q rise">${esc(q.q).replace('___','<u>&nbsp;?&nbsp;</u>')}</div>
-        <div class="opts">${q.o.map((o,k)=>`<div class="o pop ${k===q.a?'right':''}" style="animation-delay:${0.1+0.08*k}s"><b>${'ABC'[k]}</b>${esc(o)}</div>`).join('')}</div></div>`}));
+        <div class="opts">${q.o.map((o,k)=>`<div class="o pop ${k===q.a?'right':''}" style="animation-delay:${0.1+0.08*k}s"><b>${'ABC'[k]}</b>${esc(o)}</div>`).join('')}</div></div>`,
+        note: how('ឱ្យសិស្សលើកដៃ ឬបង្ហាញ A / B / C', 'ចុចបន្ទាប់ ដើម្បីបង្ហាញចម្លើយត្រូវ')}));
     }
   });
   // 4. Finish
@@ -113,15 +129,14 @@ function buildDeck(n){
     <div class="s-title end">
       <div class="s-bigicon spin">🏆</div>
       <h1 class="s-h1 rise">Well done!</h1>
-      <div class="s-kmt rise d2">អស្ចារ្យណាស់! អ្នកបានបញ្ចប់ Unit ${n} — ${u.km}</div>
-      <div class="s-page rise d3">🏠 Homework: Workbook Unit ${n} • រៀនពាក្យក្នុងកម្មវិធី • ធ្វើលំហាត់ ✍️</div>
-    </div>`});
+      <div class="s-kmt rise d2">Unit ${n} — ${esc(u.en)}</div>
+    </div>`, note: noteBlock('🏠 កិច្ចការផ្ទះ', `<p>Workbook Unit ${n} • រៀនពាក្យក្នុងកម្មវិធី • ធ្វើលំហាត់ ✍️ និង 🏁 លំហាត់ឆ្លងកម្រិត</p>`)});
   S.forEach((s,i)=>{ s.i=i; s.tr=tr; });
   return S;
 }
 
 /* ---------------- deck UI ---------------- */
-const D = { n:1, slides:[], i:0, step:0, black:null, laser:false, book:false, grid:false, numbuf:'' };
+const D = { n:1, slides:[], i:0, step:0, black:null, laser:false, book:false, grid:false, notes:false, numbuf:'' };
 const $ = s => document.querySelector(s);
 
 function open(n, startPage){
@@ -154,6 +169,7 @@ function draw(dir){
   $('#dBar').style.width = ((D.i+1)/D.slides.length*100)+'%';
   $('#dUnit').textContent = 'Unit '+D.n+' • '+u.en;
   $('#dPage').textContent = 'p'+s.page;
+  const nb=$('#dNotesBody'); if(nb) nb.innerHTML = s.note || '<p class="dn-none">គ្មានការណែនាំសម្រាប់ស្លាយនេះ</p>';
   if(D.book) bookSync();
   if(s.kind==='end') confetti();
 }
@@ -179,6 +195,7 @@ function prev(){
 }
 function goto(i){ D.i=Math.max(0,Math.min(D.slides.length-1,i)); D.step=0; draw(0); }
 function curtain(c){ D.black = D.black===c ? null : c; $('#dCurtain').className = D.black ? 'show '+c : ''; }
+function notes(v){ D.notes = v==null ? !D.notes : !!v; $('#deck').classList.toggle('notes-on', D.notes); try{ localStorage.setItem('bs-deck-notes', D.notes?'1':''); }catch(e){} }
 function laser(){ D.laser=!D.laser; $('#deck').classList.toggle('laser-on',D.laser); }
 function bookToggle(){ if(typeof ROLE_NOW!=='undefined'&&ROLE_NOW==='student') return; D.book=!D.book; $('#deck').classList.toggle('book-on',D.book); if(D.book) bookSync(); }
 function bookSync(){ const p=D.slides[D.i].page, f=$('#dBook'); const url=window.bookUrl(1,p); if(f.dataset.p!=String(p)){ f.dataset.p=p; f.src=url; } }
@@ -207,6 +224,7 @@ function key(e){
   else if(k==='F5'){ e.preventDefault(); if(!document.fullscreenElement) document.documentElement.requestFullscreen(); }
   else if(k==='Escape'){ if(D.grid) gridToggle(); else if(!document.fullscreenElement) close(); }
   else if(k==='l'||k==='L') laser();
+  else if(k==='i'||k==='I'||k==='Tab'){ e.preventDefault(); notes(); }
   else if(k==='v'||k==='V') bookToggle();
   else if(k==='g'||k==='G') gridToggle();
   else if(k==='a'||k==='A') playSlide();
@@ -236,6 +254,7 @@ function init(){
      <button onclick="Deck.next()" title="Next (→, PageDown, Space)">▶</button>
      <span id="dCount"></span><span id="dPage" class="pg"></span>
      <span class="grow"></span>
+     <button onclick="Deck.notes()" title="Teacher notes (I)" class="d-nbtn">📋</button>
      <button onclick="Deck.playSlide()" title="Audio (A)">🎧</button>
      <button onclick="Deck.bookToggle()" title="Book page (V)">📘</button>
      <button onclick="Deck.laser()" title="Laser (L)">🔴</button>
@@ -245,6 +264,7 @@ function init(){
      <button onclick="Deck.help()" title="Help">?</button>
      <button onclick="Deck.close()" title="Exit (Esc)">✕</button>
    </div>
+   <aside id="dNotes"><div class="dn-h"><b>📋 ការណែនាំសម្រាប់គ្រូ</b><button onclick="Deck.notes(false)" title="បិទ (I)">✕</button></div><div id="dNotesBody"></div></aside>
    <div class="d-prog"><i id="dBar"></i></div>
    <div id="dGrid"></div>
    <div id="dCurtain"></div>
@@ -256,10 +276,12 @@ function init(){
      <p><kbd>B</kbd> / <kbd>.</kbd> អេក្រង់ខ្មៅ • <kbd>W</kbd> អេក្រង់ស</p>
      <p><kbd>F5</kbd> ពេញអេក្រង់ • <kbd>Esc</kbd> ចេញ</p>
      <p><kbd>L</kbd> Laser pointer • <kbd>V</kbd> ទំព័រសៀវភៅ • <kbd>G</kbd> ស្លាយទាំងអស់</p>
+     <p><kbd>I</kbd> / <kbd>Tab</kbd> បើក/បិទការណែនាំសម្រាប់គ្រូ 📋</p>
      <p><kbd>A</kbd> ចាក់/ផ្អាកសំឡេង • <kbd>S</kbd> អានពាក្យ • <kbd>លេខ</kbd>+<kbd>Enter</kbd> ទៅស្លាយ</p>
      <p class="m">Presenter remote (Logitech R400, Spotlight, Norwii…) ប្រើ PageUp/PageDown/B ដែលកម្មវិធីស្គាល់ស្រាប់។ ចុចលើស្លាយ = បន្ទាប់ • ចុចកណ្តុរស្តាំ = ថយក្រោយ</p>
      <button onclick="Deck.help()">យល់ហើយ ✓</button></div></div>`;
   document.body.appendChild(el);
+  try{ if(localStorage.getItem('bs-deck-notes')) notes(true); }catch(e){}
   $('#dStage').addEventListener('click', e=>{
     const sp=e.target.closest('[data-say]'); const tk=e.target.closest('[data-track]');
     if(tk){ e.stopPropagation(); const s=D.slides[D.i]; window.P.load(s.tr, +tk.dataset.track); return; }
@@ -273,5 +295,5 @@ function init(){
   $('#dStage').addEventListener('touchend',e=>{ if(tx==null) return; const dx=e.changedTouches[0].clientX-tx; if(Math.abs(dx)>50){ dx<0?next():prev(); } tx=null; });
 }
 function help(){ $('#dHelp').classList.toggle('show'); }
-window.Deck = { init, open, close, next, prev, goto, curtain, laser, bookToggle, gridToggle, playSlide, key, help, buildDeck, D };
+window.Deck = { notes, init, open, close, next, prev, goto, curtain, laser, bookToggle, gridToggle, playSlide, key, help, buildDeck, D };
 })();
