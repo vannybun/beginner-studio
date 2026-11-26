@@ -673,7 +673,7 @@ function _pbBackup(f){
 }
 function _pbApply(){ const c=cls(); let k=0; PB.items.forEach(x=>{ if(x.s){ const s=c.students.find(y=>y.id===x.s.id); if(s){ s.photo=x.photo; k++; } } }); if(saveC()){ closeModal(); toast(`✅ បានដាក់រូប ${k} នាក់`); render(); } }
 
-function backup(){ download(`class-backup-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(C), 'application/json'); }
+function backup(){ download(`class-backup-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(window.Auth&&Auth.role()==='teacher'?{...C, classes:vis()}:C), 'application/json'); }
 function restore(f){ if(!f||(window.Auth&&Auth.role()!=='admin')) return; f.text().then(t=>{ const d=JSON.parse(t); if(!d.classes) throw 0; if(C.classes.length && !confirm('ជំនួសទិន្នន័យថ្នាក់បច្ចុប្បន្នដោយ Backup នេះ?')) return; C=Object.assign({classes:[],cur:null,month:monthNow()},d); saveC(); render(); toast('✅ Restore រួចរាល់'); }).catch(()=>toast('ឯកសារ Backup មិនត្រឹមត្រូវ')); }
 
 /* ---------- picker integration ---------- */

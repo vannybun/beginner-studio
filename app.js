@@ -232,7 +232,7 @@ function renderStuUnits(){ setUnitColors(nextUnit());
   const m=document.querySelector('.map'); if(m) setTimeout(()=>window.scrollTo({top:Math.max(0,m.offsetTop+(+m.dataset.cury)-window.innerHeight/2),behavior:'smooth'}),250);
 }
 function renderPreviewTasks(){ setUnitColors(4);
-  const X=(window.Exam&&Exam.data())||{open:[]}, Wd=(window.WS&&WS.data())||{list:[]}, C=Class.data(), cn=id=>(C.classes.find(c=>c.id===id)||{}).name||'?';
+  const C=Class.data(), vis=C.classes.filter(c=>Auth.canSeeClass(c)).map(c=>c.id), X0=(window.Exam&&Exam.data())||{open:[]}, W0=(window.WS&&WS.data())||{list:[]}, X={open:(X0.open||[]).filter(o=>vis.includes(o.cls))}, Wd={list:(W0.list||[]).filter(a=>vis.includes(a.cls))}, cn=id=>(C.classes.find(c=>c.id===id)||{}).name||'?';
   $('#main').innerHTML=`<div class="stu-head"><h2>📝 កិច្ចការ</h2></div><div class="pv-note">👀 Mode គ្រូមើលជាសិស្ស — នេះជាកិច្ចការដែលកំពុងបើកឱ្យសិស្ស (គ្រប់ថ្នាក់)។ បើក/បិទ ក្នុង Mode គ្រូ → មេរៀន → 📝 ប្រឡង ឬ 📄 សន្លឹកលំហាត់</div>
     <h3 class="stu-sub">📝 ប្រឡង</h3>${(X.open||[]).map(se=>`<div class="stu-exam" style="--c1:${UNIT_STYLE[se.n].c1}"><div class="ic">${ANIMALS[se.n-1]}</div><div class="tx"><b>Unit ${se.n} • Version ${se.ver}</b><span>🏫 ${esc(cn(se.cls))} • ${se.min?se.min+' នាទី':'គ្មានកំណត់'}</span></div></div>`).join('')||'<div class="stu-empty sm"><p>មិនមានប្រឡងកំពុងបើក</p></div>'}
     <h3 class="stu-sub">📄 សន្លឹកលំហាត់</h3>${(Wd.list||[]).filter(a=>a.open).map(a=>`<div class="stu-exam" style="--c1:${UNIT_STYLE[a.n].c1}"><div class="ic">${a.mode==='do'?'✍️':'📖'}</div><div class="tx"><b>${esc(a.ws.title)}</b><span>🏫 ${esc(cn(a.cls))} • ${a.mode==='do'?'ធ្វើលើទូរស័ព្ទ':'សរសេរក្នុងសៀវភៅ'}</span></div></div>`).join('')||'<div class="stu-empty sm"><p>មិនមានសន្លឹកកំពុងបើក</p></div>'}`;

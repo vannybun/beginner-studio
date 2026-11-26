@@ -92,7 +92,7 @@ function cleanOpen(){ const u=uniqOpen(X.open); if(u.length!==(X.open||[]).lengt
 function openFor(me){ return uniqOpen((X.open||[]).filter(se=>se.cls===me.classId)); }
 function classes(){ const C=(window.Class&&Class.data())||{classes:[]}; return C.classes.filter(c=>!window.Auth||!Auth.user()||Auth.canSeeClass(c)); }
 function openPanel(u){
-  cleanOpen(); const cs=classes(), list=(X.open||[]).filter(se=>se.n===u.n);
+  cleanOpen(); const cs=classes(), list=(X.open||[]).filter(se=>se.n===u.n && cs.some(c=>c.id===se.cls));
   return `<div class="panel ex-gate"><div class="row" style="justify-content:space-between"><h3 class="sec" style="margin:0">🔓 បើកឱ្យសិស្សប្រឡង (លើទូរស័ព្ទ/App របស់សិស្ស)</h3><span class="note">សិស្សមើលមិនឃើញប្រឡងទេ រហូតដល់គ្រូបើក</span></div>
     ${cs.length?`<div class="row" style="margin:10px 0;align-items:end">
       <label class="km">🏫 ថ្នាក់<select id="exoC" class="cl-in">${cs.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
@@ -129,7 +129,7 @@ async function studentPage(refresh){
 
 function tab(u){
   if(meStu()){ go('exams'); return; }
-  const teach = S.mode==='teach', me=window.Auth&&Auth.user(), res=X.results.filter(r=>r.n===u.n && (!me||me.role!=='student'||r.uid===me.id||(r.sid&&r.sid===me.studentId))).sort((a,b)=>b.ts-a.ts);
+  const teach = S.mode==='teach', me=window.Auth&&Auth.user(), mySids=me&&me.role==='teacher'?new Set(classes().flatMap(c=>c.students.map(s=>s.id))):null, res=X.results.filter(r=>r.n===u.n && (!me||me.role==='admin'||(me.role==='teacher'?mySids.has(r.sid):(r.uid===me.id||(r.sid&&r.sid===me.studentId))))).sort((a,b)=>b.ts-a.ts);
   const ex=build(u.n,'A');
   $('#tab').innerHTML = (teach?openPanel(u):'') + `<div class="ex-hero panel">
     <div class="ex-hi"><div class="ex-ico">📝</div><div><h3 class="sec" style="margin:0">ប្រឡងបញ្ចប់មេរៀន Unit ${u.n} — ${esc(u.en)}</h3>

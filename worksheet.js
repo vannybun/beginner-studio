@@ -47,7 +47,7 @@ function classes(){ const C=(window.Class&&Class.data())||{classes:[]}; return C
 function teacherTab(u){
   const maxA=poolOf(u).length, gp=(window.Exam&&Exam.grammarPool)?Exam.grammarPool(u.n).length:u.quiz.length;
   const As=[0,5,8,10,12,15,20,25,30,40,50].filter(v=>v<=maxA).concat(maxA>50?[maxA]:[]), Bs=[0,3,5,6,8,10,12,15,20].filter(v=>v<=gp).concat([gp]).filter((v,i,a)=>a.indexOf(v)===i), Cs=[0,3,5,6,8,10,12,15,20,25,30].filter(v=>v<=maxA);
-  const cs=classes(), list=W.list.filter(a=>a.n===u.n).sort((a,b)=>b.ts-a.ts);
+  const cs=classes(), list=W.list.filter(a=>a.n===u.n && cs.some(c=>c.id===a.cls)).sort((a,b)=>b.ts-a.ts);
   $('#tab').innerHTML=`<div class="panel"><h3 class="sec">📄 សន្លឹកលំហាត់ Unit ${u.n}</h3>
     <div class="row ws-opts">
       <label class="km">A. ផ្គូផ្គងពាក្យ<select id="wsA">${OPTS(As, Math.min(SEL.A,maxA))}</select></label>
