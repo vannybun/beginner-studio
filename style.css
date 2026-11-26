@@ -1032,3 +1032,5 @@ body.role-student .modes{display:none!important}
 body.is-web .bk-page.missing::before{content:none}
 .bk-miss{display:flex;flex-direction:column;align-items:center;gap:8px;padding:30px;text-align:center;font-family:var(--kh);color:#334155;max-width:360px}
 .bk-miss .i{font-size:54px}.bk-miss b{font-size:18px}.bk-miss p{margin:0;color:#64748b;font-size:14px;line-height:1.6}.bk-miss code{background:#f1f5f9;padding:1px 6px;border-radius:6px}
+@media (max-width:860px){header .brand>div:last-child{display:none}header .tools{overflow-x:auto;scrollbar-width:none;flex:1;justify-content:flex-end}header .tools::-webkit-scrollbar{display:none}.tools button{flex:none}.modes button{padding:6px 10px}}
+@media (max-width:520px){.modes{display:none!important}}
