@@ -13,7 +13,9 @@ const uid = () => Math.random().toString(36).slice(2,10);
 let A = { users:[], log:[], recovery:null };
 try { Object.assign(A, JSON.parse(localStorage.getItem(AK)||'{}')); } catch(e){}
 const saveA = () => { try{ localStorage.setItem(AK, JSON.stringify(A)); }catch(e){} };
-let SESSION=null; try{ SESSION=JSON.parse(sessionStorage.getItem(SK)||'null'); }catch(e){}
+const KK='bs-keep';   // 🔒 persistent login (students always; staff when «ចងចាំ» is ticked)
+let SESSION=null; try{ SESSION=JSON.parse(sessionStorage.getItem(SK)||localStorage.getItem(KK)||'null'); }catch(e){}
+function dropSession(){ sessionStorage.removeItem(SK); localStorage.removeItem(KK); SESSION=null; }
 const ROLE = {admin:{i:'🛡️',km:'Admin',c:'#7c3aed'}, teacher:{i:'👩‍🏫',km:'គ្រូ',c:'#0f766e'}, student:{i:'🎓',km:'សិស្ស',c:'#ea580c'}};
 
 /* ---------- hashing ---------- */
@@ -26,12 +28,12 @@ async function checkPass(u, p){ return u.hash && u.hash===await sha(u.salt+'|'+p
 const randPin = () => String(Math.floor(1000+Math.random()*9000));
 
 /* ---------- session ---------- */
-function user(){ if(!SESSION) return null; const u=A.users.find(x=>x.id===SESSION.uid && !x.disabled); return u||null; }
+function user(){ if(!SESSION) return null; const u=A.users.find(x=>x.id===SESSION.uid && !x.disabled && (x.sv||0)===(SESSION.sv||0)); return u||null; }
 function role(){ const u=user(); return u?u.role:null; }
 function progressKey(){ const u=user(); return u && u.role==='student' ? ':'+u.id : ''; }
 function log(ev, u){ u=u||user(); A.log.unshift({ts:Date.now(), uid:u?u.id:null, name:u?u.name:'—', role:u?u.role:'', ev}); A.log=A.log.slice(0,400); saveA(); }
-function login(u){ u.last=Date.now(); SESSION={uid:u.id, ts:Date.now()}; sessionStorage.setItem(SK, JSON.stringify(SESSION)); log('ចូលប្រព័ន្ធ', u); reload(); }
-function logout(){ log('ចាកចេញ'); { const u=user(); if(u) sessionStorage.setItem('bs-tab', u.role); } sessionStorage.removeItem(SK); reload(); }
+function login(u, keep){ u.last=Date.now(); SESSION={uid:u.id, sv:u.sv||0, ts:Date.now()}; sessionStorage.setItem(SK, JSON.stringify(SESSION)); if(u.role==='student'||keep) localStorage.setItem(KK, JSON.stringify(SESSION)); else localStorage.removeItem(KK); log('ចូលប្រព័ន្ធ', u); reload(); }
+function logout(){ log('ចាកចេញ'); { const u=user(); if(u) sessionStorage.setItem('bs-tab', u.role); } dropSession(); reload(); }
 
 /* ---------- class helpers (works with class.js data) ---------- */
 const CK='beginner-studio-class-v1';
@@ -78,7 +80,7 @@ function gate(){
   const H=new URLSearchParams(location.hash.slice(1)), qu=(H.get('u')||'').toLowerCase(), qp=H.get('p')||'';
   if(qu){ history.replaceState(null,'',location.pathname+location.search);
     const t=A.users.find(x=>x.username===qu && !x.disabled);
-    if(t && user() && user().id!==t.id){ sessionStorage.removeItem(SK); SESSION=null; }
+    if(t && user() && user().id!==t.id){ dropSession(); }
     if(t && !user()){
       if(t.role==='student'){ LS.tab='student'; LS.cls=t.classId; LS.stu=t.id; LS.pin=''; if(qp) checkPass(t,qp).then(ok=>{ if(ok) login(t); else { LS.pin=''; loginScreen(); err('PIN ក្នុង QR ចាស់ហើយ — សូមវាយ PIN ថ្មី'); } }); }
       else { LS.tab=t.role==='admin'?'admin':'teacher'; LS.prefill=t.username; }
@@ -135,6 +137,7 @@ function loginScreen(tab){
   } else {
     body=`<label>ឈ្មោះអ្នកប្រើ (Username)<input id="auU" autocomplete="off" autofocus value="${esc(LS.prefill||'')}"></label>
       <label>ពាក្យសម្ងាត់<input id="auP" type="password" onkeydown="if(event.key==='Enter')Auth._login()"></label>
+      <label class="au-keep"><input type="checkbox" id="auKeep" ${localStorage.getItem('bs-keep-pref')?'checked':''}> ចងចាំការចូល (ឧបករណ៍ផ្ទាល់ខ្លួនប៉ុណ្ណោះ)</label>
       <div class="au-err" id="auErr"></div><button class="au-btn" onclick="Auth._login()">🔓 ចូលប្រព័ន្ធ</button>
       ${LS.tab==='admin'?`<a class="au-link" href="#" onclick="Auth._recover();return false">ភ្លេចពាក្យសម្ងាត់ Admin?</a>`:''}
       ${LS.tab==='teacher'?`<p class="note" style="margin-top:10px">គ្មានគណនី? សូមស្នើ Admin បង្កើតគណនីគ្រូឱ្យ</p>`:''}`;
@@ -146,7 +149,8 @@ async function _login(){
   const un=$('#auU').value.trim().toLowerCase(), p=$('#auP').value;
   const u=A.users.find(x=>x.username===un && x.role===LS.tab && !x.disabled) || A.users.find(x=>x.username===un && LS.tab==='teacher' && x.role==='admin' && !x.disabled);
   if(!u || !(await checkPass(u,p))){ log('ចូលមិនបាន: '+un); return err('Username ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ'); }
-  login(u);
+  const keep=!!($('#auKeep')&&$('#auKeep').checked); if(keep) localStorage.setItem('bs-keep-pref','1'); else localStorage.removeItem('bs-keep-pref');
+  login(u, keep);
 }
 async function _pin(k){
   if(k==='⌫'){ LS.pin=LS.pin.slice(0,-1); return loginScreen(); }
@@ -245,7 +249,7 @@ async function makeStudentAccounts(classId){
   A.users.filter(u=>u.role==='student'&&u.classId===c.id).forEach(u=>{ const s=c.students.find(x=>x.id===u.studentId); if(s) u.name=s.name; else u.disabled=true; });
   saveA(); log(`បង្កើតគណនីសិស្ស ${k} នាក់ (${c.name})`); return k;
 }
-async function resetPin(id){ const u=A.users.find(x=>x.id===id); const pin=randPin(); u.pin=pin; await setPass(u,pin); saveA(); log('កំណត់ PIN ថ្មី: '+u.name); return pin; }
+async function resetPin(id){ const u=A.users.find(x=>x.id===id); const pin=randPin(); u.pin=pin; u.sv=(u.sv||0)+1; await setPass(u,pin); saveA(); log('កំណត់ PIN ថ្មី: '+u.name); return pin; }
 function accountsPanel(c){
   const {us, missing}=studentAccounts(c);
   return `<div class="panel"><div class="row" style="justify-content:space-between"><h3 class="sec" style="margin:0">🔑 គណនីសិស្ស — ${esc(c.name)} (${us.filter(u=>!u.disabled).length}/${c.students.length})</h3>
@@ -320,7 +324,7 @@ async function _saveUser(id, r){
   if(A.users.some(x=>x.username===un && x.id!==id)) return toast('Username នេះមានរួចហើយ');
   let u=id?A.users.find(x=>x.id===id):null;
   if(!u){ if(p.length<6) return toast('ពាក្យសម្ងាត់យ៉ាងតិច ៦ តួ'); u={id:uid(), role:r, created:Date.now()}; A.users.push(u); }
-  u.name=n; u.username=un; if(p){ if(p.length<6) return toast('ពាក្យសម្ងាត់យ៉ាងតិច ៦ តួ'); await setPass(u,p); }
+  u.name=n; u.username=un; if(p){ if(p.length<6) return toast('ពាក្យសម្ងាត់យ៉ាងតិច ៦ តួ'); await setPass(u,p); if(id && id!==(user()||{}).id) u.sv=(u.sv||0)+1; }
   if(r==='teacher') u.classIds=[...document.querySelectorAll('.au-cls input:checked')].map(x=>x.value);
   saveA(); log((id?'កែ':'បង្កើត')+'គណនី '+ROLE[r].km+': '+n); closeModal(); render(); toast('✅ បានរក្សាទុក');
   if(r==='teacher' && p) setTimeout(()=>teacherInvite(u, p), 300);
@@ -339,7 +343,7 @@ function teacherInvite(u, pass){
 function delUser(id){ const u=A.users.find(x=>x.id===id); if(!confirm('លុបគណនី «'+u.name+'»?')) return; A.users=A.users.filter(x=>x.id!==id); saveA(); log('លុបគណនី: '+u.name); render(); }
 function _own(cid, tid){ const D=classData(); const c=D.classes.find(x=>x.id===cid); if(tid) c.owner=tid; else delete c.owner; localStorage.setItem(CK, JSON.stringify(D)); log('កំណត់គ្រូបន្ទុក: '+c.name); toast('✅ រក្សាទុក'); setTimeout(()=>reload(),500); }
 function backupAll(){ const o={}; Object.keys(localStorage).filter(k=>k.startsWith('beginner-studio')).forEach(k=>o[k]=localStorage.getItem(k)); const b=new Blob([JSON.stringify({app:'beginner-studio',v:1,ts:Date.now(),data:o})],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`beginner-studio-FULL-backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); log('Backup ទាំងអស់'); }
-function restoreAll(f){ if(!f) return; f.text().then(t=>{ const d=JSON.parse(t); if(d.app!=='beginner-studio'||!d.data) throw 0; if(!confirm('ជំនួសទិន្នន័យទាំងអស់ដោយ Backup នេះ? (ត្រូវចូលប្រព័ន្ធម្តងទៀត)')) return; Object.keys(localStorage).filter(k=>k.startsWith('beginner-studio')).forEach(k=>localStorage.removeItem(k)); Object.entries(d.data).forEach(([k,v])=>localStorage.setItem(k,v)); sessionStorage.removeItem(SK); reload(); }).catch(()=>toast('ឯកសារ Backup មិនត្រឹមត្រូវ')); }
+function restoreAll(f){ if(!f) return; f.text().then(t=>{ const d=JSON.parse(t); if(d.app!=='beginner-studio'||!d.data) throw 0; if(!confirm('ជំនួសទិន្នន័យទាំងអស់ដោយ Backup នេះ? (ត្រូវចូលប្រព័ន្ធម្តងទៀត)')) return; Object.keys(localStorage).filter(k=>k.startsWith('beginner-studio')).forEach(k=>localStorage.removeItem(k)); Object.entries(d.data).forEach(([k,v])=>localStorage.setItem(k,v)); dropSession(); reload(); }).catch(()=>toast('ឯកសារ Backup មិនត្រឹមត្រូវ')); }
 
 window.Auth = { showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
   editUser, delUser, backupAll, restoreAll, log, data:()=>A,

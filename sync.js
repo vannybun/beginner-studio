@@ -7,7 +7,7 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.26k';
+const VER='2026.11.26l';
 const FILES=['qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','exam.js','worksheet.js','track.js','auth.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
@@ -23,7 +23,7 @@ const saveSync = m => _set.call(localStorage,SYK,JSON.stringify(m));
 // ⚡ start downloading app scripts + Firebase SDK in parallel with data sync
 FILES.forEach(f=>{ const l=document.createElement('link'); l.rel='preload'; l.as='script'; l.href=f+'?v='+VER; document.head.appendChild(l); });
 if(cloud) ['firebase-app.js','firebase-auth.js','firebase-firestore.js'].forEach(f=>{ const l=document.createElement('link'); l.rel='modulepreload'; l.crossOrigin='anonymous'; l.href=FB+f; document.head.appendChild(l); });
-if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).catch(()=>{});
 
 /* ---------- join link ---------- */
 function joinLink(){ return location.href.split('#')[0]+'#join='+b64e(JSON.stringify({c:cloud.cfg, s:cloud.school})); }
@@ -64,7 +64,7 @@ async function writeOne(k, str, oldN){
 
 /* ---------- ⚡ delta pull: read the small _index doc, fetch only keys that changed ---------- */
 const PROG=PREFIX+'-v1:';
-function sessionUser(){ try{ const ss=JSON.parse(sessionStorage.getItem(PREFIX+'-session')||'null'); if(!ss) return null; const A=JSON.parse(_get.call(localStorage,PREFIX+'-auth-v1')||'{}'); return (A.users||[]).find(u=>u.id===ss.uid)||null; }catch(e){ return null; } }
+function sessionUser(){ try{ const ss=JSON.parse(sessionStorage.getItem(PREFIX+'-session')||_get.call(localStorage,'bs-keep')||'null'); if(!ss) return null; const A=JSON.parse(_get.call(localStorage,PREFIX+'-auth-v1')||'{}'); return (A.users||[]).find(u=>u.id===ss.uid)||null; }catch(e){ return null; } }
 async function pull(skipKeys){
   const ix=await F.getDoc(dref(IDX)); let idx;
   if(!ix.exists()){            // first time: full download, then build the index
@@ -190,6 +190,21 @@ async function restoreMedia(){
 /* ---------- admin panel section ---------- */
 function qrSvg(text, cell){ try{ const q=qrcode(0,'L'); q.addData(text); q.make(); return q.createSvgTag({cellSize:cell||4, margin:2}); }catch(e){ return ''; } }
 async function refreshKey(k){ if(!db) return false; const r=await fetchOne(k); if(r.v!=null && r.v!==_get.call(localStorage,k) && !Q.has(k)){ _set.call(localStorage,k,r.v); BASE[k]=r.v; return true; } return false; }
+/* ---------- 🔄 auto-update: check for a newer version and reload (never in the middle of a test) ---------- */
+let updWaiting=false, lastChk=Date.now();
+async function checkUpdate(){
+  lastChk=Date.now();
+  try{ const t=await (await fetch('index.html?u='+Date.now(),{cache:'no-store'})).text(); const m=t.match(/sync\.js\?v=([\w.-]+)/);
+    if(!m || m[1]===VER) return;
+    if(navigator.serviceWorker){ const r=await navigator.serviceWorker.getRegistration(); if(r) r.update().catch(()=>{}); }
+    if(document.getElementById('exam')||document.getElementById('wsRun')){ updWaiting=true; return; }
+    window.toast&&toast('🔄 មានកំណែថ្មី — កំពុងធ្វើបច្ចុប្បន្នភាព…'); await flushNow(); setTimeout(()=>location.reload(),900);
+  }catch(e){}
+}
+addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && Date.now()-lastChk>30000) checkUpdate(); });
+setInterval(()=>{ if(document.visibilityState==='visible') checkUpdate(); }, 5*60000);
+setInterval(()=>{ if(updWaiting && !document.getElementById('exam') && !document.getElementById('wsRun')){ updWaiting=false; checkUpdate(); } }, 5000);
+
 /* ---------- 📲 install as an app (PWA) ---------- */
 let BIP=null;
 addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); BIP=e; document.querySelectorAll('.inst-b').forEach(b=>b.classList.add('ready')); });
@@ -242,7 +257,7 @@ async function joinByCode(code){
   if(!d.exists()){ cloud=prev; return false; }
   const v=d.data(), school=v.s;
   if(prev && prev.school && prev.school!==school){   // another school's data on this device → clear it
-    Object.keys(localStorage).filter(k=>k.startsWith(PREFIX)).forEach(k=>_rm.call(localStorage,k)); _rm.call(localStorage,SYK); sessionStorage.removeItem(PREFIX+'-session'); }
+    Object.keys(localStorage).filter(k=>k.startsWith(PREFIX)).forEach(k=>_rm.call(localStorage,k)); _rm.call(localStorage,SYK); _rm.call(localStorage,'bs-keep'); sessionStorage.removeItem(PREFIX+'-session'); }
   cloud={cfg:v.c||cfg, school, code}; _set.call(localStorage,CK,J(cloud)); return true;
 }
 // role links:  ?c=CODE → students   ?t=CODE → teachers   ?a=CODE → admin
@@ -340,6 +355,6 @@ async function boot(){
   setBase();
   loadScripts();
 }
-window.Cloud={ installBanner, install, standalone, refresh:refreshKey, roleLink, makeCode, _code, _codeKey:codeKey, code:()=>meta().code, flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _join, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
+window.Cloud={ checkUpdate, installBanner, install, standalone, refresh:refreshKey, roleLink, makeCode, _code, _codeKey:codeKey, code:()=>meta().code, flush:flushNow, panel, pickMedia, disconnect, setupScreen:()=>{ setupScreen(true); }, _connect, _join, _local, joinLink:()=>cloud?joinLink():null, qrSvg, on:()=>!!db, merge };
 boot();
 })();
