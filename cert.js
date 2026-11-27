@@ -29,7 +29,7 @@ const dm = k => { const d=D(k); return d.getDate()+'/'+(d.getMonth()+1); };
 function perLabel(p){ if(p.y==='w') return `សប្តាហ៍ ${dm(p.key)}–${dm(addD(p.key,6))}/${p.key.slice(0,4)}`; if(p.y==='m'){ const [y,m]=p.key.split('-'); return `ខែ${MK[+m-1]} ${y}`; } return `ឆ្នាំ ${p.key}`; }
 function perEn(p){ if(p.y==='w') return `Week of ${D(p.key).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`; if(p.y==='m'){ const [y,m]=p.key.split('-'); return `${MEN[+m-1]} ${y}`; } return `Year ${p.key}`; }
 const gradeOf = pct => GR.find(g=>pct>=g[0]);
-const TYPES = {busy:['💪','សិស្សឧស្សាហ៍រៀនជាងគេ','Most Hard-working Student'], rich:['💰','សិស្សរកលុយពីការរៀនបានច្រើនជាងគេ','Top Learning Earner'], exam:['📝','ប្រឡងបញ្ចប់មេរៀនជាប់និទ្ទេស','Unit Test Achievement']};
+const TYPES = {busy:['💪','សិស្សឧស្សាហ៍រៀនជាងគេ','Most Hard-working Student'], rich:['💰','សិស្សប្រឹងរៀនរកលុយបានច្រើនជាងគេ','Top Learning Earner'], exam:['📝','ប្រឡងបញ្ចប់មេរៀនជាប់និទ្ទេស','Unit Test Achievement']};
 
 /* ---------- numbers from the shared board (each student pushes a small summary) ---------- */
 function entries(c){ const B=J(BK)||{}, out={}; Object.values(B).forEach(e=>{ if(e&&e.c===c.id&&e.s&&(!out[e.s]||(e.ts||0)>(out[e.s].ts||0))) out[e.s]=e; }); return out; }
@@ -69,11 +69,32 @@ function lines(t){ const T=TYPES[t.t];
 const THEMES={teal:['#0f766e','#14b8a6'], gold:['#b45309','#f59e0b'], blue:['#1d4ed8','#60a5fa'], purple:['#6d28d9','#a78bfa'], red:['#b91c1c','#f87171'], green:['#15803d','#4ade80'], navy:['#1e293b','#64748b']};
 const MK2=d=>'ថ្ងៃទី '+d.getDate()+' ខែ'+MK[d.getMonth()]+' ឆ្នាំ '+d.getFullYear();
 /* default text of a certificate — every field can be overridden by the teacher (t.ed) */
+/* 🎨 class templates for the two award types (💪 busy • 💰 rich): one template serves week / month / year */
+const TPLN={busy:'💪 សិស្សឧស្សាហ៍', rich:'💰 សិស្សប្រឹងរៀនរកលុយ'};
+function tplDef(type, c){ const B=type==='busy';
+  return {theme:B?'teal':'gold', medal:B?'💪':'💰', frame:(c&&c.certCfg&&c.certCfg.frame)||'classic', head:'កម្មវិធីគ្រប់គ្រងថ្នាក់រៀន • {ថ្នាក់}',
+    title:'ប័ណ្ណសរសើរ', titleEn:'Certificate of Achievement', pre:'សូមប្រគល់ជូន • This certificate is proudly presented to',
+    kh:B?'សិស្សឧស្សាហ៍រៀនជាងគេ {លេខ} {រយៈពេល}':'សិស្សប្រឹងរៀនរកលុយបានច្រើនជាងគេ {លេខ} {រយៈពេល}',
+    en:B?'Most Hard-working Student — {rank} — {period}':'Top Learning Earner — {rank} — {period}',
+    khG:B?'សិស្សឧស្សាហ៍ — រៀនបានគ្រប់ {គោលដៅ} {រយៈពេល}':'សិស្សប្រឹងរៀនរកលុយ — រកបានគ្រប់ {គោលដៅ} {រយៈពេល}',
+    enG:B?'Hard-working Student — studied over {goal} — {period}':'Hard-working Earner — earned over {goal} — {period}',
+    val:B?'រៀនបាន {តម្លៃ}':'រកបាន {តម្លៃ}', role:'គ្រូបង្រៀន • Teacher', sig:true, sigS:1, sigX:0, sigY:0}; }
+const tplOf = (type, c) => ({...tplDef(type,c), ...(((c&&c.certCfg&&c.certCfg.tpl)||{})[type]||{})});
+const PH=[['{លេខ}','លេខ ១'],['{rank}','No. 1'],['{រយៈពេល}','ខែវិច្ឆិកា 2026'],['{period}','November 2026'],['{តម្លៃ}','12 ម៉ោង'],['{គោលដៅ}','5 ម៉ោង'],['{goal}','5 hours'],['{ថ្នាក់}','Beginner 1'],['{ឈ្មោះ}','ឈ្មោះសិស្ស']];
+function fill(str, t, s, c){ if(typeof str!=='string') return str; const B=t.t==='busy', gl=t.goal||0;
+  const map={'{លេខ}':t.rk?RK[t.rk]:'', '{rank}':t.rk?'No. '+t.rk:'', '{រយៈពេល}':t.p?perLabel(t.p):'', '{period}':t.p?perEn(t.p):'',
+    '{តម្លៃ}':B?fmtT(t.v):riel(t.v), '{គោលដៅ}':B?fmtT(gl):riel(gl), '{goal}':B?(Math.round(gl/360)/10)+' hours':Math.round(gl).toLocaleString('en-US')+' riel', '{ថ្នាក់}':c?c.name:'', '{ឈ្មោះ}':s?s.name:''};
+  return str.replace(/\{[^}]+\}/g, k=>map[k]!=null?map[k]:k).replace(/\s+—\s+—\s+/g,' — ').replace(/\s{2,}/g,' ').trim(); }
 function defs(t, s, c){ const L=lines(t);
-  return {theme:{busy:'teal',rich:'gold',exam:'blue'}[t.t], medal:t.t==='exam'?L.big:TYPES[t.t][0], head:'កម្មវិធីគ្រប់គ្រងថ្នាក់រៀន • '+(c?c.name:''),
+  const base={theme:{busy:'teal',rich:'gold',exam:'blue'}[t.t], medal:t.t==='exam'?L.big:TYPES[t.t][0], head:'កម្មវិធីគ្រប់គ្រងថ្នាក់រៀន • '+(c?c.name:''),
     title:'ប័ណ្ណសរសើរ', titleEn:'Certificate of Achievement', pre:'សូមប្រគល់ជូន • This certificate is proudly presented to',
     name:s?s.name:'—', latin:s&&s.latin||'', kh:L.title, en:L.en, val:L.val, date:MK2(new Date(t.sent||t.ts||Date.now())),
-    tn:t.tn||'គ្រូបង្រៀន', role:'គ្រូបង្រៀន • Teacher', sig:true, sigBy:t.by||'', frame:(c&&c.certCfg&&c.certCfg.frame)||'classic', sigS:1, sigX:0, sigY:0}; }
+    tn:t.tn||'គ្រូបង្រៀន', role:'គ្រូបង្រៀន • Teacher', sig:true, sigBy:t.by||'', frame:(c&&c.certCfg&&c.certCfg.frame)||'classic', sigS:1, sigX:0, sigY:0};
+  if(t.t!=='busy'&&t.t!=='rich') return base;
+  const T=tplOf(t.t,c), F=v=>fill(v,t,s,c);
+  ['theme','medal','frame','sig','sigS','sigX','sigY','_themeSet'].forEach(k=>{ if(T[k]!==undefined) base[k]=T[k]; });
+  ['head','title','titleEn','pre','val','role'].forEach(k=>{ base[k]=F(T[k]); });
+  base.kh=F(t.rk?T.kh:T.khG); base.en=F(t.rk?T.en:T.enG); return base; }
 const imgOf = url => new Promise(r=>{ if(!url) return r(null); const im=new Image(); im.onload=()=>r(im); im.onerror=()=>r(null); im.src=url; });
 /* 🖼 frames: drawn styles + the Khmer ornament images used by the monthly certificates (cert-frames/f1–f8.jpg) */
 const KFR=[["f1","ក្បាច់ផ្កាបៃតង",[10.61,6.88,10.88,8.5],"#518f6f"],["f2","ក្បាច់ត្នោតបុរាណ",[9.55,6.5,9.37,5.94],"#9e8c7a"],["f3","ក្បាច់រាជបៃតង",[18.39,8.25,9.64,8.25],"#229a1e"],["f4","ក្បាច់ស្លឹកត្នោត",[18.48,12.88,15.74,13.81],"#ac876f"],["f5","ក្បាច់នាគខៀវ",[20.25,13.69,13.17,12.56],"#5b6d97"],["f6","ក្បាច់សិង្ហខៀវ",[12.2,8.69,12.91,9.19],"#54639e"],["f7","ក្បាច់មាស",[18.3,10.44,13.7,10.06],"#776150"],["f8","ក្បាច់ផ្កាខៀវ",[9.73,6.19,9.64,6.12],"#30369d"]];
@@ -143,17 +164,23 @@ async function draw(t, s, c, over){
 async function toURL(t,s,c,over,type,q){ let cv=await draw(t,s,c,over); try{ return cv.toDataURL(type||'image/png',q); }catch(e){ cv=await draw(t,s,c,{...(over||{}), frame:'classic'}); toast('⚠️ ស៊ុមក្បាច់ខ្មែរ ប្រើបានលើវេបសាយ (កម្មវិធី offline ប្រើស៊ុមបុរាណជំនួស)'); return cv.toDataURL(type||'image/png',q); } }
 /* ---------- ✏️ teacher edits any certificate before download / send ---------- */
 let ED=null;
+const TFIELDS=[['title','ចំណងជើង'],['titleEn','ចំណងជើង (English)'],['head','បន្ទាត់ខាងលើ'],['pre','ឃ្លាប្រគល់ជូន'],['kh','ខ្លឹមសារ — 🏆 ចំណាត់ថ្នាក់ (ខ្មែរ)','ta'],['en','ខ្លឹមសារ — 🏆 ចំណាត់ថ្នាក់ (English)','ta'],['khG','ខ្លឹមសារ — 🎯 គោលដៅ (ខ្មែរ)','ta'],['enG','ខ្លឹមសារ — 🎯 គោលដៅ (English)','ta'],['val','លទ្ធផល'],['role','តួនាទីអ្នកចុះហត្ថលេខា']];
 const FIELDS=[['title','ចំណងជើង'],['titleEn','ចំណងជើង (English)'],['head','បន្ទាត់ខាងលើ (សាលា • ថ្នាក់)'],['pre','ឃ្លាប្រគល់ជូន'],['name','ឈ្មោះសិស្ស'],['latin','ឈ្មោះ Latin'],['kh','ខ្លឹមសារ (ខ្មែរ)','ta'],['en','ខ្លឹមសារ (English)','ta'],['val','លទ្ធផល'],['date','កាលបរិច្ឆេទ'],['tn','ឈ្មោះគ្រូ'],['role','តួនាទី']];
 async function edit(cid, id){ const c=findC(cid), t=c&&CS(c).find(x=>x.id===id); if(!t) return; const s=c.students.find(x=>x.id===t.sid);
   ED={cid, id, v:{...defs(t,s,c), ...(t.ed||{})}}; if(ED.v.sig&&!(Auth.sigOf&&Auth.sigOf(ED.v.sigBy))&&Auth.sigOf(me().id)) ED.v.sigBy=me().id; edDraw(); }
-function edDraw(){ const c=findC(ED.cid), t=CS(c).find(x=>x.id===ED.id), V=ED.v, mySig=window.Auth&&Auth.sigOf(me().id);
-  modal(`<div class="ce"><h3>✏️ កែប័ណ្ណសរសើរ</h3><div class="ce-g">
+function ctx(){ const c=findC(ED.cid); if(ED.tpl){ const P=periods(), key={w:P.cw,m:P.cm,y:P.cy}[ED.dy], B=ED.tpl==='busy';
+    const t={id:'demo0000', t:ED.tpl, rk:ED.dg?0:1, goal:ED.dg?(B?18000:5000):0, p:{y:ED.dy,key}, v:B?45600:12500, ts:Date.now(), by:me().id, tn:me().name||''}; return {c, t, s:c.students[0]||{name:'សុខ សុភា', latin:'SOK Sophea'}}; }
+  const t=CS(c).find(x=>x.id===ED.id); return {c, t, s:t&&c.students.find(x=>x.id===t.sid)}; }
+function edDraw(){ const {c,t}=ctx(), V=ED.v, mySig=window.Auth&&Auth.sigOf(me().id), TP=!!ED.tpl;
+  modal(`<div class="ce"><h3>${TP?'🎨 គំរូប័ណ្ណ — '+TPLN[ED.tpl]:'✏️ កែប័ណ្ណសរសើរ'}</h3>${TP?`<p class="note">គំរូនេះប្រើសម្រាប់ប័ណ្ណ${TPLN[ED.tpl]} ប្រចាំ <b>សប្តាហ៍ ខែ និងឆ្នាំ</b> — រយៈពេល លេខចំណាត់ថ្នាក់ និងចំនួន បំពេញឱ្យស្វ័យប្រវត្តិ</p>
+      <div class="row ce-demo"><span>👁 មើល Demo៖</span>${[['w','សប្តាហ៍'],['m','ខែ'],['y','ឆ្នាំ']].map(([k,l])=>`<button class="chip ${ED.dy===k?'on':''}" onclick="Cert._edDemo('dy','${k}')">${l}</button>`).join('')}<span class="sep"></span><button class="chip ${ED.dg?'':'on'}" onclick="Cert._edDemo('dg',0)">🏆 លេខ ១</button><button class="chip ${ED.dg?'on':''}" onclick="Cert._edDemo('dg',1)">🎯 គោលដៅ</button></div>`:''}<div class="ce-g">
     <div class="ce-prev"><img id="ceImg" alt=""><div class="row" style="justify-content:center;gap:6px;margin-top:8px"><button class="btn ghost sm" onclick="Cert._edReset()">↺ លំនាំដើម</button><button class="btn ghost sm" onclick="Cert._edPng()">⬇ PNG</button></div></div>
     <div class="ce-f">
       <div class="me-f"><span>🖼 ស៊ុម</span><div class="ce-frs">${FRS.map(([k,l])=>`<button class="ce-fr ${V.frame===k?'on':''}" onclick="Cert._edFrame('${k}')">${/^f\d$/.test(k)?`<img src="${BASE}cert-frames/${k}.jpg" alt="">`:`<i class="fr-${k}"></i>`}<small>${l}</small></button>`).join('')}</div></div>
       <div class="me-f"><span>🎨 ពណ៌ប័ណ្ណ</span><div class="row" style="gap:6px">${Object.entries(THEMES).map(([k,p])=>`<button class="ce-th ${V.theme===k?'on':''}" style="background:linear-gradient(135deg,${p[0]},${p[1]})" onclick="Cert._edSet('theme','${k}',1)"></button>`).join('')}</div></div>
       <div class="me-f"><span>🏅 រូបមេដាយ</span><div class="row" style="gap:4px">${['💪','💰','📝','🏆','⭐','🥇','🎓','👑','🌟','A','B','C'].map(m=>`<button class="ce-md ${V.medal===m?'on':''}" onclick="Cert._edSet('medal','${m}',1)">${m}</button>`).join('')}<input class="cl-in" style="width:64px" value="${esc(V.medal)}" maxlength="3" oninput="Cert._edSet('medal',this.value)"></div></div>
-      ${FIELDS.map(([k,l,ta])=>`<label class="me-f"><span>${l}</span>${ta?`<textarea class="cl-in" rows="2" oninput="Cert._edSet('${k}',this.value)">${esc(V[k])}</textarea>`:`<input class="cl-in" value="${esc(V[k])}" oninput="Cert._edSet('${k}',this.value)">`}</label>`).join('')}
+      ${TP?`<div class="me-f"><span>🔤 ពាក្យជំនួស <small class="note">(ចុចដើម្បីបញ្ចូលក្នុងប្រអប់ដែលកំពុងសរសេរ)</small></span><div class="ce-ph">${PH.map(([k,e])=>`<button class="chip" title="ឧ. ${esc(e)}" onmousedown="event.preventDefault()" onclick="Cert._edIns('${k}')">${k}</button>`).join('')}</div></div>`:''}
+      ${(TP?TFIELDS:FIELDS).map(([k,l,ta])=>`<label class="me-f"><span>${l}</span>${ta?`<textarea class="cl-in" rows="2" data-k="${k}" onfocus="Cert._edFocus(this)" oninput="Cert._edSet('${k}',this.value)">${esc(V[k])}</textarea>`:`<input class="cl-in" data-k="${k}" onfocus="Cert._edFocus(this)" value="${esc(V[k])}" oninput="Cert._edSet('${k}',this.value)">`}</label>`).join('')}
       <label class="row" style="gap:6px;margin:6px 0"><input type="checkbox" ${V.sig?'checked':''} onchange="Cert._edSet('sig',this.checked,1)"> <b>✍️ បង្ហាញហត្ថលេខាគ្រូ</b></label>
       ${V.sig?`<div class="ce-sig"><label><span>🔍 ទំហំ <b id="ceSS">${Math.round((+V.sigS||1)*100)}%</b></span><input type="range" min="40" max="250" value="${Math.round((+V.sigS||1)*100)}" oninput="document.getElementById('ceSS').textContent=this.value+'%';Cert._edSet('sigS',this.value/100)"></label>
         <label><span>↔️ ឆ្វេង / ស្តាំ</span><input type="range" min="-900" max="160" value="${+V.sigX||0}" oninput="Cert._edSet('sigX',+this.value)"></label>
@@ -161,17 +188,24 @@ function edDraw(){ const c=findC(ED.cid), t=CS(c).find(x=>x.id===ED.id), V=ED.v,
         <button class="btn ghost sm" onclick="Cert._edSet('sigS',1);Cert._edSet('sigX',0);Cert._edSet('sigY',0,1)">↺ ទីតាំងដើម</button></div>`:''}
       ${V.sig?(mySig?(V.sigBy!==me().id?`<button class="btn ghost sm" onclick="Cert._edSet('sigBy','${me().id}',1)">✍️ ប្រើហត្ថលេខារបស់ខ្ញុំ</button>`:'<small class="note">✅ ប្រើហត្ថលេខារបស់អ្នក</small>'):`<p class="note">⚠️ អ្នកមិនទាន់មានហត្ថលេខា — <button class="btn ghost sm" onclick="Cert._edSig()">✍️ បង្កើតហត្ថលេខា</button></p>`):''}
     </div></div>
-    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" onclick="Cert._edSave()">💾 រក្សាទុក</button>${t.st==='ok'?`<button class="btn sun" onclick="Cert._edSave(1)">💾 រក្សាទុក និង 📤 ផ្ញើ</button>`:''}</div></div>`);
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn ghost" onclick="closeModal()">បោះបង់</button>${TP?`<button class="btn teal" onclick="Cert._tplSave()">💾 រក្សាទុកគំរូ</button>`:''}<button class="btn teal" style="${TP?'display:none':''}" onclick="Cert._edSave()">💾 រក្សាទុក</button>${!TP&&t.st==='ok'?`<button class="btn sun" onclick="Cert._edSave(1)">💾 រក្សាទុក និង 📤 ផ្ញើ</button>`:''}</div></div>`);
   document.getElementById('modal').classList.add('wide'); edPrev(); }
-function edPrev(){ clearTimeout(ED.pt); ED.pt=setTimeout(async()=>{ const c=findC(ED.cid), t=CS(c).find(x=>x.id===ED.id), s=c.students.find(x=>x.id===t.sid), url=await toURL({...t, ed:{}}, s, c, ED.v,'image/jpeg',.85); const im=document.getElementById('ceImg'); if(im) im.src=url; },150); }
+const edOver = (t,s,c) => { if(!ED.tpl) return ED.v; const o={...ED.v}; ['head','title','titleEn','pre','val','role'].forEach(k=>o[k]=fill(o[k],t,s,c)); o.kh=fill(t.rk?ED.v.kh:ED.v.khG,t,s,c); o.en=fill(t.rk?ED.v.en:ED.v.enG,t,s,c); return o; };
+function edPrev(){ clearTimeout(ED.pt); ED.pt=setTimeout(async()=>{ const {c,t,s}=ctx(), url=await toURL({...t, ed:{}}, s, c, edOver(t,s,c),'image/jpeg',.85); const im=document.getElementById('ceImg'); if(im) im.src=url; },150); }
 function edFrame(k){ ED.v.frame=k; const KF=KFR.find(f=>f[0]===k); if(KF) delete ED.v._themeSet; edDraw(); }
 function edSet(k,v,re){ if(k==='theme') ED.v._themeSet=1; ED.v[k]=v; re?edDraw():edPrev(); }
 function edSave(andSend){ const c=findC(ED.cid), t=CS(c).find(x=>x.id===ED.id), s=c.students.find(x=>x.id===t.sid), D0=defs(t,s,c), ed={};
   Object.keys(ED.v).forEach(k=>{ if(ED.v[k]!==D0[k]) ed[k]=ED.v[k]; }); if(Object.keys(ed).length) t.ed=ed; else delete t.ed;
   closeModal(); if(andSend){ t.st='sent'; t.sent=Date.now(); notify(c,t); toast('📤 បានរក្សាទុក និងផ្ញើ'); } else toast('💾 បានរក្សាទុកការកែ'); redo(); }
-async function edPng(){ const c=findC(ED.cid), t=CS(c).find(x=>x.id===ED.id), s=c.students.find(x=>x.id===t.sid), url=await toURL({...t,ed:{}},s,c,ED.v);
+async function edPng(){ const {c,t,s}=ctx(), url=await toURL({...t,ed:{}},s,c,edOver(t,s,c));
   const a=document.createElement('a'); a.href=url; a.download=`ប័ណ្ណសរសើរ_${(ED.v.latin||ED.v.name||'student').replace(/\s+/g,'_')}.png`; document.body.appendChild(a); a.click(); a.remove(); }
-function edReset(){ const c=findC(ED.cid), t=CS(c).find(x=>x.id===ED.id), s=c.students.find(x=>x.id===t.sid); ED.v=defs(t,s,c); edDraw(); }
+function edReset(){ const {c,t,s}=ctx(); ED.v=ED.tpl?{...tplDef(ED.tpl,c), sigBy:me().id}:defs(t,s,c); edDraw(); }
+function tplEdit(type){ const c=TAB.c; ED={cid:c.id, tpl:type, dy:'m', dg:0, v:{...tplOf(type,c), sigBy:me().id}}; edDraw(); }
+function tplSave(){ const c=findC(ED.cid), D0=tplDef(ED.tpl,c), o={}; Object.keys(D0).concat('_themeSet').forEach(k=>{ if(ED.v[k]!==undefined&&ED.v[k]!==D0[k]) o[k]=ED.v[k]; });
+  c.certCfg=c.certCfg||{}; c.certCfg.tpl=c.certCfg.tpl||{}; if(Object.keys(o).length) c.certCfg.tpl[ED.tpl]=o; else delete c.certCfg.tpl[ED.tpl]; closeModal(); redo(); toast('💾 បានរក្សាទុកគំរូ '+TPLN[ED.tpl]); }
+let LASTF=null;
+function edIns(tok){ const el=LASTF&&document.body.contains(LASTF)?LASTF:null; if(!el) return toast('👆 ចុចក្នុងប្រអប់ខ្លឹមសារជាមុនសិន'); const a=el.selectionStart??el.value.length, b=el.selectionEnd??a;
+  const pre=el.value.slice(0,a), post=el.value.slice(b); tok=(pre&&!/\s$/.test(pre)?' ':'')+tok+(post&&!/^\s/.test(post)?' ':''); el.value=pre+tok+post; el.focus(); el.selectionStart=el.selectionEnd=a+tok.length; edSet(el.dataset.k, el.value); }
 function edSig(){ const keep=ED; Sig.open('', url=>{ ED=keep; if(url){ const u=Auth.data().users.find(x=>x.id===me().id); if(u){ u.sig=url; u.ts=Date.now(); Auth._saveA&&Auth._saveA(); } ED.v.sigBy=me().id; } edDraw(); }); }
 async function view(cid, id){ const c=findC(cid), t=c&&CS(c).find(x=>x.id===id); if(!t) return; const s=c.students.find(x=>x.id===t.sid);
   modal(`<div class="ct-view"><div class="ct-img"><p class="note">⏳ កំពុងរៀបចំ…</p></div>
@@ -195,7 +229,7 @@ function tab(el, c){ const sug=suggest(c), ok=CS(c).filter(x=>x.st==='ok'), sent
   const man=top(c, TT.t, {y:TT.y, key});
   el.innerHTML=`<div class="panel"><div class="ct-head"><h3 class="sec" style="margin:0">🏅 ប័ណ្ណសរសើរ</h3>
       <div class="ct-cnt"><span>🔔 ស្នើ <b>${sug.length}</b></span><span>✅ អនុម័ត <b>${ok.length}</b></span><span>📤 បានផ្ញើ <b>${sent.length}</b></span></div></div>
-    <button class="btn ghost sm ct-cfgb" onclick="Cert._cfgOpen()">⚙️ កំណត់លក្ខខណ្ឌទទួលប័ណ្ណ</button>
+    <div class="row ct-cfgrow"><button class="btn ghost sm ct-cfgb" onclick="Cert._cfgOpen()">⚙️ កំណត់លក្ខខណ្ឌទទួលប័ណ្ណ</button><span class="note">🎨 គំរូប័ណ្ណ៖</span><button class="btn ghost sm" onclick="Cert._tplEdit('busy')">${TPLN.busy}${((c.certCfg||{}).tpl||{}).busy?' ✓':''}</button><button class="btn ghost sm" onclick="Cert._tplEdit('rich')">${TPLN.rich}${((c.certCfg||{}).tpl||{}).rich?' ✓':''}</button></div>
     <div class="ct-rules">${(()=>{ const K=cfg(c); return ['busy','rich'].map(t=>['w','m','y'].map(y=>{ const k=K[t][y]; return k.mode==='off'?'':`<span>${TYPES[t][0]} ${PER[y]}: ${k.mode==='goal'?'គ្រប់គ្នាដែល ≥ '+(t==='busy'?fmtT(k.min):riel(k.min)):'លេខ ១–'+k.n+(+k.min?' (≥ '+(t==='busy'?fmtT(k.min):riel(k.min))+')':'')}</span>`; }).join('')).join('')+`<span>📝 ប្រឡង ≥ ${K.exam.min}%</span>`; })()}</div>
     <p class="note">ជំហាន៖ ប្រព័ន្ធស្នើ → <b>✅ អនុម័ត</b> (ផ្ទៀងផ្ទាត់) → <b>📤 ផ្ញើ</b> → សិស្សទើបឃើញ • ប័ណ្ណដែលផ្ញើ រក្សាទុកជារៀងរហូត លុះត្រាគ្រូ <b>🗑 ដកហូត</b></p></div>
   <div class="panel"><div class="ct-sh"><h3 class="sec">🔔 សំណើថ្មី — ត្រូវអនុម័ត (${sug.length})</h3>${sug.length?`<button class="btn teal sm" onclick="Cert.okAll()">✅ អនុម័តទាំងអស់</button>`:''}</div>
@@ -254,6 +288,6 @@ function cfgOpen(){ const c=TAB.c, K=cfg(c);
 function cfgSave(){ const c=TAB.c, o={exam:{min:+document.getElementById('cf_exam').value}, frame:document.getElementById('cf_frame').value};
   ['busy','rich'].forEach(t=>{ o[t]={}; ['w','m','y'].forEach(y=>{ const g=k=>document.getElementById(`cf_${t}_${y}_${k}`).value, v=Math.max(0,+g('v')||0);
     o[t][y]={mode:g('m'), n:Math.max(1,Math.min(20,Math.round(+g('n')||3))), min:t==='busy'?Math.round(v*3600):Math.round(v)}; if(o[t][y].mode==='goal'&&!o[t][y].min) o[t][y].min=t==='busy'?3600:5000; }); });
-  c.certCfg=o; closeModal(); redo(); toast('💾 បានរក្សាទុកលក្ខខណ្ឌ'); }
-window.Cert = { _edFrame:edFrame, FRS, _cfgOpen:cfgOpen, _cfgSave:cfgSave, _cfgReset:()=>{ delete TAB.c.certCfg; closeModal(); redo(); toast('↺ ត្រឡប់លំនាំដើម (លេខ ១–៣)'); }, edit, _edSet:edSet, _edSave:edSave, _edPng:edPng, _edReset:edReset, _edSig:edSig, tab, page, count, view, png, print, ok, okItem, okAll, no, undo, send, sendAll, revoke, suggest, draw, _tt:(k,v)=>{ TT[k]=v; if(k==='y'||k==='t') TT.key=null; if(k==='key') TT.key=TT.y+v; if(TAB) tab(TAB.el,TAB.c); } };
+  if(c.certCfg&&c.certCfg.tpl) o.tpl=c.certCfg.tpl; c.certCfg=o; closeModal(); redo(); toast('💾 បានរក្សាទុកលក្ខខណ្ឌ'); }
+window.Cert = { _tplEdit:tplEdit, _tplSave:tplSave, _edIns:edIns, _edFocus:el=>{ LASTF=el; }, _edDemo:(k,v)=>{ ED[k]=v; edDraw(); }, _edFrame:edFrame, FRS, _cfgOpen:cfgOpen, _cfgSave:cfgSave, _cfgReset:()=>{ const tp=TAB.c.certCfg&&TAB.c.certCfg.tpl; delete TAB.c.certCfg; if(tp) TAB.c.certCfg={tpl:tp}; closeModal(); redo(); toast('↺ ត្រឡប់លំនាំដើម (លេខ ១–៣)'); }, edit, _edSet:edSet, _edSave:edSave, _edPng:edPng, _edReset:edReset, _edSig:edSig, tab, page, count, view, png, print, ok, okItem, okAll, no, undo, send, sendAll, revoke, suggest, draw, _tt:(k,v)=>{ TT[k]=v; if(k==='y'||k==='t') TT.key=null; if(k==='key') TT.key=TT.y+v; if(TAB) tab(TAB.el,TAB.c); } };
 })();

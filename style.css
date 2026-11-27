@@ -1867,3 +1867,8 @@ body.gm-open{overflow:hidden}
 .fr-wave{background:linear-gradient(#0f766e 14%,#fffdf6 14%,#fffdf6 86%,#0f766e 86%)!important}
 .ce-sig{display:grid;gap:4px;padding:8px 10px;border-radius:12px;background:#f8fafc;margin-bottom:6px}
 .ce-sig label{display:flex;align-items:center;gap:8px;font-size:13px}.ce-sig label span{min-width:96px}.ce-sig input{flex:1}
+.ct-cfgrow{gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.ce-demo{gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 10px}.ce-demo .sep{width:10px}
+.ce-demo .chip,.ce-ph .chip{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 11px;font:inherit;font-size:13px;cursor:pointer}
+.ce-demo .chip.on{background:#0f172a;color:#fff;border-color:#0f172a}
+.ce-ph{display:flex;flex-wrap:wrap;gap:4px}.ce-ph .chip{background:#eef2ff;border-color:#c7d2fe;color:#3730a3}
