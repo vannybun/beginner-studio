@@ -15,7 +15,7 @@ function summ(S){ const cut=dk(Date.now()-70*864e5), d={}; Object.entries((S.act
   let cu=0, sr=0, pcs=0;
   for(let n=1;n<=N;n++){ const tot=(L[n]&&L[n].sections.length)||1, dn=Math.min(tot,((S.sec||{})[n]||[]).length), lvn=(S.level||{})[n]||0, done=dn>=tot;
     sr += (done?1:0)+(lvn>=80?1:0)+(lvn>=95?1:0); pcs += dn/tot*0.5 + Math.min(lvn,100)/200; if(!cu && !(done&&lvn>=80)) cu=n; }
-  return {cu:cu||N, sr, pc:Math.round(pcs/N*100), d, p:lv.filter(v=>v>=80).length, l:lv.length?Math.round(lv.reduce((a,b)=>a+b,0)/lv.length):0, w:Object.values(S.known||{}).reduce((a,x)=>a+x.length,0), lv:S.level||{}, r:M.t||0, rm:M.m||{}}; }
+  return {cu:cu||N, sr, pc:Math.round(pcs/N*100), d, p:lv.filter(v=>v>=80).length, l:lv.length?Math.round(lv.reduce((a,b)=>a+b,0)/lv.length):0, w:Object.values(S.known||{}).reduce((a,x)=>a+x.length,0), lv:S.level||{}, r:M.t||0, rm:M.m||{}, sm:(()=>{ const o={}; Object.entries((S.act&&S.act.d)||{}).forEach(([k,v])=>{ const m=k.slice(0,7); o[m]=(o[m]||0)+(+v||0); }); return o; })(), rd:(()=>{ const o={}, lim=Date.now()-70*864e5; (M.log||[]).forEach(([t,a])=>{ if(t>=lim&&a>0){ const k=dk(t); o[k]=(o[k]||0)+a; } }); return o; })()}; }
 function push(S, force){
   if(!window.Auth||Auth.role()!=='student'||(Auth.asStaff&&Auth.asStaff())) return; const me=Auth.user(); if(!me||!S) return;
   if(!force && Date.now()-(push.t||0)<90000) return; push.t=Date.now();

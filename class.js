@@ -75,7 +75,7 @@ function resizePhoto(file, cb){
 }
 
 /* ---------- main render ---------- */
-const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['attend','🙋 វត្តមាន'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['reward','🎁 រង្វាន់'],['notify','📣 ជូនដំណឹង'],['chat','💬 ឆាតសិស្ស'],['unlock','🔓 បើក/កាលវិភាគមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
+const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['attend','🙋 វត្តមាន'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['reward','🎁 រង្វាន់'],['cert','🏅 ប័ណ្ណសរសើរ'],['notify','📣 ជូនដំណឹង'],['chat','💬 ឆាតសិស្ស'],['unlock','🔓 បើក/កាលវិភាគមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
 let tab='students';
 function render(t){ applyProfiles();
   if(t) tab=t;
@@ -88,20 +88,21 @@ function render(t){ applyProfiles();
       <div class="pgs">${c?`${c.students.length} សិស្ស • ស្រី ${c.students.filter(s=>s.g==='F').length} • ${monthsWithData(c).length} ខែមានពិន្ទុ`:'មិនទាន់មានថ្នាក់'}</div></div>
     <div class="act" style="width:auto;margin-left:auto;align-items:center">
       ${vis().length?`<select class="cl-sel" onchange="Class.pick(this.value)">${vis().map(x=>`<option value="${x.id}" ${x.id===C.cur?'selected':''}>${esc(x.name)}</option>`).join('')}</select>`:''}
-      <button class="btn ghost sm" onclick="Class.addClass()">＋ ថ្នាក់ថ្មី</button>
+      ${isAdm()?`<button class="btn ghost sm" onclick="Class.addClass()">＋ ថ្នាក់ថ្មី</button>`:''}
       ${c?`<button class="btn ghost sm" onclick="Class.renameClass()">✎</button><select class="cl-sel" title="សៀវភៅរបស់ថ្នាក់" onchange="Class.setBook(this.value)">${COURSES.map(b=>`<option value="${b.id}" ${courseOf(c).id===b.id?'selected':''}>${b.icon} ${esc(b.name)}</option>`).join('')}</select>`:''}
       <button class="btn ghost sm" onclick="Class.backup()">⬇ Backup</button>
       ${!window.Auth||Auth.role()==='admin'?`<label class="btn ghost sm">⬆ Restore<input type="file" accept=".json" hidden onchange="Class.restore(this.files[0])"></label>`:''}
     </div>
   </div>`;
   if(!c){
-    $('#main').innerHTML = head + `<div class="panel cl-empty"><div style="font-size:70px" class="float">🏫</div><h3 class="km">ចាប់ផ្តើមដោយបង្កើតថ្នាក់រៀន</h3>
-      <div class="row" style="justify-content:center"><input id="clNewName" class="cl-in" placeholder="ឈ្មោះថ្នាក់ ឧ. Beginner A — ព្រឹក" value="Beginner A"><button class="btn teal" onclick="Class.addClass($('#clNewName').value)">＋ បង្កើតថ្នាក់</button></div></div>`;
+    $('#main').innerHTML = head + (isAdm()?`<div class="panel cl-empty"><div style="font-size:70px" class="float">🏫</div><h3 class="km">ចាប់ផ្តើមដោយបង្កើតថ្នាក់រៀន</h3>
+      <div class="row" style="justify-content:center"><button class="btn teal" onclick="Class.addClass()">＋ បង្កើតថ្នាក់ និងចាត់គ្រូ</button></div></div>`
+      :`<div class="panel cl-empty"><div style="font-size:70px" class="float">🏫</div><h3 class="km">អ្នកមិនទាន់មានថ្នាក់ទទួលបន្ទុកទេ</h3><p class="km">មានតែ <b>Admin</b> ទេដែលអាចបង្កើតថ្នាក់ ហើយចាត់ឱ្យគ្រូ — សូមទាក់ទង Admin ដើម្បីបង្កើតថ្នាក់ជូនអ្នក</p></div>`);
     return;
   }
   $('#main').innerHTML = head + `<div class="tabs">${TABS.map(x=>`<button class="${x[0]===tab?'on':''}" onclick="Class.render('${x[0]}')">${x[1]}</button>`).join('')}</div><div id="clTab"></div>`;
   { const on=document.querySelector('#main .tabs .on'); if(on&&on.parentElement.scrollWidth>on.parentElement.clientWidth) on.parentElement.scrollLeft=on.offsetLeft-on.parentElement.clientWidth/2+on.offsetWidth/2; }
-  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, attend:tAttend, reward:tReward, notify:c=>{ if(window.Notify) Notify.teacherTab($('#clTab'), c); }, chat:c=>{ if(window.Chat) Chat.teacherTab($('#clTab'), c); }, rank:c=>{ Rank._target(()=>Class.render('rank')); Rank.page($('#clTab'), c, {staff:true, head:false}); }, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
+  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, attend:tAttend, reward:tReward, cert:c=>{ if(window.Cert) Cert.tab($('#clTab'),c); }, notify:c=>{ if(window.Notify) Notify.teacherTab($('#clTab'), c); }, chat:c=>{ if(window.Chat) Chat.teacherTab($('#clTab'), c); }, rank:c=>{ Rank._target(()=>Class.render('rank')); Rank.page($('#clTab'), c, {staff:true, head:false}); }, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
 }
 
 /* ---------- 🔓 teacher unlocks units (for students who studied before) ---------- */
@@ -823,8 +824,17 @@ function tFull(){
 function tFullClose(){ const el=$('#clTfull'); if(el) el.remove(); const h=$('#clTimerHidden'); if(h){ h.id='clTimer'; h.innerHTML=timerHtml(); } if(document.fullscreenElement) document.exitFullscreen(); tDraw(); }
 
 /* ---------- class management ---------- */
-function addClass(name){ if(name===undefined){ name=prompt('ឈ្មោះថ្នាក់ថ្មី', 'Beginner B'); if(!name) return; } newClass(name.trim()||'ថ្នាក់ថ្មី'); tab='students'; render(); }
-function renameClass(){ const c=cls(); const n=prompt('ប្តូរឈ្មោះថ្នាក់ (ទុកទទេ ដើម្បីលុបថ្នាក់)', c.name); if(n===null) return; if(!n.trim()){ if(confirm('លុបថ្នាក់ «'+c.name+'» ទាំងសិស្ស និងពិន្ទុទាំងអស់?')){ C.classes=C.classes.filter(x=>x!==c); C.cur=C.classes[0]?C.classes[0].id:null; saveC(); render(); } return; } c.name=n.trim(); saveC(); render(); }
+function newClassForm(){ const T=(window.Auth&&Auth.data().users||[]).filter(u=>u.role==='teacher');
+  modal(`<h3>🏫 បង្កើតថ្នាក់ថ្មី (Admin)</h3>
+    <label class="me-f"><span>ឈ្មោះថ្នាក់</span><input id="ncN" class="cl-in" value="Beginner B" maxlength="40"></label>
+    <label class="me-f"><span>សៀវភៅ</span><select id="ncB" class="cl-in">${COURSES.map(b=>`<option value="${b.id}">${b.icon} ${esc(b.name)}</option>`).join('')}</select></label>
+    <div class="me-f"><span>👩‍🏫 គ្រូទទួលបន្ទុក</span>${T.length?`<div class="nc-t">${T.map(u=>`<label><input type="checkbox" value="${u.id}"> ${esc(u.name)} <small>@${esc(u.username||'')}</small></label>`).join('')}</div>`:'<p class="note">មិនទាន់មានគណនីគ្រូ — បង្កើតនៅ 🛡️ Admin › អ្នកប្រើ</p>'}</div>
+    <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" onclick="Class._ncGo()">✅ បង្កើត</button></div>`); }
+function ncGo(){ const n=(document.getElementById('ncN').value||'').trim()||'ថ្នាក់ថ្មី', b=document.getElementById('ncB').value, tids=[...document.querySelectorAll('.nc-t input:checked')].map(x=>x.value);
+  const c=newClass(n); c.book=b; saveC(); if(tids.length&&window.Auth&&Auth.assignClass) Auth.assignClass(c.id, tids); closeModal(); tab='students'; render(); toast('✅ បានបង្កើតថ្នាក់ «'+n+'»'+(tids.length?' និងចាត់គ្រូ '+tids.length+' នាក់':'')); }
+const isAdm = () => !window.Auth || !Auth.user() || Auth.role()==='admin';
+function addClass(name){ if(!isAdm()) return toast('⛔ មានតែ Admin ទេដែលអាចបង្កើតថ្នាក់ — សូមទាក់ទង Admin'); if(name===undefined) return newClassForm(); if(name===null) return; newClass(name.trim()||'ថ្នាក់ថ្មី'); tab='students'; render(); }
+function renameClass(){ const c=cls(); const n=prompt('ប្តូរឈ្មោះថ្នាក់ (ទុកទទេ ដើម្បីលុបថ្នាក់)', c.name); if(n===null) return; if(!n.trim()){ if(!isAdm()) return toast('⛔ មានតែ Admin ទេដែលអាចលុបថ្នាក់'); if(confirm('លុបថ្នាក់ «'+c.name+'» ទាំងសិស្ស និងពិន្ទុទាំងអស់?')){ C.classes=C.classes.filter(x=>x!==c); C.cur=C.classes[0]?C.classes[0].id:null; saveC(); render(); } return; } c.name=n.trim(); saveC(); render(); }
 /* ---------- 🖼 bulk photos: many image files, or photos from a Backup .json ---------- */
 const pnorm = x => String(x||'').toLowerCase().normalize('NFC').replace(/\.[a-z0-9]+$/,'').replace(/[\s_\-.]+/g,' ').replace(/^\s*\d+\s*[.)-]?\s*(?=\D)/,'').trim();
 function matchStudent(c, label){
@@ -874,7 +884,7 @@ function studentsForPicker(){ const c=cls(); return c?c.students:[]; }
 function setBook(id){ const c=cls(); if(!c) return; c.book=id; saveC(); render(); }
 function share(k){ const c=cls(); if(!c) return; c.share=c.share||{}; c.share[k]=!c.share[k]; saveC(); toast(c.share[k]?'👁 សិស្សអាចមើលបានហើយ':'🔒 បានបិទមិនឱ្យសិស្សមើល'); }
 function shareBtn(c,k){ const on=c.share&&c.share[k]; return `<button class="btn sm ${on?'teal':'ghost'}" onclick="Class._share('${k}');Class.render('${k==='res'?'results':'year'}')" title="សិស្សមើលឃើញក្នុង 🏆 ចំណាត់ថ្នាក់">${on?'👁 សិស្សកំពុងមើលបាន':'🙈 សិស្សមើលមិនឃើញ'}</button>`; }
-window.Class = { wallet, reward, _rwSet:v=>{ RW.sel=new Set(v==='all'?cls().students.map(s=>s.id):v); rwDraw(); }, _rwTog:id=>{ RW.sel.has(id)?RW.sel.delete(id):RW.sel.add(id); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwA:v=>{ RW.a=Math.max(0,Math.round(+v||0)); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwGo:rwGo, _rwUndo:rwUndo, _gn:gn, gEdit, gManual, gSel, gTo, gName, gEmo, gAdd, gDel, TABS, _setCur:id=>{ if(vis().some(x=>x.id===id)){ C.cur=id; saveC(); if(document.getElementById('clTab')) render(); } }, _save:saveC, att, attFine, attNote, attAll, attClear, attDay, attTell, attPrint, attMon:m=>{ AT.m=m; tAttend(cls()); }, fines, FINE_A, gate, gateAuto, copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
+window.Class = { _ncGo:ncGo, wallet, reward, _rwSet:v=>{ RW.sel=new Set(v==='all'?cls().students.map(s=>s.id):v); rwDraw(); }, _rwTog:id=>{ RW.sel.has(id)?RW.sel.delete(id):RW.sel.add(id); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwA:v=>{ RW.a=Math.max(0,Math.round(+v||0)); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwGo:rwGo, _rwUndo:rwUndo, _gn:gn, gEdit, gManual, gSel, gTo, gName, gEmo, gAdd, gDel, TABS, _setCur:id=>{ if(vis().some(x=>x.id===id)){ C.cur=id; saveC(); if(document.getElementById('clTab')) render(); } }, _save:saveC, att, attFine, attNote, attAll, attClear, attDay, attTell, attPrint, attMon:m=>{ AT.m=m; tAttend(cls()); }, fines, FINE_A, gate, gateAuto, copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
   editStudent, pickPhoto, noPhoto:()=>{ editPhoto=null; $('#clPrev').innerHTML=avatar({name:$('#clN').value},140); }, cam, camStop, saveStudent, photo, delStudent, bulk, impMode, impFile, impPreview, impApply, infoTable, infoSave, template, age:ageOf, sortStudents,
   setMonth:m=>{ if(m){ C.month=m; saveC(); render(); } }, cols, colAdd, colSave, csv, printMonth, csvYear, printYear, certs, certSet, certGrade, certPrint, sigFile, sigDraw, sigScale, sigReset, certShow:i=>{ ctSel=i; certRefresh(); },
   gset:(k,v)=>{ G[k]=v; tGroups(cls()); }, gabs:id=>{ G.absent.has(id)?G.absent.delete(id):G.absent.add(id); tGroups(cls()); }, makeGroups, groupsToScore, groupsFull, printGroups,
