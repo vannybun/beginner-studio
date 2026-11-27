@@ -263,21 +263,24 @@ function launcher(){
 }
 function lxGo(tab){ closeModal(); if(!document.body.classList.contains('teach')) setMode('teach'); go('class',null,tab); }
 /* ✏️ staff edit own info + photo (stored on the account; syncs with the school) */
-function editStaff(){ const u=user(); if(!u||u.role==='student') return; EP={photo:u.photo||''};
+function editStaff(keep){ const u=user(); if(!u||u.role==='student') return; if(!keep) EP={photo:u.photo||'', sig:u.sig||''}; const F=EP.form||{};
   modal(`<h3>✏️ ព័ត៌មានរបស់ខ្ញុំ</h3>
     <div class="me-ed"><div class="me-ph" id="meP">${EP.photo?`<img src="${EP.photo}">`:`<span>${esc((u.name||'?')[0])}</span>`}</div>
       <div class="row" style="justify-content:center;gap:6px"><label class="btn teal sm">📷 ថតរូប<input type="file" accept="image/*" capture="user" hidden onchange="Auth._mePic(this.files[0])"></label><label class="btn ghost sm">🖼 រើសរូប<input type="file" accept="image/*" hidden onchange="Auth._mePic(this.files[0])"></label><button class="btn ghost sm" onclick="Auth._mePic(null)">🗑</button></div></div>
-    <label class="me-f"><span>ឈ្មោះដែលបង្ហាញ</span><input id="meN" class="cl-in" value="${esc(u.name)}" maxlength="40" placeholder="ឧ. លោកគ្រូ ប៊ុន វណ្ណនី"></label>
-    <label class="me-f"><span>លេខទូរស័ព្ទ</span><input id="meT" class="cl-in" type="tel" value="${esc(u.phone||'')}" maxlength="20" placeholder="ឧ. 012 345 678"></label>
-    <label class="me-f"><span>Telegram</span><input id="meG" class="cl-in" value="${esc(u.tg||'')}" maxlength="40" placeholder="ឧ. @username"></label>
-    <label class="me-f"><span>ពីខ្លួនខ្ញុំ</span><input id="meB" class="cl-in" value="${esc(u.bio||'')}" maxlength="80" placeholder="ឧ. គ្រូបង្រៀនភាសាអង់គ្លេស ថ្នាក់ Beginner"></label>
+    <label class="me-f"><span>ឈ្មោះដែលបង្ហាញ</span><input id="meN" class="cl-in" value="${esc(F.n!=null?F.n:u.name)}" maxlength="40" placeholder="ឧ. លោកគ្រូ ប៊ុន វណ្ណនី"></label>
+    <label class="me-f"><span>លេខទូរស័ព្ទ</span><input id="meT" class="cl-in" type="tel" value="${esc(F.t!=null?F.t:u.phone||'')}" maxlength="20" placeholder="ឧ. 012 345 678"></label>
+    <label class="me-f"><span>Telegram</span><input id="meG" class="cl-in" value="${esc(F.g!=null?F.g:u.tg||'')}" maxlength="40" placeholder="ឧ. @username"></label>
+    <label class="me-f"><span>ពីខ្លួនខ្ញុំ</span><input id="meB" class="cl-in" value="${esc(F.b!=null?F.b:u.bio||'')}" maxlength="80" placeholder="ឧ. គ្រូបង្រៀនភាសាអង់គ្លេស ថ្នាក់ Beginner"></label>
+    <div class="me-f"><span>✍️ ហត្ថលេខា <small class="note">(ប្រើលើប័ណ្ណសរសើរ និងឯកសារផ្សេងៗ)</small></span>
+      <div class="sg-mine">${EP.sig?`<div class="sg-chk sm"><img src="${EP.sig}" alt="signature"></div>`:'<span class="note">មិនទាន់មានហត្ថលេខា</span>'}
+        <div class="row" style="gap:6px"><button class="btn teal sm" onclick="Auth._sigEdit()">${EP.sig?'✏️ កែ':'✍️ បង្កើត'}ហត្ថលេខា</button>${EP.sig?`<button class="btn ghost sm" onclick="Sig.download(Auth._sigUrl(),'signature')">⬇ PNG</button><button class="btn ghost sm" onclick="Auth._sigDel()">🗑</button>`:''}</div></div></div>
     <p class="note">ឈ្មោះប្រើចូលប្រព័ន្ធ៖ <b>@${esc(u.username||'')}</b> (មិនប្តូរ) • សិស្សនឹងឃើញឈ្មោះ និងរូបថតនេះក្នុងឆាត និងដំណឹង។</p>
     <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="Auth.menu()">‹ ត្រឡប់</button><button class="btn teal" onclick="Auth._staffSave()">💾 រក្សាទុក</button></div>`);
 }
 function staffSave(){ const u=user(), n=document.getElementById('meN').value.trim(); if(n.length<2) return toast('សូមបញ្ចូលឈ្មោះ');
   const r=A.users.find(x=>x.id===u.id); if(!r) return;
   r.name=n; r.phone=document.getElementById('meT').value.trim(); r.tg=document.getElementById('meG').value.trim(); r.bio=document.getElementById('meB').value.trim();
-  if(EP.photo) r.photo=EP.photo; else delete r.photo; r.ts=Date.now(); saveA(); log('✏️ កែព័ត៌មានផ្ទាល់ខ្លួន', r);
+  if(EP.photo) r.photo=EP.photo; else delete r.photo; if(EP.sig) r.sig=EP.sig; else delete r.sig; EP.form=null; r.ts=Date.now(); saveA(); log('✏️ កែព័ត៌មានផ្ទាល់ខ្លួន', r);
   const ch=document.querySelector('.au-chip'); if(ch) ch.outerHTML=headerChip(false); toast('✅ បានរក្សាទុកព័ត៌មាន'); launcher(); }
 function changePass(){
   const u=user(), st=u.role==='student';
@@ -457,7 +460,8 @@ function meSave(){ const u=user(), n=document.getElementById('meN').value.trim()
   const prof={name:n, latin:document.getElementById('meL').value.trim(), dob:document.getElementById('meD').value, phone:document.getElementById('meT').value.trim(), photo:EP.photo, ts:Date.now()};
   if(window.Me) Me.setProfile(prof); closeModal(); const ch=document.querySelector('.au-chip'); if(ch) ch.outerHTML=headerChip(false); toast('✅ បានរក្សាទុក — គ្រូនឹងឃើញព័ត៌មានថ្មី'); if(window.render) render(); }
 function renameUser(cid,sid,name){ const u=A.users.find(x=>x.role==='student'&&x.classId===cid&&x.studentId===sid); if(u&&name&&u.name!==name){ u.name=name; saveA(); } }
-window.Auth = { assignClass:(cid,tids)=>{ A.users.forEach(u=>{ if(u.role==='teacher'&&tids.includes(u.id)){ u.classIds=[...new Set([...(u.classIds||[]),cid])]; u.ts=Date.now(); } }); saveA(); }, editStaff, _staffSave:staffSave, _lxGo:lxGo, viewAs, asStaff, backToStaff, qrZip, editMe, _mePic:mePic, _meSave:meSave, _rename:renameUser, moveStudent, about, _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
+function sigForm(){ const v=id=>{ const e=document.getElementById(id); return e?e.value:null; }; EP.form={n:v('meN'),t:v('meT'),g:v('meG'),b:v('meB')}; }
+window.Auth = { _saveA:()=>saveA(), _sigEdit:()=>{ sigForm(); Sig.open(EP.sig, url=>{ if(url!=null) EP.sig=url; editStaff(true); }); }, _sigDel:()=>{ sigForm(); EP.sig=''; editStaff(true); }, _sigUrl:()=>EP.sig, sigOf:id=>{ const u=A.users.find(x=>x.id===id); return u&&u.sig||''; }, assignClass:(cid,tids)=>{ A.users.forEach(u=>{ if(u.role==='teacher'&&tids.includes(u.id)){ u.classIds=[...new Set([...(u.classIds||[]),cid])]; u.ts=Date.now(); } }); saveA(); }, editStaff, _staffSave:staffSave, _lxGo:lxGo, viewAs, asStaff, backToStaff, qrZip, editMe, _mePic:mePic, _meSave:meSave, _rename:renameUser, moveStudent, about, _stuFind, showQR, qrPng:id=>qrPng(A.users.find(x=>x.id===id)), qrLinkOf, invite:id=>teacherInvite(A.users.find(x=>x.id===id)), gate, user, role, progressKey, canSeeClass, headerChip, menu, logout, changePass, renderMe, renderAdmin, accountsPanel, printCards, avatarFor,
   editUser, delUser, backupAll, restoreAll, log, data:()=>A,
   _setup, _loginAs, _login, _pin, _recover, _doRecover, _cp, _mk, _rp, _tg, _own, _saveUser,
   _tab:r=>{ LS.tab=r; LS.stu=null; LS.pin=''; loginScreen(); }, _cls:id=>{ LS.cls=id; loginScreen(); }, _stu:id=>{ LS.stu=id; LS.pin=''; loginScreen(); } };

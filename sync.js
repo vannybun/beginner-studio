@@ -7,8 +7,8 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.27i';
-const FILES=['tts.js','qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','rank.js','chat.js','notify.js','exam.js','worksheet.js','track.js','qrscan.js','auth.js','ctx.js','voice.js','lessonex.js','rich.js','games.js','cert.js','app.js'];
+const VER='2026.11.27j';
+const FILES=['tts.js','qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','rank.js','chat.js','notify.js','exam.js','worksheet.js','track.js','qrscan.js','auth.js','ctx.js','voice.js','lessonex.js','rich.js','games.js','sig.js','cert.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

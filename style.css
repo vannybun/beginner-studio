@@ -1831,3 +1831,20 @@ body.gm-open{overflow:hidden}
 .stu-cert span{font-size:30px}.stu-cert div{flex:1;display:flex;flex-direction:column}.stu-cert small{color:#92400e}.stu-cert b{color:#78350f;font-size:17px}.stu-cert i{font-style:normal;color:#b45309;font-size:22px}
 .nc-t{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow:auto;padding:6px;border:1px solid #e2e8f0;border-radius:10px}
 .nc-t label{display:flex;gap:6px;align-items:center}.nc-t small{color:#94a3b8}
+/* ✍️ signature + ✏️ certificate editor */
+.sg-tabs{display:flex;gap:4px;background:#f1f5f9;padding:4px;border-radius:12px;margin-bottom:10px}
+.sg-tabs button{flex:1;padding:8px;border-radius:9px;font:14px var(--kh)}.sg-tabs button.on{background:#fff;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+#sgPad{width:100%;aspect-ratio:900/320;background:#fff;border:2px dashed #cbd5e1;border-radius:14px;touch-action:none;cursor:crosshair;display:block}
+.sg-row{gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}.sg-row input[type=range]{flex:1;min-width:120px}
+.sg-ink{width:28px;height:28px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #cbd5e1;cursor:pointer}.sg-ink.on{box-shadow:0 0 0 3px #0f172a}
+.sg-chk{background:repeating-conic-gradient(#e2e8f0 0 25%,#fff 0 50%) 0 0/18px 18px;border-radius:12px;padding:10px;display:flex;justify-content:center;align-items:center;min-height:90px;border:1px solid #e2e8f0}
+.sg-chk img{max-width:100%;max-height:140px}.sg-chk.sm{min-height:60px;padding:6px}.sg-chk.sm img{max-height:70px}
+.sg-prev small{display:block;color:#64748b;margin:6px 0 4px}
+.sg-mine{display:flex;flex-direction:column;gap:6px}
+.ce-g{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start}
+.ce-prev{position:sticky;top:0}.ce-prev img{width:100%;border-radius:10px;box-shadow:0 8px 24px -10px rgba(0,0,0,.35);background:#f8fafc;min-height:120px}
+.ce-f{max-height:62vh;overflow:auto;padding-right:4px}
+.ce-f .me-f{margin-bottom:6px}.ce-f textarea{width:100%;resize:vertical;font:inherit}
+.ce-th{width:30px;height:30px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #cbd5e1;cursor:pointer}.ce-th.on{box-shadow:0 0 0 3px #0f172a}
+.ce-md{min-width:34px;height:34px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;font-size:18px;cursor:pointer}.ce-md.on{border-color:#0f172a;background:#f1f5f9}
+@media(max-width:760px){.ce-g{grid-template-columns:1fr}.ce-prev{position:static}.ce-f{max-height:none}}
