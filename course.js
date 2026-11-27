@@ -58,14 +58,22 @@ window.NU = () => (window.UNITS||[]).length || 14;            // number of units
 /* ---------- Sounds Great media from the local «1. Sound great» folder ---------- */
 const P = {};  window.SG_LOAD = (k, arr) => { P[k]=arr; };
 const loaded = {};
-function script(src){ if(loaded[src]) return loaded[src];
-  return loaded[src]=new Promise(res=>{ const s=document.createElement('script'); s.src=src.split('/').map(encodeURIComponent).join('/').replace(/%2E%2E/g,'..'); s.onload=()=>res(true); s.onerror=()=>{ res(false); }; document.body.appendChild(s); }); }
+/* Website៖ ឯកសារពី Folder ដែលគ្រូភ្ជាប់ (📂 ឯកសារ) — MEDIA.sg[«b1_stu.js»] = blob URL (មិន Upload ទេ) */
+const webSrc = path => { const n=String(path).split('/').pop(); return (window.MEDIA&&MEDIA.sg&&MEDIA.sg[n]) || null; };
+function script(src){ if(window.IS_WEB){ src=webSrc(src); if(!src) return Promise.resolve(false); }
+  if(loaded[src]) return loaded[src];
+  return loaded[src]=new Promise(res=>{ const s=document.createElement('script'); s.src=/^blob:/.test(src)?src:src.split('/').map(encodeURIComponent).join('/').replace(/%2E%2E/g,'..'); s.onload=()=>res(true); s.onerror=()=>{ delete loaded[src]; res(false); }; document.body.appendChild(s); }); }
 const staff = () => { const u=me(); return !u || u.role!=='student'; };
 CO.loadPages = function(){
-  if(!pack || window.IS_WEB) return Promise.resolve(false);
+  if(!pack) return Promise.resolve(false);
+  if(window.IS_WEB && !webSrc(CO.pages+'stu.js')) return Promise.resolve(false);   // Website៖ មិនទាន់ភ្ជាប់ Folder
   const ks=['stu'].concat(staff()?['ans']:[]);
-  return Promise.all(ks.map(k=>script(CO.pages+k+'.js'))).then(r=>{ if(!r[0]) say('📂 រកមិនឃើញរូបទំព័រ Sounds Great — សូមទុក Folder «1. Sound great» នៅជាប់ Folder «Beginner App»'); return r[0]; });
+  return Promise.all(ks.map(k=>script(CO.pages+k+'.js'))).then(r=>{ if(!r[0]&&!window.IS_WEB) say('📂 រកមិនឃើញរូបទំព័រ Sounds Great — សូមទុក Folder «1. Sound great» នៅជាប់ Folder «Beginner App»'); return r[0]; });
 };
+/* Website៖ ក្រោយគ្រូភ្ជាប់ Folder → ទាញរូបទំព័រ និងកាតពាក្យ */
+function mediaLoaded(){ if(!pack) return Promise.resolve();
+  return Promise.all([CO.loadPages(), script(CO.cards).then(ok=>{ if(ok && !PIC){ buildPic(); } return ok; })]).then(([pg,cd])=>{
+    if(cd){ const v=curView(); if(typeof render==='function' && v && v.name!=='home') render(); } }); }
 CO.showAns = false;
 CO.img = function(p){
   const b='b'+CO.sg, stu=P[b+'_stu'], ans=P[b+'_ans'];
@@ -139,6 +147,6 @@ function pill(){
 function brand(){ if(!CO.sg) return; const sm=document.querySelector('.kh-brand small'); if(sm) sm.textContent=CO.short+' • '+CO.kh+' • រៀន • បង្រៀន'; document.title='កម្មវិធីគ្រប់គ្រងថ្នាក់រៀន — '+CO.short; }
 window.addEventListener('load',()=>{ brand(); pill(); const a=sessionStorage.getItem('bs-after-switch'); if(!a) return; sessionStorage.removeItem('bs-after-switch');
   try{ const v=JSON.parse(a); if(typeof go==='function' && v.name==='class') setTimeout(()=>go('class',null,v.tab||'students'),50); }catch(e){} });
-window.Course = { id:ID, sg:!!pack, extra:CO.extra, check, stuCheck, menu, stuMenu, stuUse, preview:id=>preview(id||wantedNoPv()), useClass, setClassBook, pill, nameOf, booksOf, openOf, isOpen, allowed, lockedPage, locked:!!CO.locked };
+window.Course = { id:ID, sg:!!pack, extra:CO.extra, check, stuCheck, menu, stuMenu, stuUse, preview:id=>preview(id||wantedNoPv()), useClass, setClassBook, pill, nameOf, booksOf, openOf, isOpen, allowed, lockedPage, locked:!!CO.locked, mediaLoaded };
 document.addEventListener('DOMContentLoaded', pill); setTimeout(pill, 0);
 })();

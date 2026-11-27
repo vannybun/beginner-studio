@@ -272,6 +272,8 @@ function miss(im){
   const st=window.Auth&&Auth.role()==='student';
   pg.insertAdjacentHTML('afterbegin', st
     ? `<div class="bk-miss"><div class="i">📖</div><b>ទំព័រសៀវភៅមិនមានលើ Website ទេ</b><p>សូមបើកសៀវភៅពិតរបស់អ្នក ទំព័រ ${pg.dataset.p} 🙂<br>ផ្ទាំងជំនួយខាងស្តាំ (សំឡេង វេយ្យាករណ៍ លំហាត់) នៅតែប្រើបាន</p></div>`
+    : window.COURSE&&COURSE.sg
+    ? `<div class="bk-miss"><div class="i">📂</div><b>ភ្ជាប់ Folder សៀវភៅ Sounds Great ពីកុំព្យូទ័រនេះ</b><p>ជ្រើស Folder <code>1. Sound great</code> (មាន <code>0. Sounds Great Digital Book</code> និង Folder សៀវភៅ ១–៥) — ឯកសារមិនត្រូវបាន Upload ទេ • ភ្ជាប់ម្តង ប្រើបានគ្រប់សៀវភៅ Sounds Great</p><button class="btn teal" onclick="Cloud.pickMedia()">📂 ជ្រើស Folder</button></div>`
     : `<div class="bk-miss"><div class="i">📂</div><b>ភ្ជាប់ Folder សៀវភៅពីកុំព្យូទ័រនេះ</b><p>ជ្រើស Folder <code>Beginner App</code> (មាន book/ និង 2. Beginner Audio) — ឯកសារមិនត្រូវបាន Upload ទេ</p><button class="btn teal" onclick="Cloud.pickMedia()">📂 ជ្រើស Folder</button></div>`);
 }
 function redraw(){ if(B.open) draw(0); }

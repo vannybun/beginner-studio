@@ -7,7 +7,7 @@ const BOOKS = (window.COURSE&&COURSE.pdf) || {
   3: "../1. Book/Headway_5ed_Beginner_Workbook_www.frenglish.ru.pdf"
 };
 const enc = p => p.split('/').map(encodeURIComponent).join('/');
-function pdfUrl(which, page){ return ((window.MEDIA&&MEDIA.pdf[which]) || enc(BOOKS[which])) + (page ? '#page=' + (page + 1) + '&view=FitH' : ''); }
+function pdfUrl(which, page){ return ((window.MEDIA&&MEDIA.pdf[(window.COURSE&&COURSE.sg?'sg'+COURSE.sg+':':'')+which]) || enc(BOOKS[which])) + (page ? '#page=' + (page + 1) + '&view=FitH' : ''); }
 function bookUrl(which, page){ return which===1 && page!=null ? Book.img(page) : pdfUrl(which, page); }
 function openPdf(which, page){ window.open(pdfUrl(which, page), '_blank'); }
 function openBook(which, page){ if(which===1 && window.Book){ if(window.Deck && Deck.D && document.getElementById('deck').classList.contains('show')) Deck.close(); Book.open(page); } else openPdf(which, page); }
