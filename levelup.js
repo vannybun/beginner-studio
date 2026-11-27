@@ -5,10 +5,12 @@
 //  • 📖 អានដោយខ្លួនឯង — ពាក្យ/ប្រយោគគ្មានសំឡេង → ជ្រើសរូប → ទើបឮសំឡេងពិនិត្យ
 //  • 📐 វេយ្យាករណ៍សមកម្រិត — មួយចំណុចក្នុងមួយ Unit (ភ្ជាប់នឹង sight words របស់ Unit នោះ)
 //  • 🎮 ផ្លូវ Level ក្នុង Unit • ★ ផ្កាយ • 🔥 Combo • 🎉 LEVEL CLEAR! • 🏁 Boss Level
+//  • Beginner (Headway)៖ មានតែស្រទាប់ហ្គេម (ផ្លូវ Level ផ្កាយ Combo LEVEL CLEAR) — ខ្លឹមសារ និងលំហាត់ដដែលទាំងអស់
+//    ផ្កាយគណនាពីទិន្នន័យដែលមានស្រាប់ (S.sec, S.ex) — មិនសរសេរ ឬកែទិន្នន័យសិស្សទេ
 // =====================================================================
 (function(){
-if(!window.COURSE || !COURSE.sg) return;
-const LV = +COURSE.sg;
+if(!window.COURSE) return;
+const SG = !!COURSE.sg, LV = +COURSE.sg || 0;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const attr = t => JSON.stringify(String(t)).replace(/"/g,'&quot;');
 const shuf = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
@@ -212,6 +214,7 @@ const GC={}; const gram = n => GC[n] || (GC[n]=G(n));
 
 /* ---------- extend each lesson section's exercises (called from lessonex.js) ---------- */
 function extend(n, si, s, res){
+  if(!SG) return res;   // Beginner៖ លំហាត់ដដែល
   const L=LESSONS[n], W=spellWords(n), secW=(s.w||[]).map(w=>w[0]).filter(w=>W.includes(w)), Wpool=secW.length?secW:W;
   const sents=uniq((s.ph||[]).map(p=>p[0]).concat((s.g||[]).flatMap(gi=>(L.grammar[gi]||{}).ex||[])));
   const allSents=uniq(L.sections.flatMap(x=>(x.ph||[]).map(p=>p[0])));
@@ -237,6 +240,7 @@ function extend(n, si, s, res){
 
 /* ---------- section intro cards (shown above the exercises) ---------- */
 function pre(n, si, s){
+  if(!SG) return '';    // Beginner៖ ខ្លឹមសារដដែល
   let h='';
   if(s.k==='vocab' || s.k==='open'){ const W=(s.w||[]).map(w=>w[0]).filter(w=>/^[a-z]+$/.test(w)).slice(0,12);
     if(W.length) h+=`<div class="lv-box lv-blend"><h4>🧩 ប្រកបតាមចំណែកសំឡេង <small>${GR.length?(LV>=5?'ស្រៈផ្សំ (ពណ៌ទឹកក្រូច) អានជាសំឡេងតែមួយ':'ព្យញ្ជនៈផ្សំ (ពណ៌ទឹកក្រូច) អានភ្ជាប់គ្នា'):'ស្រៈ (ពណ៌ក្រហម) • ព្យញ្ជនៈ (ពណ៌ខៀវ)'} — ចុចដើម្បីស្តាប់យឺតៗ</small></h4>
