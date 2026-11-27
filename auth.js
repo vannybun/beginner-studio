@@ -368,7 +368,11 @@ function renderAdmin(t){
   if(t) atab=t; setUnitColors(3);
   const tabs=[['users','👥 គណនី'],['students','🎓 គណនីសិស្ស'],['classes','🏫 ថ្នាក់ & គ្រូ'],['data','💾 ទិន្នន័យ'],['log','📜 កំណត់ហេតុ']];
   const n=r=>A.users.filter(u=>u.role===r&&!u.disabled).length;
-  $('#main').innerHTML = `<div class="uhero"><div class="emo float" style="margin-left:0">🛡️</div><div><h2>ផ្ទាំង Admin</h2><div class="kmt">គ្រប់គ្រងគណនី ថ្នាក់ និងទិន្នន័យ</div><div class="pgs">🛡️ ${n('admin')} Admin • 👩‍🏫 ${n('teacher')} គ្រូ • 🎓 ${n('student')} សិស្ស</div></div></div>
+  /* 🎓 រាប់តែសិស្សដែលនៅក្នុងបញ្ជីថ្នាក់ពិតៗ • គណនីក្រៅបញ្ជី បង្ហាញដាច់ដោយឡែក (Admin សម្រេច៖ ដាក់ចូលវិញ ឬលុប) */
+  const CD=classData(), CL=CD.classes||[], stu=A.users.filter(u=>u.role==='student'&&!u.disabled);
+  const inRoster=u=>{ const c=CL.find(x=>x.id===u.classId); return !!c && (c.students||[]).some(s=>s.id===u.studentId); };
+  const stray=stu.filter(u=>CL.some(c=>c.id===u.classId) && !inRoster(u)), lost=stu.filter(u=>!CL.some(c=>c.id===u.classId));
+  $('#main').innerHTML = `<div class="uhero"><div class="emo float" style="margin-left:0">🛡️</div><div><h2>ផ្ទាំង Admin</h2><div class="kmt">គ្រប់គ្រងគណនី ថ្នាក់ និងទិន្នន័យ</div><div class="pgs">🛡️ ${n('admin')} Admin • 👩‍🏫 ${n('teacher')} គ្រូ • 🎓 ${stu.filter(inRoster).length} សិស្ស${stray.length+lost.length?` • <a href="#" style="color:inherit;text-decoration:underline" onclick="go('admin',null,'students');return false">⚠️ ${stray.length+lost.length} គណនីក្រៅបញ្ជីថ្នាក់</a>`:''}</div></div></div>
     <div class="tabs">${tabs.map(x=>`<button class="${x[0]===atab?'on':''}" onclick="go('admin',null,'${x[0]}')">${x[1]}</button>`).join('')}</div><div id="adTab"></div>`;
   const D=classData(), el=document.getElementById('adTab');
   if(atab==='users'){
@@ -379,7 +383,13 @@ function renderAdmin(t){
         <small>ចូលចុងក្រោយ៖ ${u.last?new Date(u.last).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'}):'—'}</small>
         <div class="row" style="justify-content:center;gap:4px"><button class="btn ghost sm" title="QR ចូលប្រព័ន្ធ" onclick="Auth.showQR('${u.id}')">📱</button>${u.role==='teacher'?`<button class="btn ghost sm" title="ផ្ញើតំណចូល" onclick="Auth.invite('${u.id}')">✉️</button>`:''}<button class="btn ghost sm" onclick="Auth.editUser('${u.id}')">✎</button>${u.id!==user().id?`<button class="btn ghost sm" onclick="Auth._tg('${u.id}')">${u.disabled?'✅':'⛔'}</button><button class="btn ghost sm" onclick="Auth.delUser('${u.id}')">🗑</button>`:''}</div></div>`).join('')}</div></div>`;
   } else if(atab==='students'){
-    const cs=D.classes||[]; el.innerHTML = cs.length ? cs.map(c=>accountsPanel(c)).join('<div style="height:14px"></div>') : `<div class="panel cl-empty"><p class="km">មិនទាន់មានថ្នាក់ — បង្កើតក្នុង 👥 ថ្នាក់រៀន</p></div>`;
+    const cs=D.classes||[];
+    const strayPanel = stray.length||lost.length ? `<div class="panel" style="border:2px solid #f59e0b;margin-bottom:14px"><h3 class="sec" style="margin-top:0">⚠️ គណនីសិស្សក្រៅបញ្ជីថ្នាក់ (${stray.length+lost.length})</h3>
+      <p class="note">គណនីទាំងនេះមិនត្រូវបានរាប់ក្នុងចំនួនសិស្សទេ។ វឌ្ឍនភាព និងលុយរបស់សិស្សនៅដដែល។ ↩️ ដាក់ចូលថ្នាក់វិញ ប្រសិនបើសិស្សនៅរៀន • 🗑 លុប ប្រសិនបើសិស្សឈប់រៀនហើយ។${lost.length?' គណនីដែលថ្នាក់បាត់ទាំងមូល — ប្រើ ♻️ ស្តារថ្នាក់ នៅ 👥 ថ្នាក់រៀន។':''}</p>
+      ${stray.map(u=>{ const c=CL.find(x=>x.id===u.classId); return `<div class="au-crow"><b>🎓 ${esc(u.name)}</b><span class="note">@${esc(u.username||'')} • 🏫 ${esc(c.name)}</span>
+        <div class="row" style="gap:6px"><button class="btn teal sm" onclick="Class._readd('${c.id}','${u.studentId}',${JSON.stringify(u.name).replace(/"/g,'&quot;')});Auth.renderAdmin('students')">↩️ ដាក់ចូលថ្នាក់វិញ</button><button class="btn ghost sm" onclick="Auth.delUser('${u.id}')">🗑 លុប</button></div></div>`; }).join('')}
+      ${lost.map(u=>`<div class="au-crow"><b>🎓 ${esc(u.name)}</b><span class="note">@${esc(u.username||'')} • ថ្នាក់បាត់ — ប្រើ ♻️ ស្តារថ្នាក់</span><button class="btn ghost sm" onclick="Auth.delUser('${u.id}')">🗑 លុប</button></div>`).join('')}</div>` : '';
+    el.innerHTML = strayPanel + (cs.length ? cs.map(c=>accountsPanel(c)).join('<div style="height:14px"></div>') : `<div class="panel cl-empty"><p class="km">មិនទាន់មានថ្នាក់ — បង្កើតក្នុង 👥 ថ្នាក់រៀន</p></div>`);
   } else if(atab==='classes'){
     const teachers=A.users.filter(u=>u.role==='teacher'&&!u.disabled);
     el.innerHTML=`<div class="panel"><h3 class="sec">🏫 កំណត់គ្រូបន្ទុកថ្នាក់</h3><p class="note">គ្រូមើលឃើញតែថ្នាក់ដែលខ្លួនទទួលបន្ទុកប៉ុណ្ណោះ។ ថ្នាក់ដែលគ្មានគ្រូបន្ទុក មានតែ Admin ទេដែលមើលឃើញ។</p>
