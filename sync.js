@@ -7,7 +7,7 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.27r';
+const VER='2026.11.27s';
 const FILES=['tts.js','qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','rank.js','chat.js','notify.js','exam.js','worksheet.js','track.js','qrscan.js','auth.js','ctx.js','voice.js','lessonex.js','sg-courses.js','course.js','levelup.js','rich.js','games.js','sig.js','cert.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
@@ -337,7 +337,7 @@ function afterApp(){
   const tl=document.querySelector('header .tools'); if(!tl) return;
   const r=window.Auth&&Auth.role(); if(!r) return;
   if(r!=='student') tl.insertAdjacentHTML('afterbegin','<button onclick="Cloud.pickMedia()" title="ភ្ជាប់ Folder សៀវភៅ/សំឡេង ពីកុំព្យូទ័រនេះ">📂<span>ឯកសារ</span></button>');
-  tl.insertAdjacentHTML('afterbegin','<button id="cloudChip" class="cloud-chip" onclick="location.reload()"></button>'); setStatus(!cloud?'off':status==='wait'?'wait':status==='err'||!db?'err':'ok');
+  tl.insertAdjacentHTML('afterbegin','<button id="cloudChip" class="cloud-chip" onclick="Cloud.flush().catch(()=>{}).then(()=>location.reload())"></button>'); setStatus(!cloud?'off':status==='wait'?'wait':status==='err'||!db?'err':'ok');
   if(r!=='student') restoreMedia();
 }
 async function boot(){

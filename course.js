@@ -88,6 +88,8 @@ window.picFor = w => { if(!PIC) return ''; const s=PIC[String(w||'').toLowerCase
 if(pack && !window.IS_WEB) script(CO.cards).then(ok=>{ if(ok){ buildPic(); const v=curView(); if(typeof render==='function' && v && v.name!=='home') render(); } });
 
 /* ---------- switching ---------- */
+/* 🛡️ រក្សាទុកទៅ Cloud ឱ្យរួចសិន ទើប Reload (មុននេះ Reload 0.5s ក្រោយរក្សាទុក → ថ្នាក់ថ្មី/សៀវភៅថ្មី មិនទាន់ដល់ Cloud ក៏បាត់) */
+const reloadSafe = () => (window.Cloud&&Cloud.flush ? Cloud.flush() : Promise.resolve()).catch(()=>{}).then(()=>location.reload());
 const nameOf = id => (COURSES.find(x=>x.id===id)||{}).name || id;
 function check(){                     // called after class data is saved
   if(!staff()) return stuCheck();
@@ -95,7 +97,7 @@ function check(){                     // called after class data is saved
   if(sessionStorage.getItem(PV)) return;
   say(`📚 ប្តូរទៅសៀវភៅ ${nameOf(want)} …`);
   const v=curView(); sessionStorage.setItem('bs-after-switch', JSON.stringify(v&&v.name==='class'?{name:'class',tab:v.tab}:{name:'home'}));
-  setTimeout(()=>location.reload(), 500);
+  if(check.busy) return; check.busy=true; setTimeout(reloadSafe, 300);
 }
 /* សិស្ស៖ បើគ្រូបិទសៀវភៅដែលកំពុងរៀន ឬ Admin ដកចេញ → ត្រឡប់ទៅសៀវភៅដែលបានអនុញ្ញាត */
 function stuCheck(){
@@ -103,7 +105,7 @@ function stuCheck(){
   pill(); const want=wantedId(), lockNow=!openOf(stuClass()).length; if(want===CO.id && lockNow===!!CO.locked) return;
   sessionStorage.setItem('bs-after-switch', JSON.stringify({name:'home'}));
   say(lockNow?'🔒 គ្រូបានបិទសៀវភៅ …':CO.locked?`🔓 គ្រូបានបើក ${nameOf(want)} ហើយ!`:`🔒 សៀវភៅ ${nameOf(CO.id)} ត្រូវបានបិទ — ត្រឡប់ទៅ ${nameOf(want)} …`);
-  setTimeout(()=>location.reload(), 900);
+  setTimeout(reloadSafe, 900);
 }
 function stuMenu(){
   const c=stuClass(), O=openOf(c);
@@ -111,14 +113,14 @@ function stuMenu(){
     return `<div class="crs-row ${id===CO.id?'on':''}"><div class="crs-ic">${b.icon}</div><div class="crs-t"><b>${esc(b.name)}</b><small>${id===O[0]?'📌 សៀវភៅគោលរបស់ថ្នាក់':'🔓 គ្រូបានបើក'}</small></div>
       <div class="crs-b">${id===CO.id?'<button class="btn sm teal" disabled>✓ កំពុងរៀន</button>':`<button class="btn sm ghost" onclick="Course.stuUse('${id}')">▶ រៀន</button>`}</div></div>`; }).join('')}</div>`);
 }
-function stuUse(id){ const u=me(); if(!u||!openOf(stuClass()).includes(id)) return say('🔒 គ្រូមិនទាន់បើកសៀវភៅនេះទេ'); try{ localStorage.setItem(SK(u), id); }catch(e){} sessionStorage.setItem('bs-after-switch', JSON.stringify({name:'home'})); (window.Cloud&&Cloud.flush?Cloud.flush():Promise.resolve()).catch(()=>{}).then(()=>location.reload()); }
+function stuUse(id){ const u=me(); if(!u||!openOf(stuClass()).includes(id)) return say('🔒 គ្រូមិនទាន់បើកសៀវភៅនេះទេ'); try{ localStorage.setItem(SK(u), id); }catch(e){} sessionStorage.setItem('bs-after-switch', JSON.stringify({name:'home'})); reloadSafe(); }
 /* 🎓 សិស្ស៖ គ្រូមិនទាន់បើកសៀវភៅណាមួយ */
 function lockedPage(el){ const c=stuClass();
   el.innerHTML=`<div class="stu-empty" style="margin-top:30px"><div style="font-size:64px">🔒</div><b>គ្រូមិនទាន់បើកសៀវភៅឱ្យរៀនទេ</b><p>${c?'ថ្នាក់ «'+esc(c.name)+'» — ':''}សូមរង់ចាំគ្រូ 🔓 បើកសៀវភៅ។ ពេលគ្រូបើក កម្មវិធីនឹងបើកមេរៀនដោយស្វ័យប្រវត្តិ 🙂</p>
     <p class="note">ពេលរង់ចាំ អ្នកនៅតែអាចមើល 📝 កិច្ចការ 🏆 ចំណាត់ថ្នាក់ និង 💬 មិត្ត បាន</p></div>`;
   const poll=()=>{ if(!document.body.contains(el.firstElementChild)) return; (window.Cloud&&Cloud.refresh?Cloud.refresh(CK):Promise.resolve(false)).catch(()=>{}).then(()=>{ stuCheck(); setTimeout(poll, 20000); }); };
   clearTimeout(lockedPage.t); lockedPage.t=setTimeout(poll, 3000); }
-function preview(id){ if(id && !allowed().includes(id)) return say('🔒 Admin មិនទាន់បើកសៀវភៅនេះឱ្យអ្នកទេ'); if(id===wantedNoPv()) sessionStorage.removeItem(PV); else sessionStorage.setItem(PV,id); sessionStorage.setItem('bs-after-switch', JSON.stringify({name:'home'})); location.reload(); }
+function preview(id){ if(id && !allowed().includes(id)) return say('🔒 Admin មិនទាន់បើកសៀវភៅនេះឱ្យអ្នកទេ'); if(id===wantedNoPv()) sessionStorage.removeItem(PV); else sessionStorage.setItem(PV,id); sessionStorage.setItem('bs-after-switch', JSON.stringify({name:'home'})); reloadSafe(); }
 function wantedNoPv(){ const s=sessionStorage.getItem(PV); sessionStorage.removeItem(PV); const w=wantedId(); if(s) sessionStorage.setItem(PV,s); return w; }
 function menu(){
   const C=readC(), V=staffVisible(C.classes||[]), A=allowed(), adm=(me()||{role:'admin'}).role==='admin';
@@ -132,7 +134,7 @@ function menu(){
     ${pv?`<div class="pv-note">👀 កំពុងមើល ${esc(nameOf(pv))} <button class="btn sm sun" onclick="Course.preview('')">↺ ត្រឡប់ទៅថ្នាក់</button></div>`:''}<div class="crs-list">${rows||'<p class="note">🔒 Admin មិនទាន់បើកសៀវភៅណាមួយឱ្យអ្នកទេ — សូមទាក់ទង Admin</p>'}</div>`);
 }
 function setClassBook(cid, bid){ const M=readCB(); if(bid) M[cid]=bid; else delete M[cid]; try{ localStorage.setItem(CB, JSON.stringify(M)); }catch(e){} }
-function useClass(id, bid){ const C=readC(); C.cur=id; localStorage.setItem(CK, JSON.stringify(C)); setClassBook(id, bid||null); sessionStorage.removeItem(PV); sessionStorage.setItem('bs-after-switch', JSON.stringify({name:'home'})); location.reload(); }
+function useClass(id, bid){ const C=readC(); C.cur=id; localStorage.setItem(CK, JSON.stringify(C)); setClassBook(id, bid||null); sessionStorage.removeItem(PV); sessionStorage.setItem('bs-after-switch', JSON.stringify({name:'home'})); reloadSafe(); }
 function modalOpen(h){ if(typeof openModal==='function') return openModal(h); const o=document.getElementById('ov'), m=document.getElementById('modal'); m.innerHTML=`<button class="x" onclick="closeModal()">✕</button>`+h; o.classList.add('show'); }
 function pill(){
   if(!document.querySelector('header .modes')) return;

@@ -77,7 +77,7 @@ function tab(c){
       <div class="row">
         <div class="tk-flt">${[['all','ទាំងអស់'],['ok','🟢'],['warn','🟡'],['risk','🔴⚪']].map(f=>`<button class="${filter===f[0]?'on':''}" onclick="Track.filter('${f[0]}')">${f[1]}</button>`).join('')}</div>
         <select class="cl-in" onchange="Track.sort(this.value)">${[['status','តម្រៀប៖ ស្ថានភាព'],['name','ឈ្មោះ'],['last','សកម្មចុងក្រោយ'],['time','ពេលរៀន ៧ ថ្ងៃ'],['words','ពាក្យចេះ'],['exam','ពិន្ទុប្រឡង']].map(o=>`<option value="${o[0]}" ${sortBy===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select>
-        ${window.IS_WEB?`<button class="btn ghost sm" onclick="location.reload()" title="ទាញទិន្នន័យថ្មីពី Cloud">🔄 ធ្វើបច្ចុប្បន្នភាព</button>`:''}
+        ${window.IS_WEB?`<button class="btn ghost sm" onclick="Cloud.flush().catch(()=>{}).then(()=>location.reload())" title="ទាញទិន្នន័យថ្មីពី Cloud">🔄 ធ្វើបច្ចុប្បន្នភាព</button>`:''}
         <button class="btn ghost sm" onclick="Track.csv()">📊 Excel</button>
       </div>
     </div>

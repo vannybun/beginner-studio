@@ -386,7 +386,7 @@ function doScores(n){
   const latest={}; X.results.filter(r=>r.n===n).sort((a,b)=>a.ts-b.ts).forEach(r=>{ const s=r.sid?c.students.find(x=>x.id===r.sid):c.students.find(x=>x.name===r.name||x.latin===r.name); if(s && (!best || !latest[s.id] || r.s>=latest[s.id].s)) latest[s.id]=r; });
   let k=0; Object.entries(latest).forEach(([sid,r])=>{ const M=c.scores[m]=c.scores[m]||{}, R=M[sid]=M[sid]||{}; R[col.id]=Math.round(r.s/r.t*col.max*10)/10; k++; });
   localStorage.setItem('beginner-studio-class-v1', JSON.stringify(D)); closeModal(); toast(`✅ បានបញ្ចូលពិន្ទុ ${k} នាក់ ទៅ «${col.n}» ${m}`);
-  setTimeout(()=>location.reload(),900);
+  (window.Cloud&&Cloud.flush?Cloud.flush():Promise.resolve()).catch(()=>{}).then(()=>setTimeout(()=>location.reload(),300));   // 🛡️ រក្សាទុកដល់ Cloud សិន
 }
 function csv(n){ const ex=build(n,'A'), res=X.results.filter(r=>r.n===n); const rows=[['ឈ្មោះ','Version',...ex.parts.map(p=>p.id+' '+p.en),'សរុប /'+ex.total,'%','របៀប','ថ្ងៃ'],...res.map(r=>[r.name,r.ver,...ex.parts.map(p=>r.by?r.by[p.id]:''),r.s,r.pct,r.via,new Date(r.ts).toLocaleDateString('en-GB')])];
   const b=new Blob(['﻿'+rows.map(r=>r.map(v=>/[",\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':v).join(',')).join('\r\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`Unit${n}-Test-results.csv`; a.click(); }
