@@ -22,15 +22,22 @@ function staffVisible(L){ try{ return me()&&Auth.canSeeClass ? L.filter(x=>Auth.
    c.bookOpen = សៀវភៅបន្ថែមដែលគ្រូបានបើកឱ្យសិស្សរៀន/មើល */
 const valid = id => id===HW || !!SGC[id];
 function booksOf(c){ if(!c) return [HW]; const p=c.book||HW; return [p, ...(c.books||[]).filter(b=>b!==p && valid(b))].filter((b,i,a)=>a.indexOf(b)===i); }
-function openOf(c){ if(!c) return [HW]; const B=booksOf(c), O=c.bookOpen||[]; return B.filter((b,i)=>i===0 || O.includes(b)); }
+/* 🔐 សិស្សរៀនបាន លុះត្រាតែគ្រូបើក (c.bookOpen)។ ថ្នាក់ចាស់ (មិនទាន់មាន c.lock) — សៀវភៅគោលនៅបើកដូចមុន ដើម្បីកុំឱ្យប៉ះពាល់សិស្សកំពុងរៀន។
+   c.lock=true ពេលគ្រូបិទ/បើកសៀវភៅគោលម្តង ឬថ្នាក់ថ្មី → គ្រប់សៀវភៅត្រូវគ្រូបើក */
+function isOpen(c, b){ const B=booksOf(c); return B.includes(b) && ((c.bookOpen||[]).includes(b) || (b===B[0] && !c.lock)); }
+function openOf(c){ if(!c) return [HW]; return booksOf(c).filter(b=>isOpen(c,b)); }
+/* 👩‍🏫 គ្រូមើលឃើញតែសៀវភៅដែល Admin បើកឱ្យថ្នាក់របស់ខ្លួន (c.books) • 🛡️ Admin មើលឃើញទាំងអស់ */
+function allowed(){ const u=me(); if(!u || u.role==='admin') return COURSES.map(x=>x.id);
+  if(u.role==='student') return openOf(stuClass());
+  return staffVisible(readC().classes||[]).flatMap(booksOf).filter((b,i,a)=>a.indexOf(b)===i); }
 const SK = u => 'bs-stu-book:'+u.id;          // សៀវភៅដែលសិស្សជ្រើសចុងក្រោយ
 const CB = 'bs-class-book';                    // {classId: bookId} — សៀវភៅដែលគ្រូកំពុងបង្រៀនតាមថ្នាក់
 function readCB(){ try{ return JSON.parse(localStorage.getItem(CB)||'{}'); }catch(e){ return {}; } }
 function stuClass(){ const u=me(); return u&&u.role==='student' ? (readC().classes||[]).find(x=>x.id===u.classId) : null; }
 function wantedId(){
   const u=me(), C=readC(), L=C.classes||[];
-  if(u&&u.role==='student'){ const c=L.find(x=>x.id===u.classId), O=openOf(c); let pick=null; try{ pick=localStorage.getItem(SK(u)); }catch(e){} return O.includes(pick) ? pick : O[0]; }
-  const pv=sessionStorage.getItem(PV); if(pv && valid(pv)) return pv;
+  if(u&&u.role==='student'){ const c=L.find(x=>x.id===u.classId), O=openOf(c); let pick=null; try{ pick=localStorage.getItem(SK(u)); }catch(e){} return O.includes(pick) ? pick : (O[0] || booksOf(c)[0]); }
+  const pv=sessionStorage.getItem(PV); if(pv && valid(pv) && allowed().includes(pv)) return pv;
   const V=staffVisible(L), c=V.find(x=>x.id===C.cur)||V[0];
   if(!c) return HW; const B=booksOf(c), want=readCB()[c.id];
   return B.includes(want) ? want : B[0];
@@ -39,6 +46,7 @@ let ID=wantedId(); if(!SGC[ID]) ID=HW; const pack=SGC[ID];
 const CO = window.COURSE = pack ? Object.assign({}, pack.meta) : {id:HW, name:'Headway 5th ed. Beginner', short:'Beginner', icon:'📘', sg:0};
 CO.short = CO.short || CO.name;
 { const sc=stuClass(); CO.extra = !!sc && ID!==booksOf(sc)[0]; }   // សិស្សកំពុងរៀនសៀវភៅបន្ថែម → វឌ្ឍនភាពទុកដាច់ដោយឡែក
+{ const u=me(); CO.locked = !!u && u.role==='student' && !openOf(stuClass()).length; }   // 🔒 គ្រូមិនទាន់បើកសៀវភៅណាឱ្យទេ
 if(pack){
   window.UNITS=pack.UNITS; window.LESSONS=pack.LESSONS; window.CTX=pack.CTX; window.UNIT_STYLE=pack.UNIT_STYLE; window.TRACKS=pack.TRACKS;
   window.WORDLIST={}; pack.UNITS.forEach(u=>{ WORDLIST[u.n]=u.vocabApp; });
@@ -84,8 +92,9 @@ function check(){                     // called after class data is saved
 /* សិស្ស៖ បើគ្រូបិទសៀវភៅដែលកំពុងរៀន ឬ Admin ដកចេញ → ត្រឡប់ទៅសៀវភៅដែលបានអនុញ្ញាត */
 function stuCheck(){
   const u=me(); if(!u||u.role!=='student') return;
-  pill(); const want=wantedId(); if(want===CO.id) return;
-  say(`🔒 សៀវភៅ ${nameOf(CO.id)} ត្រូវបានបិទ — ត្រឡប់ទៅ ${nameOf(want)} …`);
+  pill(); const want=wantedId(), lockNow=!openOf(stuClass()).length; if(want===CO.id && lockNow===!!CO.locked) return;
+  sessionStorage.setItem('bs-after-switch', JSON.stringify({name:'home'}));
+  say(lockNow?'🔒 គ្រូបានបិទសៀវភៅ …':CO.locked?`🔓 គ្រូបានបើក ${nameOf(want)} ហើយ!`:`🔒 សៀវភៅ ${nameOf(CO.id)} ត្រូវបានបិទ — ត្រឡប់ទៅ ${nameOf(want)} …`);
   setTimeout(()=>location.reload(), 900);
 }
 function stuMenu(){
@@ -95,18 +104,24 @@ function stuMenu(){
       <div class="crs-b">${id===CO.id?'<button class="btn sm teal" disabled>✓ កំពុងរៀន</button>':`<button class="btn sm ghost" onclick="Course.stuUse('${id}')">▶ រៀន</button>`}</div></div>`; }).join('')}</div>`);
 }
 function stuUse(id){ const u=me(); if(!u||!openOf(stuClass()).includes(id)) return say('🔒 គ្រូមិនទាន់បើកសៀវភៅនេះទេ'); try{ localStorage.setItem(SK(u), id); }catch(e){} sessionStorage.setItem('bs-after-switch', JSON.stringify({name:'home'})); (window.Cloud&&Cloud.flush?Cloud.flush():Promise.resolve()).catch(()=>{}).then(()=>location.reload()); }
-function preview(id){ if(id===wantedNoPv()) sessionStorage.removeItem(PV); else sessionStorage.setItem(PV,id); sessionStorage.setItem('bs-after-switch', JSON.stringify({name:'home'})); location.reload(); }
+/* 🎓 សិស្ស៖ គ្រូមិនទាន់បើកសៀវភៅណាមួយ */
+function lockedPage(el){ const c=stuClass();
+  el.innerHTML=`<div class="stu-empty" style="margin-top:30px"><div style="font-size:64px">🔒</div><b>គ្រូមិនទាន់បើកសៀវភៅឱ្យរៀនទេ</b><p>${c?'ថ្នាក់ «'+esc(c.name)+'» — ':''}សូមរង់ចាំគ្រូ 🔓 បើកសៀវភៅ។ ពេលគ្រូបើក កម្មវិធីនឹងបើកមេរៀនដោយស្វ័យប្រវត្តិ 🙂</p>
+    <p class="note">ពេលរង់ចាំ អ្នកនៅតែអាចមើល 📝 កិច្ចការ 🏆 ចំណាត់ថ្នាក់ និង 💬 មិត្ត បាន</p></div>`;
+  const poll=()=>{ if(!document.body.contains(el.firstElementChild)) return; (window.Cloud&&Cloud.refresh?Cloud.refresh(CK):Promise.resolve(false)).catch(()=>{}).then(()=>{ stuCheck(); setTimeout(poll, 20000); }); };
+  clearTimeout(lockedPage.t); lockedPage.t=setTimeout(poll, 3000); }
+function preview(id){ if(id && !allowed().includes(id)) return say('🔒 Admin មិនទាន់បើកសៀវភៅនេះឱ្យអ្នកទេ'); if(id===wantedNoPv()) sessionStorage.removeItem(PV); else sessionStorage.setItem(PV,id); sessionStorage.setItem('bs-after-switch', JSON.stringify({name:'home'})); location.reload(); }
 function wantedNoPv(){ const s=sessionStorage.getItem(PV); sessionStorage.removeItem(PV); const w=wantedId(); if(s) sessionStorage.setItem(PV,s); return w; }
 function menu(){
-  const C=readC(), V=staffVisible(C.classes||[]);
-  const tag = (c,id) => booksOf(c)[0]===id ? '' : (openOf(c).includes(id) ? ' 🔓' : ' 🔒');
-  const rows=COURSES.map(b=>{ const cl=V.filter(c=>booksOf(c).includes(b.id));
+  const C=readC(), V=staffVisible(C.classes||[]), A=allowed(), adm=(me()||{role:'admin'}).role==='admin';
+  const tag = (c,id) => isOpen(c,id) ? ' 🔓' : ' 🔒';
+  const rows=COURSES.filter(b=>A.includes(b.id)).map(b=>{ const cl=V.filter(c=>booksOf(c).includes(b.id));
     return `<div class="crs-row ${b.id===CO.id?'on':''}"><div class="crs-ic">${b.icon}</div><div class="crs-t"><b>${esc(b.name)}</b><small>${cl.length?cl.map(c=>'👥 '+esc(c.name)+tag(c,b.id)).join(' • '):'មិនទាន់មានថ្នាក់'}</small></div>
       <div class="crs-b">${cl.map(c=>`<button class="btn sm ${c.id===C.cur&&b.id===CO.id?'teal':'ghost'}" onclick="Course.useClass('${c.id}','${b.id}')">${esc(c.name)}</button>`).join('')}
       <button class="btn sm ghost" onclick="Course.preview('${b.id}')" title="មើលមេរៀន (មិនប្តូរថ្នាក់)">👀 មើល</button></div></div>`; }).join('');
   const pv=sessionStorage.getItem(PV);
-  modalOpen(`<h3>📚 សៀវភៅ • ថ្នាក់</h3><p class="note">ជ្រើសថ្នាក់ ដើម្បីបង្រៀនតាមសៀវភៅរបស់ថ្នាក់នោះ។ «👀 មើល» = មើលមេរៀនសៀវភៅណាមួយ ដោយមិនប្តូរថ្នាក់។ សៀវភៅរបស់ថ្នាក់៖ 👥 ថ្នាក់រៀន → 📚 (Admin កំណត់សៀវភៅ • គ្រូ 🔓 បើកឱ្យសិស្ស)។</p>
-    ${pv?`<div class="pv-note">👀 កំពុងមើល ${esc(nameOf(pv))} <button class="btn sm sun" onclick="Course.preview('')">↺ ត្រឡប់ទៅថ្នាក់</button></div>`:''}<div class="crs-list">${rows}</div>`);
+  modalOpen(`<h3>📚 សៀវភៅ • ថ្នាក់</h3><p class="note">${adm?'🛡️ Admin មើលឃើញសៀវភៅទាំងអស់។ ដើម្បីឱ្យគ្រូមើល/បង្រៀនបាន៖ 👥 ថ្នាក់រៀន → 📚 → ☑ សៀវភៅឱ្យថ្នាក់របស់គ្រូនោះ។':'👩‍🏫 អ្នកឃើញតែសៀវភៅដែល Admin បើកឱ្យថ្នាក់របស់អ្នក។'} សិស្សរៀនបាន លុះត្រាតែគ្រូ 🔓 បើក (👥 ថ្នាក់រៀន → 📚)។ 🔓/🔒 ក្រោយឈ្មោះថ្នាក់ = សិស្សរៀនបាន/មិនទាន់បាន។</p>
+    ${pv?`<div class="pv-note">👀 កំពុងមើល ${esc(nameOf(pv))} <button class="btn sm sun" onclick="Course.preview('')">↺ ត្រឡប់ទៅថ្នាក់</button></div>`:''}<div class="crs-list">${rows||'<p class="note">🔒 Admin មិនទាន់បើកសៀវភៅណាមួយឱ្យអ្នកទេ — សូមទាក់ទង Admin</p>'}</div>`);
 }
 function setClassBook(cid, bid){ const M=readCB(); if(bid) M[cid]=bid; else delete M[cid]; try{ localStorage.setItem(CB, JSON.stringify(M)); }catch(e){} }
 function useClass(id, bid){ const C=readC(); C.cur=id; localStorage.setItem(CK, JSON.stringify(C)); setClassBook(id, bid||null); sessionStorage.removeItem(PV); sessionStorage.setItem('bs-after-switch', JSON.stringify({name:'home'})); location.reload(); }
@@ -124,6 +139,6 @@ function pill(){
 function brand(){ if(!CO.sg) return; const sm=document.querySelector('.kh-brand small'); if(sm) sm.textContent=CO.short+' • '+CO.kh+' • រៀន • បង្រៀន'; document.title='កម្មវិធីគ្រប់គ្រងថ្នាក់រៀន — '+CO.short; }
 window.addEventListener('load',()=>{ brand(); pill(); const a=sessionStorage.getItem('bs-after-switch'); if(!a) return; sessionStorage.removeItem('bs-after-switch');
   try{ const v=JSON.parse(a); if(typeof go==='function' && v.name==='class') setTimeout(()=>go('class',null,v.tab||'students'),50); }catch(e){} });
-window.Course = { id:ID, sg:!!pack, extra:CO.extra, check, stuCheck, menu, stuMenu, stuUse, preview:id=>preview(id||wantedNoPv()), useClass, setClassBook, pill, nameOf, booksOf, openOf };
+window.Course = { id:ID, sg:!!pack, extra:CO.extra, check, stuCheck, menu, stuMenu, stuUse, preview:id=>preview(id||wantedNoPv()), useClass, setClassBook, pill, nameOf, booksOf, openOf, isOpen, allowed, lockedPage, locked:!!CO.locked };
 document.addEventListener('DOMContentLoaded', pill); setTimeout(pill, 0);
 })();

@@ -27,7 +27,7 @@ try { Object.assign(C, JSON.parse(localStorage.getItem(CK)||'{}')); } catch(e){}
 function saveC(){ try{ localStorage.setItem(CK, JSON.stringify(C)); if(window.Course) setTimeout(Course.check,0); return true; }catch(e){ toast('⚠️ ទំហំទិន្នន័យពេញ — សូម Backup ហើយកាត់បន្ថយរូបថត'); return false; } }
 function vis(){ return window.Auth&&Auth.user() ? C.classes.filter(c=>Auth.canSeeClass(c)) : C.classes; }
 function cls(){ const V=vis(); let c=V.find(x=>x.id===C.cur); if(!c && V.length){ c=V[0]; C.cur=c.id; } return c; }
-function newClass(name){ const c={id:uid(), name:name||'ថ្នាក់ Beginner A', book:'hw5-beg', cols:JSON.parse(JSON.stringify(DEFAULT_COLS)), students:[], scores:{}, groups:null}; if(window.Auth&&Auth.role()==='teacher') c.owner=Auth.user().id; C.classes.push(c); C.cur=c.id; saveC(); return c; }
+function newClass(name){ const c={id:uid(), name:name||'ថ្នាក់ Beginner A', book:'hw5-beg', lock:true, bookOpen:[], cols:JSON.parse(JSON.stringify(DEFAULT_COLS)), students:[], scores:{}, groups:null}; if(window.Auth&&Auth.role()==='teacher') c.owner=Auth.user().id; C.classes.push(c); C.cur=c.id; saveC(); return c; }
 
 /* ✏️ students edit their own profile (kept in their progress key) → staff devices copy newer ones into the roster */
 function applyProfiles(){ if(!window.Auth||!Auth.user()||Auth.role()==='student') return 0; let n=0;
@@ -831,7 +831,7 @@ function newClassForm(){ const T=(window.Auth&&Auth.data().users||[]).filter(u=>
     <div class="me-f"><span>👩‍🏫 គ្រូទទួលបន្ទុក</span>${T.length?`<div class="nc-t">${T.map(u=>`<label><input type="checkbox" value="${u.id}"> ${esc(u.name)} <small>@${esc(u.username||'')}</small></label>`).join('')}</div>`:'<p class="note">មិនទាន់មានគណនីគ្រូ — បង្កើតនៅ 🛡️ Admin › អ្នកប្រើ</p>'}</div>
     <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" onclick="Class._ncGo()">✅ បង្កើត</button></div>`); }
 function ncGo(){ const n=(document.getElementById('ncN').value||'').trim()||'ថ្នាក់ថ្មី', b=document.getElementById('ncB').value, tids=[...document.querySelectorAll('.nc-t input:checked')].map(x=>x.value);
-  const c=newClass(n); c.book=b; saveC(); if(tids.length&&window.Auth&&Auth.assignClass) Auth.assignClass(c.id, tids); closeModal(); tab='students'; render(); toast('✅ បានបង្កើតថ្នាក់ «'+n+'»'+(tids.length?' និងចាត់គ្រូ '+tids.length+' នាក់':'')); }
+  const c=newClass(n); c.book=b; saveC(); if(tids.length&&window.Auth&&Auth.assignClass) Auth.assignClass(c.id, tids); closeModal(); tab='students'; render(); toast('✅ បានបង្កើតថ្នាក់ «'+n+'»'+(tids.length?' និងចាត់គ្រូ '+tids.length+' នាក់':'')+' — សិស្សរៀនបាន លុះត្រាតែគ្រូ 🔓 បើកសៀវភៅ (📚)'); }
 const isAdm = () => !window.Auth || !Auth.user() || Auth.role()==='admin';
 function addClass(name){ if(!isAdm()) return toast('⛔ មានតែ Admin ទេដែលអាចបង្កើតថ្នាក់ — សូមទាក់ទង Admin'); if(name===undefined) return newClassForm(); if(name===null) return; newClass(name.trim()||'ថ្នាក់ថ្មី'); tab='students'; render(); }
 function renameClass(){ const c=cls(); const n=prompt('ប្តូរឈ្មោះថ្នាក់ (ទុកទទេ ដើម្បីលុបថ្នាក់)', c.name); if(n===null) return; if(!n.trim()){ if(!isAdm()) return toast('⛔ មានតែ Admin ទេដែលអាចលុបថ្នាក់'); if(confirm('លុបថ្នាក់ «'+c.name+'» ទាំងសិស្ស និងពិន្ទុទាំងអស់?')){ C.classes=C.classes.filter(x=>x!==c); C.cur=C.classes[0]?C.classes[0].id:null; saveC(); render(); } return; } c.name=n.trim(); saveC(); render(); }
@@ -882,29 +882,26 @@ function restore(f){ if(!f||(window.Auth&&Auth.role()!=='admin')) return; f.text
 function studentsForPicker(){ const c=cls(); return c?c.students:[]; }
 
 /* ---------- 📚 សៀវភៅច្រើនក្នុងថ្នាក់មួយ ----------
-   Admin៖ កំណត់សៀវភៅរបស់ថ្នាក់ (c.books) និងសៀវភៅគោល (c.book)
-   គ្រូ៖ 🔓 បើក / 🔒 បិទ សៀវភៅបន្ថែមឱ្យសិស្ស (c.bookOpen) — សៀវភៅគោល សិស្សរៀនបានជានិច្ច */
+   Admin៖ បើកសៀវភៅឱ្យគ្រូនៃថ្នាក់ (c.books) និងសៀវភៅគោល (c.book) — សៀវភៅផ្សេងទៀត មានតែ Admin មើលឃើញ
+   គ្រូ៖ 🔓 បើក / 🔒 បិទ សៀវភៅឱ្យសិស្ស (c.bookOpen) — ថ្នាក់ចាស់ (គ្មាន c.lock) សៀវភៅគោលនៅបើកដូចមុន */
 const bOf = c => window.Course&&Course.booksOf ? Course.booksOf(c) : [c.book||'hw5-beg'];
 const oOf = c => window.Course&&Course.openOf ? Course.openOf(c) : [c.book||'hw5-beg'];
 const bName = id => { const b=COURSES.find(x=>x.id===id); return b?b.icon+' '+esc(b.name):esc(id); };
 function booksBtn(c){ const B=bOf(c), O=oOf(c);
   return `<button class="btn ghost sm" onclick="Class.books()" title="សៀវភៅរបស់ថ្នាក់">📚 ${B.length>1?`${B.length} សៀវភៅ • 🔓${O.length}`:bName(B[0])}</button>`; }
 function books(){ const c=cls(); if(!c) return; const adm=isAdm(), B=bOf(c), O=oOf(c);
-  const adminPart = adm ? `<h4 class="km">🛡️ Admin — កំណត់សៀវភៅរបស់ថ្នាក់ «${esc(c.name)}»</h4>
-    <p class="note">☑ = ថ្នាក់នេះរៀនសៀវភៅនេះ • ◉ = សៀវភៅគោល (សិស្សរៀនបានជានិច្ច)។ សៀវភៅបន្ថែម គ្រូត្រូវ 🔓 បើក ទើបសិស្សរៀន និងមើលបាន។</p>
+  const adminPart = adm ? `<h4 class="km">🛡️ Admin — បើកសៀវភៅឱ្យគ្រូនៃថ្នាក់ «${esc(c.name)}»</h4>
+    <p class="note">☑ = គ្រូនៃថ្នាក់នេះមើល និងបង្រៀនសៀវភៅនេះបាន (សៀវភៅមិន ☑ មានតែ Admin ទេដែលមើលឃើញ) • ◉ = សៀវភៅគោល។ សិស្សរៀនបាន លុះត្រាតែគ្រូ 🔓 បើក។</p>
     <div class="crs-list">${COURSES.map(b=>{ const inC=B.includes(b.id), prim=B[0]===b.id;
-      return `<div class="crs-row ${inC?'on':''}"><div class="crs-ic">${b.icon}</div><div class="crs-t"><b>${esc(b.name)}</b><small>${prim?'📌 សៀវភៅគោល':inC?(O.includes(b.id)?'🔓 សិស្សកំពុងរៀនបាន':'🔒 គ្រូមិនទាន់បើក'):'មិនមែនសៀវភៅរបស់ថ្នាក់'}</small></div>
+      return `<div class="crs-row ${inC?'on':''}"><div class="crs-ic">${b.icon}</div><div class="crs-t"><b>${esc(b.name)}</b><small>${inC?(prim?'📌 គោល • ':'👩‍🏫 គ្រូមើលបាន • ')+(O.includes(b.id)?'🔓 សិស្សរៀនបាន':'🔒 គ្រូមិនទាន់បើកឱ្យសិស្ស'):'🛡️ មានតែ Admin មើលឃើញ'}</small></div>
         <div class="crs-b"><label class="btn sm ghost"><input type="checkbox" ${inC?'checked':''} ${prim?'disabled':''} onchange="Class._bkIn('${b.id}',this.checked)"> ក្នុងថ្នាក់</label>
         <label class="btn sm ghost"><input type="radio" name="bkPrim" ${prim?'checked':''} onchange="Class._bkPrim('${b.id}')"> គោល</label></div></div>`; }).join('')}</div>` : '';
-  const extra = B.slice(1);
-  const teachPart = `<h4 class="km" style="margin-top:14px">👩‍🏫 គ្រូ — បើកសៀវភៅឱ្យសិស្សរៀន និងមើល</h4>
-    ${!adm?`<p class="note">មានតែ <b>Admin</b> ទេដែលអាចបន្ថែម ឬដកសៀវភៅពីថ្នាក់។ គ្រូអាចបើក/បិទសៀវភៅបន្ថែមឱ្យសិស្ស។</p>`:''}
-    <div class="crs-list"><div class="crs-row on"><div class="crs-ic">📌</div><div class="crs-t"><b>${bName(B[0])}</b><small>សៀវភៅគោល — សិស្សរៀនបានជានិច្ច</small></div></div>
-    ${extra.length?extra.map(id=>{ const on=O.includes(id);
-      return `<div class="crs-row ${on?'on':''}"><div class="crs-ic">${on?'🔓':'🔒'}</div><div class="crs-t"><b>${bName(id)}</b><small>${on?'សិស្សរៀន និងមើលបាន':'សិស្សមើលមិនឃើញ'}</small></div>
+  const teachPart = `<h4 class="km" style="margin-top:14px">👩‍🏫 គ្រូ — បើកសៀវភៅឱ្យសិស្សរៀន</h4>
+    <p class="note">សិស្សរៀន និងមើលសៀវភៅបាន លុះត្រាតែគ្រូ 🔓 បើក។${!adm?' បើចង់បានសៀវភៅផ្សេងទៀត សូមស្នើ <b>Admin</b>។':''}</p>
+    <div class="crs-list">${B.map((id,i)=>{ const on=O.includes(id);
+      return `<div class="crs-row ${on?'on':''}"><div class="crs-ic">${on?'🔓':'🔒'}</div><div class="crs-t"><b>${bName(id)}</b><small>${i===0?'📌 សៀវភៅគោល • ':''}${on?'សិស្សរៀន និងមើលបាន':'សិស្សមើលមិនឃើញ'}</small></div>
         <div class="crs-b"><button class="btn sm ${on?'teal':'ghost'}" onclick="Class._bkOpen('${id}')">${on?'🔓 កំពុងបើក — ចុចដើម្បីបិទ':'🔒 បិទ — ចុចដើម្បីបើក'}</button>
-        <button class="btn sm ghost" onclick="Course.useClass('${c.id}','${id}')" title="គ្រូបង្រៀនតាមសៀវភៅនេះ">▶ បង្រៀន</button></div></div>`; }).join('')
-      :`<p class="note">ថ្នាក់នេះមានសៀវភៅតែមួយ${adm?' — ☑ សៀវភៅខាងលើ ដើម្បីបន្ថែម':' — សូមទាក់ទង Admin ដើម្បីបន្ថែមសៀវភៅ'}។</p>`}</div>`;
+        <button class="btn sm ghost" onclick="Course.useClass('${c.id}','${id}')" title="គ្រូបង្រៀនតាមសៀវភៅនេះ">▶ បង្រៀន</button></div></div>`; }).join('')}</div>`;
   modal(`<h3>📚 សៀវភៅរបស់ថ្នាក់</h3>${adminPart}${teachPart}<div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn teal" onclick="closeModal()">✓ រួចរាល់</button></div>`);
   $('#modal').classList.add('wide');
 }
@@ -913,9 +910,12 @@ function bkIn(id, on){ if(!isAdm()) return toast('⛔ មានតែ Admin ទ�
   const B=bOf(c); if(id===B[0]) return; c.books = on ? [...B, id].filter((b,i,a)=>a.indexOf(b)===i) : B.filter(b=>b!==id);
   if(!on) c.bookOpen=(c.bookOpen||[]).filter(b=>b!==id); bkSave(); toast(on?'➕ បានបន្ថែមសៀវភៅ — គ្រូត្រូវ 🔓 បើក ទើបសិស្សរៀនបាន':'➖ បានដកសៀវភៅចេញពីថ្នាក់'); }
 function bkPrim(id){ if(!isAdm()) return toast('⛔ មានតែ Admin ទេដែលអាចកំណត់សៀវភៅរបស់ថ្នាក់'); const c=cls(); if(!c) return;
-  const B=bOf(c); c.book=id; c.books=[id, ...B.filter(b=>b!==id)]; c.bookOpen=(c.bookOpen||[]).filter(b=>b!==id); bkSave(); toast('📌 បានប្តូរសៀវភៅគោល'); }
-function bkOpen(id){ const c=cls(); if(!c || !bOf(c).slice(1).includes(id)) return; const O=c.bookOpen=c.bookOpen||[], i=O.indexOf(id);
-  i>=0?O.splice(i,1):O.push(id); bkSave(); toast(i>=0?'🔒 បានបិទសៀវភៅ — សិស្សមើលមិនឃើញ':'🔓 បានបើកសៀវភៅ — សិស្សអាចរៀន និងមើលបានហើយ'); }
+  const B=bOf(c), was=oOf(c); c.book=id; c.books=[id, ...B.filter(b=>b!==id)]; c.lock=true; c.bookOpen=was.slice();   // រក្សាស្ថានភាពបើក/បិទដដែល — សៀវភៅគោលថ្មី សិស្សរៀនបាន លុះត្រាតែគ្រូបើក
+  bkSave(); toast('📌 បានប្តូរសៀវភៅគោល'+(was.includes(id)?'':' — គ្រូត្រូវ 🔓 បើក ទើបសិស្សរៀនបាន')); }
+function bkOpen(id){ const c=cls(); if(!c || !bOf(c).includes(id)) return; const on=oOf(c).includes(id);
+  if(id===bOf(c)[0] && !c.lock){ c.lock=true; c.bookOpen=oOf(c).filter(b=>b!==id); }   // ថ្នាក់ចាស់៖ ប្តូរទៅរបៀបថ្មីដោយរក្សាអ្វីដែលកំពុងបើក
+  const O=c.bookOpen=(c.bookOpen||[]).filter(b=>b!==id); if(!on) O.push(id);
+  bkSave(); toast(on?'🔒 បានបិទសៀវភៅ — សិស្សមើលមិនឃើញ':'🔓 បានបើកសៀវភៅ — សិស្សអាចរៀន និងមើលបានហើយ'); }
 function setBook(id){ if(!isAdm()) return toast('⛔ មានតែ Admin ទេដែលអាចកំណត់សៀវភៅរបស់ថ្នាក់'); bkPrim(id); }
 function share(k){ const c=cls(); if(!c) return; c.share=c.share||{}; c.share[k]=!c.share[k]; saveC(); toast(c.share[k]?'👁 សិស្សអាចមើលបានហើយ':'🔒 បានបិទមិនឱ្យសិស្សមើល'); }
 function shareBtn(c,k){ const on=c.share&&c.share[k]; return `<button class="btn sm ${on?'teal':'ghost'}" onclick="Class._share('${k}');Class.render('${k==='res'?'results':'year'}')" title="សិស្សមើលឃើញក្នុង 🏆 ចំណាត់ថ្នាក់">${on?'👁 សិស្សកំពុងមើលបាន':'🙈 សិស្សមើលមិនឃើញ'}</button>`; }
