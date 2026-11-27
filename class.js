@@ -24,7 +24,7 @@ const gname = g => g==='F'?'ស្រី':g==='M'?'ប្រុស':'—';
 
 let C = { classes:[], cur:null, month:monthNow() };
 try { Object.assign(C, JSON.parse(localStorage.getItem(CK)||'{}')); } catch(e){}
-function saveC(){ try{ localStorage.setItem(CK, JSON.stringify(C)); return true; }catch(e){ toast('⚠️ ទំហំទិន្នន័យពេញ — សូម Backup ហើយកាត់បន្ថយរូបថត'); return false; } }
+function saveC(){ try{ localStorage.setItem(CK, JSON.stringify(C)); if(window.Course) setTimeout(Course.check,0); return true; }catch(e){ toast('⚠️ ទំហំទិន្នន័យពេញ — សូម Backup ហើយកាត់បន្ថយរូបថត'); return false; } }
 function vis(){ return window.Auth&&Auth.user() ? C.classes.filter(c=>Auth.canSeeClass(c)) : C.classes; }
 function cls(){ const V=vis(); let c=V.find(x=>x.id===C.cur); if(!c && V.length){ c=V[0]; C.cur=c.id; } return c; }
 function newClass(name){ const c={id:uid(), name:name||'ថ្នាក់ Beginner A', book:'hw5-beg', cols:JSON.parse(JSON.stringify(DEFAULT_COLS)), students:[], scores:{}, groups:null}; if(window.Auth&&Auth.role()==='teacher') c.owner=Auth.user().id; C.classes.push(c); C.cur=c.id; saveC(); return c; }
@@ -89,7 +89,7 @@ function render(t){ applyProfiles();
     <div class="act" style="width:auto;margin-left:auto;align-items:center">
       ${vis().length?`<select class="cl-sel" onchange="Class.pick(this.value)">${vis().map(x=>`<option value="${x.id}" ${x.id===C.cur?'selected':''}>${esc(x.name)}</option>`).join('')}</select>`:''}
       ${isAdm()?`<button class="btn ghost sm" onclick="Class.addClass()">＋ ថ្នាក់ថ្មី</button>`:''}
-      ${c?`<button class="btn ghost sm" onclick="Class.renameClass()">✎</button><select class="cl-sel" title="សៀវភៅរបស់ថ្នាក់" onchange="Class.setBook(this.value)">${COURSES.map(b=>`<option value="${b.id}" ${courseOf(c).id===b.id?'selected':''}>${b.icon} ${esc(b.name)}</option>`).join('')}</select>`:''}
+      ${c?`<button class="btn ghost sm" onclick="Class.renameClass()">✎</button>${booksBtn(c)}`:''}
       <button class="btn ghost sm" onclick="Class.backup()">⬇ Backup</button>
       ${!window.Auth||Auth.role()==='admin'?`<label class="btn ghost sm">⬆ Restore<input type="file" accept=".json" hidden onchange="Class.restore(this.files[0])"></label>`:''}
     </div>
@@ -109,7 +109,7 @@ function render(t){ applyProfiles();
 function UL(c){ c.unlock=c.unlock||{all:[],s:{}}; c.unlock.all=c.unlock.all||[]; c.unlock.s=c.unlock.s||{}; return c.unlock; }
 function passedOf(c,s){ try{ const u=window.Auth&&Auth.data().users.find(x=>x.role==='student'&&x.classId===c.id&&x.studentId===s.id); const P=u&&JSON.parse(localStorage.getItem('beginner-studio-v1:'+u.id)||'null'); return P?(n=>(P.level||{})[n]>=80):(()=>false); }catch(e){ return ()=>false; } }
 function tUnlock(c){
-  const L=UL(c), N=[...Array(14)].map((_,i)=>i+1);
+  const L=UL(c), N=[...Array(NU())].map((_,i)=>i+1);
   const cell=(sid,n,pass)=>{ const all=L.all.includes(n), on=all||(sid!=='*'&&(L.s[sid]||[]).includes(n)); const lock=n===1;
     return `<td><button class="ul-c ${pass?'pass':on?'on':''} ${lock?'first':''}" ${lock||(sid!=='*'&&all)?'disabled':''} title="Unit ${n}" onclick="Class.unl('${sid}',${n})">${pass?'✅':lock||on?'🔓':'🔒'}</button></td>`; };
   const upto=sid=>`<select class="ul-to" onchange="Class.unlTo('${sid}',+this.value);this.value=''"><option value="">បើកដល់…</option>${N.slice(1).map(n=>`<option value="${n}">Unit ${n}</option>`).join('')}<option value="0">🔒 បិទវិញទាំងអស់</option></select>`;
@@ -136,8 +136,8 @@ function gate(k,v){ const c=cls(); c.gate=c.gate||{on:false,d:{}}; c.gate.d=c.ga
   else { const [n,d]=v; if(d) c.gate.d[n]=d; else delete c.gate.d[n]; }
   saveC(); tUnlock(c); }
 function gateAuto(){ const c=cls(), s=document.getElementById('gtS').value, e=+document.getElementById('gtE').value||14; if(!s) return;
-  if(!confirm(`បំពេញថ្ងៃបើក Unit 2–14 ចាប់ពី ${s} រៀងរាល់ ${e} ថ្ងៃ? (ជំនួសថ្ងៃចាស់)`)) return;
-  const b=new Date(s+'T12:00:00'); c.gate.d={}; for(let n=2;n<=14;n++){ const d=new Date(b.getTime()+(n-2)*e*864e5); c.gate.d[n]=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  if(!confirm(`បំពេញថ្ងៃបើក Unit 2–${NU()} ចាប់ពី ${s} រៀងរាល់ ${e} ថ្ងៃ? (ជំនួសថ្ងៃចាស់)`)) return;
+  const b=new Date(s+'T12:00:00'); c.gate.d={}; for(let n=2;n<=NU();n++){ const d=new Date(b.getTime()+(n-2)*e*864e5); c.gate.d[n]=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   saveC(); tUnlock(c); toast('✅ បានបំពេញកាលវិភាគ'); }
 function unl(sid,n){ const c=cls(), L=UL(c), a=sid==='*'?L.all:(L.s[sid]=L.s[sid]||[]); const i=a.indexOf(n); i>=0?a.splice(i,1):a.push(n); saveC(); tUnlock(c); toast(i>=0?`🔒 បិទ Unit ${n} វិញ`:`🔓 បានបើក Unit ${n}${sid==='*'?' ឱ្យថ្នាក់ទាំងមូល':''}`); }
 function unlTo(sid,n){ if(isNaN(n)) return; const c=cls(), L=UL(c), v=n?[...Array(n-1)].map((_,i)=>i+2):[]; if(sid==='*') L.all=v; else L.s[sid]=v; saveC(); tUnlock(c); toast(n?`🔓 បានបើក Unit 1–${n}`:'🔒 បានបិទវិញ'); }
@@ -881,10 +881,45 @@ function restore(f){ if(!f||(window.Auth&&Auth.role()!=='admin')) return; f.text
 /* ---------- picker integration ---------- */
 function studentsForPicker(){ const c=cls(); return c?c.students:[]; }
 
-function setBook(id){ const c=cls(); if(!c) return; c.book=id; saveC(); render(); }
+/* ---------- 📚 សៀវភៅច្រើនក្នុងថ្នាក់មួយ ----------
+   Admin៖ កំណត់សៀវភៅរបស់ថ្នាក់ (c.books) និងសៀវភៅគោល (c.book)
+   គ្រូ៖ 🔓 បើក / 🔒 បិទ សៀវភៅបន្ថែមឱ្យសិស្ស (c.bookOpen) — សៀវភៅគោល សិស្សរៀនបានជានិច្ច */
+const bOf = c => window.Course&&Course.booksOf ? Course.booksOf(c) : [c.book||'hw5-beg'];
+const oOf = c => window.Course&&Course.openOf ? Course.openOf(c) : [c.book||'hw5-beg'];
+const bName = id => { const b=COURSES.find(x=>x.id===id); return b?b.icon+' '+esc(b.name):esc(id); };
+function booksBtn(c){ const B=bOf(c), O=oOf(c);
+  return `<button class="btn ghost sm" onclick="Class.books()" title="សៀវភៅរបស់ថ្នាក់">📚 ${B.length>1?`${B.length} សៀវភៅ • 🔓${O.length}`:bName(B[0])}</button>`; }
+function books(){ const c=cls(); if(!c) return; const adm=isAdm(), B=bOf(c), O=oOf(c);
+  const adminPart = adm ? `<h4 class="km">🛡️ Admin — កំណត់សៀវភៅរបស់ថ្នាក់ «${esc(c.name)}»</h4>
+    <p class="note">☑ = ថ្នាក់នេះរៀនសៀវភៅនេះ • ◉ = សៀវភៅគោល (សិស្សរៀនបានជានិច្ច)។ សៀវភៅបន្ថែម គ្រូត្រូវ 🔓 បើក ទើបសិស្សរៀន និងមើលបាន។</p>
+    <div class="crs-list">${COURSES.map(b=>{ const inC=B.includes(b.id), prim=B[0]===b.id;
+      return `<div class="crs-row ${inC?'on':''}"><div class="crs-ic">${b.icon}</div><div class="crs-t"><b>${esc(b.name)}</b><small>${prim?'📌 សៀវភៅគោល':inC?(O.includes(b.id)?'🔓 សិស្សកំពុងរៀនបាន':'🔒 គ្រូមិនទាន់បើក'):'មិនមែនសៀវភៅរបស់ថ្នាក់'}</small></div>
+        <div class="crs-b"><label class="btn sm ghost"><input type="checkbox" ${inC?'checked':''} ${prim?'disabled':''} onchange="Class._bkIn('${b.id}',this.checked)"> ក្នុងថ្នាក់</label>
+        <label class="btn sm ghost"><input type="radio" name="bkPrim" ${prim?'checked':''} onchange="Class._bkPrim('${b.id}')"> គោល</label></div></div>`; }).join('')}</div>` : '';
+  const extra = B.slice(1);
+  const teachPart = `<h4 class="km" style="margin-top:14px">👩‍🏫 គ្រូ — បើកសៀវភៅឱ្យសិស្សរៀន និងមើល</h4>
+    ${!adm?`<p class="note">មានតែ <b>Admin</b> ទេដែលអាចបន្ថែម ឬដកសៀវភៅពីថ្នាក់។ គ្រូអាចបើក/បិទសៀវភៅបន្ថែមឱ្យសិស្ស។</p>`:''}
+    <div class="crs-list"><div class="crs-row on"><div class="crs-ic">📌</div><div class="crs-t"><b>${bName(B[0])}</b><small>សៀវភៅគោល — សិស្សរៀនបានជានិច្ច</small></div></div>
+    ${extra.length?extra.map(id=>{ const on=O.includes(id);
+      return `<div class="crs-row ${on?'on':''}"><div class="crs-ic">${on?'🔓':'🔒'}</div><div class="crs-t"><b>${bName(id)}</b><small>${on?'សិស្សរៀន និងមើលបាន':'សិស្សមើលមិនឃើញ'}</small></div>
+        <div class="crs-b"><button class="btn sm ${on?'teal':'ghost'}" onclick="Class._bkOpen('${id}')">${on?'🔓 កំពុងបើក — ចុចដើម្បីបិទ':'🔒 បិទ — ចុចដើម្បីបើក'}</button>
+        <button class="btn sm ghost" onclick="Course.useClass('${c.id}','${id}')" title="គ្រូបង្រៀនតាមសៀវភៅនេះ">▶ បង្រៀន</button></div></div>`; }).join('')
+      :`<p class="note">ថ្នាក់នេះមានសៀវភៅតែមួយ${adm?' — ☑ សៀវភៅខាងលើ ដើម្បីបន្ថែម':' — សូមទាក់ទង Admin ដើម្បីបន្ថែមសៀវភៅ'}។</p>`}</div>`;
+  modal(`<h3>📚 សៀវភៅរបស់ថ្នាក់</h3>${adminPart}${teachPart}<div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn teal" onclick="closeModal()">✓ រួចរាល់</button></div>`);
+  $('#modal').classList.add('wide');
+}
+function bkSave(){ saveC(); render(); books(); }
+function bkIn(id, on){ if(!isAdm()) return toast('⛔ មានតែ Admin ទេដែលអាចកំណត់សៀវភៅរបស់ថ្នាក់'); const c=cls(); if(!c) return;
+  const B=bOf(c); if(id===B[0]) return; c.books = on ? [...B, id].filter((b,i,a)=>a.indexOf(b)===i) : B.filter(b=>b!==id);
+  if(!on) c.bookOpen=(c.bookOpen||[]).filter(b=>b!==id); bkSave(); toast(on?'➕ បានបន្ថែមសៀវភៅ — គ្រូត្រូវ 🔓 បើក ទើបសិស្សរៀនបាន':'➖ បានដកសៀវភៅចេញពីថ្នាក់'); }
+function bkPrim(id){ if(!isAdm()) return toast('⛔ មានតែ Admin ទេដែលអាចកំណត់សៀវភៅរបស់ថ្នាក់'); const c=cls(); if(!c) return;
+  const B=bOf(c); c.book=id; c.books=[id, ...B.filter(b=>b!==id)]; c.bookOpen=(c.bookOpen||[]).filter(b=>b!==id); bkSave(); toast('📌 បានប្តូរសៀវភៅគោល'); }
+function bkOpen(id){ const c=cls(); if(!c || !bOf(c).slice(1).includes(id)) return; const O=c.bookOpen=c.bookOpen||[], i=O.indexOf(id);
+  i>=0?O.splice(i,1):O.push(id); bkSave(); toast(i>=0?'🔒 បានបិទសៀវភៅ — សិស្សមើលមិនឃើញ':'🔓 បានបើកសៀវភៅ — សិស្សអាចរៀន និងមើលបានហើយ'); }
+function setBook(id){ if(!isAdm()) return toast('⛔ មានតែ Admin ទេដែលអាចកំណត់សៀវភៅរបស់ថ្នាក់'); bkPrim(id); }
 function share(k){ const c=cls(); if(!c) return; c.share=c.share||{}; c.share[k]=!c.share[k]; saveC(); toast(c.share[k]?'👁 សិស្សអាចមើលបានហើយ':'🔒 បានបិទមិនឱ្យសិស្សមើល'); }
 function shareBtn(c,k){ const on=c.share&&c.share[k]; return `<button class="btn sm ${on?'teal':'ghost'}" onclick="Class._share('${k}');Class.render('${k==='res'?'results':'year'}')" title="សិស្សមើលឃើញក្នុង 🏆 ចំណាត់ថ្នាក់">${on?'👁 សិស្សកំពុងមើលបាន':'🙈 សិស្សមើលមិនឃើញ'}</button>`; }
-window.Class = { _ncGo:ncGo, wallet, reward, _rwSet:v=>{ RW.sel=new Set(v==='all'?cls().students.map(s=>s.id):v); rwDraw(); }, _rwTog:id=>{ RW.sel.has(id)?RW.sel.delete(id):RW.sel.add(id); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwA:v=>{ RW.a=Math.max(0,Math.round(+v||0)); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwGo:rwGo, _rwUndo:rwUndo, _gn:gn, gEdit, gManual, gSel, gTo, gName, gEmo, gAdd, gDel, TABS, _setCur:id=>{ if(vis().some(x=>x.id===id)){ C.cur=id; saveC(); if(document.getElementById('clTab')) render(); } }, _save:saveC, att, attFine, attNote, attAll, attClear, attDay, attTell, attPrint, attMon:m=>{ AT.m=m; tAttend(cls()); }, fines, FINE_A, gate, gateAuto, copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
+window.Class = { _ncGo:ncGo, wallet, reward, _rwSet:v=>{ RW.sel=new Set(v==='all'?cls().students.map(s=>s.id):v); rwDraw(); }, _rwTog:id=>{ RW.sel.has(id)?RW.sel.delete(id):RW.sel.add(id); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwA:v=>{ RW.a=Math.max(0,Math.round(+v||0)); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwGo:rwGo, _rwUndo:rwUndo, _gn:gn, gEdit, gManual, gSel, gTo, gName, gEmo, gAdd, gDel, TABS, _setCur:id=>{ if(vis().some(x=>x.id===id)){ C.cur=id; saveC(); if(document.getElementById('clTab')) render(); } }, _save:saveC, att, attFine, attNote, attAll, attClear, attDay, attTell, attPrint, attMon:m=>{ AT.m=m; tAttend(cls()); }, fines, FINE_A, gate, gateAuto, copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, books, _bkIn:bkIn, _bkPrim:bkPrim, _bkOpen:bkOpen, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
   editStudent, pickPhoto, noPhoto:()=>{ editPhoto=null; $('#clPrev').innerHTML=avatar({name:$('#clN').value},140); }, cam, camStop, saveStudent, photo, delStudent, bulk, impMode, impFile, impPreview, impApply, infoTable, infoSave, template, age:ageOf, sortStudents,
   setMonth:m=>{ if(m){ C.month=m; saveC(); render(); } }, cols, colAdd, colSave, csv, printMonth, csvYear, printYear, certs, certSet, certGrade, certPrint, sigFile, sigDraw, sigScale, sigReset, certShow:i=>{ ctSel=i; certRefresh(); },
   gset:(k,v)=>{ G[k]=v; tGroups(cls()); }, gabs:id=>{ G.absent.has(id)?G.absent.delete(id):G.absent.add(id); tGroups(cls()); }, makeGroups, groupsToScore, groupsFull, printGroups,

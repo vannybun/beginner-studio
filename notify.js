@@ -59,7 +59,7 @@ function title(it){ const n=nameOf(it.from);
 /* ---------- 🔓 unit-opened alerts (computed locally from the teacher's schedule / unlocks) ---------- */
 function unitCheck(){ if(!isStu()||typeof window.unitOpen!=='function') return; const k='bs-ntf-units:'+me().id;
   let prev=null; try{ prev=JSON.parse(localStorage.getItem(k)||'null'); }catch(e){}
-  const now=[...Array(14)].map((_,i)=>i+1).filter(n=>unitOpen(n));
+  const now=[...Array(NU())].map((_,i)=>i+1).filter(n=>unitOpen(n));
   if(prev){ now.filter(n=>!prev.includes(n)).forEach(n=>{ const t=`🔓 Unit ${n} បើកហើយ!`, b='ចុចដើម្បីចាប់ផ្តើមរៀនមេរៀនថ្មី 🚀'; toast(t); osNotify(t,b,'unit-'+n,{go:'units'}); }); }
   try{ localStorage.setItem(k, JSON.stringify(now)); }catch(e){}
 }

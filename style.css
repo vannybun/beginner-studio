@@ -1872,3 +1872,96 @@ body.gm-open{overflow:hidden}
 .ce-demo .chip,.ce-ph .chip{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 11px;font:inherit;font-size:13px;cursor:pointer}
 .ce-demo .chip.on{background:#0f172a;color:#fff;border-color:#0f172a}
 .ce-ph{display:flex;flex-wrap:wrap;gap:4px}.ce-ph .chip{background:#eef2ff;border-color:#c7d2fe;color:#3730a3}
+
+/* ===== 📚 Sounds Great courses ===== */
+.crs-pill{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.18);color:inherit;border:1.5px solid rgba(255,255,255,.35);font:inherit;font-size:14px;cursor:pointer;margin-right:8px;white-space:nowrap}
+.crs-pill b{font-weight:700}.crs-pill em{font-style:normal;opacity:.7}.crs-pill i{font-style:normal}
+.crs-pill:hover{background:rgba(255,255,255,.3)}
+.lx-book{display:flex;align-items:center;gap:12px;width:100%;margin:10px 0 4px;padding:12px 14px;border-radius:16px;border:2px solid #fbbf24;background:linear-gradient(135deg,#fffbeb,#fef3c7);text-align:left;font:inherit;cursor:pointer}
+.lx-book>span{font-size:30px}.lx-book div{flex:1;min-width:0}.lx-book small{display:block;font:12px var(--kh);color:#92400e}.lx-book b{display:block;font-size:15px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lx-book em{font-style:normal;font:600 13px var(--kh);color:#fff;background:#f59e0b;border-radius:999px;padding:5px 11px;white-space:nowrap}
+.crs-list{display:grid;gap:10px;margin-top:12px}
+.crs-row{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:16px;background:#f6f8f8;border:2px solid transparent}
+.crs-row.on{border-color:var(--c1,#0f766e);background:#fff}
+.crs-ic{font-size:30px;text-align:center}
+.crs-t b{display:block}.crs-t small{color:var(--mute,#64748b)}
+.crs-b{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+img.sgpic{height:1.6em;width:auto;max-width:2.6em;object-fit:contain;vertical-align:middle;border-radius:8px}
+.vc .em img.sgpic{height:52px;max-width:100%}
+.fcard .em img.sgpic{height:2.4em;max-width:4em}
+.gm-em img.sgpic,.vc-em img.sgpic{height:2em}
+.les-w button .em img.sgpic{height:1.5em}
+.sgb{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:10px 0}
+.sgb-w{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 8px;border-radius:16px;background:#fff;border:2px solid #e8eef0;cursor:pointer;font:inherit;transition:transform .15s}
+.sgb-w:hover{transform:translateY(-3px);border-color:var(--c1,#0f766e)}
+.sgb-em{font-size:34px;line-height:1.1;min-height:1.1em}
+.sgb-em img.sgpic{height:56px;max-width:90px}
+.sgb-p{font-size:28px;font-weight:700;letter-spacing:.04em;color:#334155}
+.sgb-p b{color:var(--c1,#0f766e);text-decoration:underline;text-decoration-thickness:4px;text-underline-offset:6px}
+.sgb-w small{color:var(--mute,#64748b);font-size:12.5px}
+
+/* ===== 🎮 levelup.js — ផ្លូវ Level • ប្រកប • អានខ្លួនឯង • វេយ្យាករណ៍ ===== */
+.lv-road{background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:22px;padding:12px 12px 10px;margin:0 0 12px;color:#fff;box-shadow:0 12px 28px -14px #312e81}
+.lv-rh{display:flex;justify-content:space-between;align-items:center;font-family:var(--kh);margin:0 4px 8px}.lv-rh b{font-size:15px}
+.lv-rh span{background:#facc15;color:#422006;border-radius:999px;padding:2px 10px;font-weight:800;font-size:13px}
+.lv-track{display:flex;align-items:center;overflow-x:auto;padding:6px 2px 8px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.lv-link{flex:none;width:18px;height:5px;border-radius:5px;background:rgba(255,255,255,.18)}.lv-link.on{background:#facc15}
+.lv-node{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;width:64px;padding:0;background:none;border:0;color:#fff;cursor:pointer;font:inherit}
+.lv-node .lv-c{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:22px;background:rgba(255,255,255,.12);border:3px solid rgba(255,255,255,.25);transition:transform .2s}
+.lv-node b{font-size:11.5px;letter-spacing:.03em}.lv-node em{font-style:normal;font-size:11px;color:#facc15;line-height:1}.lv-node em s{text-decoration:none;color:rgba(255,255,255,.25)}
+.lv-node.open .lv-c{background:linear-gradient(135deg,var(--c1),var(--c2));border-color:#fff}
+.lv-node.ok .lv-c{background:linear-gradient(135deg,#22c55e,#16a34a);border-color:#bbf7d0}
+.lv-node.lock{opacity:.55;cursor:not-allowed}
+.lv-node.cur .lv-c{transform:scale(1.12);box-shadow:0 0 0 4px rgba(250,204,21,.55),0 0 22px #facc15;animation:lvPulse 1.6s infinite}
+.lv-node.boss .lv-c{background:linear-gradient(135deg,#f97316,#dc2626);border-color:#fed7aa}.lv-node.boss.lock .lv-c{background:rgba(255,255,255,.12)}
+.lv-node.boss.ok .lv-c{background:linear-gradient(135deg,#facc15,#f59e0b)}
+.lv-node.final .lv-c{background:rgba(255,255,255,.08);border-style:dashed}.lv-node.final.ok .lv-c{background:linear-gradient(135deg,#facc15,#eab308);border-style:solid}
+.lv-node:hover:not(.lock) .lv-c{transform:translateY(-3px) scale(1.06)}
+@keyframes lvPulse{50%{box-shadow:0 0 0 7px rgba(250,204,21,.25),0 0 30px #facc15}}
+
+.lv-box{border-radius:18px;padding:12px;margin:10px 0;border:2px solid #e2e8f0;background:#fff}
+.lv-box h4{margin:0 0 8px;font-family:var(--kh);font-size:15px}.lv-box h4 small{display:block;font-weight:400;font-size:12.5px;color:#64748b}
+.lv-blend{background:linear-gradient(180deg,#eff6ff,#fff);border-color:#bfdbfe}
+.lv-bw{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.lv-bw button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:14px;background:#fff;border:2px solid #dbeafe;cursor:pointer;font:inherit}
+.lv-bw button:hover{border-color:#3b82f6;transform:translateY(-2px)}.lv-bw span{font-size:28px;line-height:1}.lv-bw b{white-space:nowrap}.lv-bw .lv-ch{font-size:19px}
+.lv-ch{display:inline-block;min-width:.75em;padding:0 2px;margin:0 1px;border-radius:6px;font-weight:800;font-size:22px;color:#1d4ed8;background:#dbeafe;text-align:center}
+.lv-ch.v{color:#b91c1c;background:#fee2e2}.lv-ch.team{color:#9a3412;background:#fed7aa}
+.lv-word{margin-top:8px;font-size:26px;letter-spacing:.04em}.lv-word .lv-ch{font-size:28px;padding:2px 5px}
+.lv-sent{margin-top:8px;padding:10px 12px;border-radius:12px;background:#fefce8;border:2px dashed #fde047;font-size:19px;font-weight:700;color:#0f172a}
+.lv-bl{display:inline-block;min-width:2.2em;text-decoration:none;border-bottom:3px solid #f59e0b;color:#f59e0b;text-align:center;font-weight:800}
+.lv-em{font-size:30px;vertical-align:middle}
+.lex-o.pic{grid-template-columns:repeat(3,1fr)}.lex-o.pic button{font-size:40px;text-align:center;padding:12px 4px;line-height:1}
+.lex-spell .lex-tiles button,.lex-spell .lex-ans button{font-size:22px;min-width:46px;padding:8px 10px;font-weight:800;text-transform:lowercase}
+.lex-slot{display:inline-block;width:40px;height:40px;border-radius:10px;border:2px dashed #94a3b8;background:#f8fafc}
+.lex-hint2{margin-right:auto;font:13px var(--kh);color:#b45309;align-self:center}
+.lv-gram{background:linear-gradient(180deg,#fdf4ff,#fff);border-color:#f0abfc}
+.lv-tag{font:600 11px sans-serif;background:#a21caf;color:#fff;border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:middle}
+.lv-gt{display:block;font-size:18px;color:#86198f;margin-bottom:4px}.lv-gram p{margin:0 0 8px;line-height:1.6}
+.lv-rule{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}
+.lv-rule div{background:#fff;border:1.5px solid #f5d0fe;border-radius:12px;padding:8px 10px}.lv-rule b{display:block;color:#701a75;cursor:pointer}.lv-rule span{font-size:12.5px;color:#64748b}
+.lv-ex{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.lv-ex button{border-radius:999px;background:#fae8ff;border:0;padding:6px 12px;font:inherit;font-size:14px;cursor:pointer}
+.lv-self{background:linear-gradient(180deg,#fefce8,#fff);border-color:#fde68a}
+.lv-sr{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#fff;border:1.5px solid #fef08a;margin-bottom:6px}
+.lv-sr b{flex:1;font-size:17px}.lv-sr button{flex:none;border:0;border-radius:999px;padding:6px 12px;background:#facc15;color:#422006;font:600 13px var(--kh);cursor:pointer}
+.lv-sr.ok{border-color:#86efac;background:#f0fdf4}.lv-sr.ok button{background:#dcfce7;color:#166534}
+
+.lv-clear{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;background:rgba(15,23,42,.72);backdrop-filter:blur(4px);animation:auIn .25s;padding:16px}
+.lv-clear.out{opacity:0;transition:opacity .25s}
+.lv-card{position:relative;width:min(380px,100%);text-align:center;background:linear-gradient(180deg,#fff,#fef9c3);border-radius:28px;padding:22px 18px 18px;box-shadow:0 30px 60px -20px #000;animation:lvPop .5s cubic-bezier(.2,1.6,.4,1)}
+.lv-card small{font:13px var(--kh);color:#64748b}
+.lv-card h2{margin:4px 0 2px;font-size:28px;font-weight:900;letter-spacing:.02em;background:linear-gradient(135deg,#f59e0b,#dc2626);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lv-st{margin:0;color:#334155;font-weight:600}
+.lv-stars{display:flex;justify-content:center;gap:8px;margin:12px 0 6px}
+.lv-stars span{font-size:52px;line-height:1;color:#e2e8f0;transform:scale(0);animation:lvStar .45s cubic-bezier(.2,1.6,.4,1) forwards}
+.lv-stars span.on{color:#facc15;text-shadow:0 4px 0 #ca8a04,0 0 20px #fde047}
+.lv-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.lv-fx{position:absolute;left:50%;top:45%;pointer-events:none}
+.lv-fx i{position:absolute;font-style:normal;font-size:24px;animation:lvBurst 1s ease-out forwards;opacity:0}
+@keyframes lvPop{from{transform:scale(.5) translateY(30px);opacity:0}}
+@keyframes lvStar{to{transform:scale(1)}}
+@keyframes lvBurst{0%{transform:translate(0,0) scale(.4);opacity:1}100%{transform:translate(var(--x),var(--y)) scale(1.2);opacity:0}}
+.lv-combo{position:fixed;left:50%;top:22%;z-index:2100;transform:translateX(-50%);background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;font-weight:900;font-size:24px;padding:10px 22px;border-radius:999px;box-shadow:0 14px 30px -10px #dc2626;text-align:center;pointer-events:none;animation:lvCombo 1.5s ease forwards}
+.lv-combo small{display:block;font:600 13px var(--kh)}
+@keyframes lvCombo{0%{opacity:0;transform:translate(-50%,20px) scale(.6)}15%{opacity:1;transform:translate(-50%,0) scale(1.1)}25%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-30px)}}
+@media (max-width:480px){.lv-node{width:56px}.lv-node .lv-c{width:42px;height:42px;font-size:19px}.lv-link{width:10px}.lex-o.pic button{font-size:34px}}

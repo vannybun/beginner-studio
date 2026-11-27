@@ -55,12 +55,12 @@ function teacherTab(u){
   $('#tab').innerHTML=`<div class="panel"><h3 class="sec">📄 សន្លឹកលំហាត់ Unit ${u.n}</h3>
     <div class="row ws-opts">
       <label class="km">A. ផ្គូផ្គងពាក្យ<select id="wsA">${OPTS(As, Math.min(SEL.A,maxA))}</select></label>
-      <label class="km">B. វេយ្យាករណ៍<select id="wsB">${OPTS(Bs, Math.min(SEL.B,gp))}</select></label>
+      <label class="km">B. ${window.COURSE&&COURSE.sg?'សំឡេង Phonics':'វេយ្យាករណ៍'}<select id="wsB">${OPTS(Bs, Math.min(SEL.B,gp))}</select></label>
       <label class="km">C. សរសេរពាក្យ<select id="wsC">${OPTS(Cs, SEL.C)}</select></label>
       <label class="km">D. 🎤 និយាយ<select id="wsD">${OPTS([0,2,3,4,5,6,8,10], SEL.D)}</select></label>
       <button class="btn teal" onclick="WS.gen(${u.n})">🔄 បង្កើតថ្មី</button>
     </div>
-    <p class="note">មានពាក្យសរុប ${maxA} • សំណួរវេយ្យាករណ៍ ${gp} • រាល់ពេលចុច «បង្កើតថ្មី» បានសន្លឹកខុសគ្នា</p>
+    <p class="note">មានពាក្យសរុប ${maxA} • សំណួរ${window.COURSE&&COURSE.sg?'សំឡេង Phonics':'វេយ្យាករណ៍'} ${gp} • រាល់ពេលចុច «បង្កើតថ្មី» បានសន្លឹកខុសគ្នា</p>
     <div class="ws-acts">
       <div class="ws-act print"><b>🖨 បោះពុម្ព</b><label class="km"><input type="checkbox" id="wsKey" checked> ភ្ជាប់ទំព័រចម្លើយ</label><button class="btn sun" onclick="WS.print()">🖨 បោះពុម្ព / PDF</button></div>
       <div class="ws-act send"><b>📲 ផ្ញើឱ្យសិស្ស</b>

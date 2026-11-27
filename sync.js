@@ -7,8 +7,8 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.27l';
-const FILES=['tts.js','qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','rank.js','chat.js','notify.js','exam.js','worksheet.js','track.js','qrscan.js','auth.js','ctx.js','voice.js','lessonex.js','rich.js','games.js','sig.js','cert.js','app.js'];
+const VER='2026.11.27n';
+const FILES=['tts.js','qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','rank.js','chat.js','notify.js','exam.js','worksheet.js','track.js','qrscan.js','auth.js','ctx.js','voice.js','lessonex.js','sg-courses.js','course.js','levelup.js','rich.js','games.js','sig.js','cert.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -77,7 +77,7 @@ async function pull(skipKeys){
     const stale=k=>SY[k]!==idx[k].ts || _get.call(localStorage,k)==null;
     await fetchKeys(Object.keys(idx).filter(k=>!k.startsWith(PROG) && stale(k)));          // 1) shared data
     const me=sessionUser(), staff=me&&me.role!=='student';                                  // 2) progress: staff = all, student = own
-    const wantP=k=>staff || (me && k===PROG+me.id);
+    const wantP=k=>staff || (me && (k===PROG+me.id || k.startsWith(PROG+me.id+':')));   // + វឌ្ឍនភាពសៀវភៅបន្ថែម
     await fetchKeys(Object.keys(idx).filter(k=>k.startsWith(PROG) && wantP(k) && stale(k)));
     Object.keys(localStorage).filter(k=>k.startsWith(PROG) && !wantP(k) && !(skipKeys&&skipKeys.has(k))).forEach(k=>_rm.call(localStorage,k));
     saveSync(SY);

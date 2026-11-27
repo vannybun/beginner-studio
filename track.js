@@ -81,7 +81,7 @@ function tab(c){
         <button class="btn ghost sm" onclick="Track.csv()">📊 Excel</button>
       </div>
     </div>
-    <div class="cl-tablewrap"><table class="cl-table tk-table"><thead><tr><th></th><th class="l">សិស្ស</th><th>ស្ថានភាព</th><th>សកម្មចុងក្រោយ</th><th>ថ្ងៃរៀន<small>៧ ថ្ងៃ</small></th><th>ពេលរៀន<small>៧ ថ្ងៃ</small></th><th>ពាក្យចេះ</th><th>សំឡេង</th><th>លំហាត់<small>មធ្យម</small></th><th>ប្រឡង<small>មធ្យម</small></th><th>ពិន្ទុខែ</th><th class="l">វឌ្ឍនភាព Unit 1–14</th></tr></thead><tbody>
+    <div class="cl-tablewrap"><table class="cl-table tk-table"><thead><tr><th></th><th class="l">សិស្ស</th><th>ស្ថានភាព</th><th>សកម្មចុងក្រោយ</th><th>ថ្ងៃរៀន<small>៧ ថ្ងៃ</small></th><th>ពេលរៀន<small>៧ ថ្ងៃ</small></th><th>ពាក្យចេះ</th><th>សំឡេង</th><th>លំហាត់<small>មធ្យម</small></th><th>ប្រឡង<small>មធ្យម</small></th><th>ពិន្ទុខែ</th><th class="l">វឌ្ឍនភាព Unit 1–${NU()}</th></tr></thead><tbody>
     ${list.map(r=>`<tr class="tk-row" onclick="Track.detail('${r.s.id}')">
       <td>${Class.avatar(r.s,34)}</td><td class="l"><b>${esc(r.s.name)}</b>${r.s.latin?`<small class="tk-lat">${esc(r.s.latin)}</small>`:''}${!r.u&&window.Auth?'<small class="tk-lat">🔑 គ្មានគណនី</small>':''}</td>
       <td><span class="tk-st" style="--c:${ST[r.status][2]}">${ST[r.status][0]} ${ST[r.status][1]}</span></td>
@@ -104,7 +104,7 @@ function detail(sid){
       <div class="tk-card"><span>⏱ ពេលរៀនសរុប</span><b>${fmtMin(r.sAll)}</b><small>៣០ ថ្ងៃ៖ ${fmtMin(r.s30)} • ${r.d30} ថ្ងៃ</small></div>
       <div class="tk-card"><span>🔤 ពាក្យចេះ</span><b>${r.words}<small>/${TW}</small></b>${bar(r.words,TW)}</div>
       <div class="tk-card"><span>🎧 បទបានស្តាប់</span><b>${r.tracks}<small>/${TRACKS.length}</small></b>${bar(r.tracks,TRACKS.length)}</div>
-      <div class="tk-card"><span>✍️ Unit ឆ្លង (≥80%)</span><b>${r.passed}<small>/14</small></b>${bar(r.passed,14,'#16a34a')}</div>
+      <div class="tk-card"><span>✍️ Unit ឆ្លង (≥80%)</span><b>${r.passed}<small>/${NU()}</small></b>${bar(r.passed,NU(),'#16a34a')}</div>
       <div class="tk-card"><span>📝 ប្រឡង</span><b>${r.exAvg!=null?r.exAvg+'%':'—'}</b><small>${r.exams} ដង</small></div>
       <div class="tk-card"><span>🔓 ចូលប្រព័ន្ធ</span><b>${r.logins}</b><small>ដង</small></div>
     </div>

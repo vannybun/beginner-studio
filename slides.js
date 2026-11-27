@@ -64,7 +64,7 @@ function buildDeck(n){
           <h2 class="s-h2 rise">${esc(g.t)}</h2>
           ${g.form?`<table class="s-form st" data-s="1">${g.form.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`:''}
           <p class="s-rule rise d2">${g.km}</p>
-        </div>`, note: noteBlock('📐 វេយ្យាករណ៍', `<p>${g.km}</p>`) + (g.form?how('ចុចបន្ទាប់ ដើម្បីបង្ហាញតារាងទម្រង់'):'')});
+        </div>`, note: noteBlock(window.COURSE&&COURSE.sg?'🔊 សំឡេង Phonics':'📐 វេយ្យាករណ៍', `<p>${g.km}</p>`) + (g.form?how('ចុចបន្ទាប់ ដើម្បីបង្ហាញតារាងទម្រង់'):'')});
       S.push({...base, steps:g.ex.length, html:`
         <div class="s-tag rise">Examples • ${esc(g.t)}</div>
         <div class="s-exs">${g.ex.map((e,i)=>`<div class="s-ex st" data-s="${i+1}">${spk(e)}<span>${esc(e)}</span></div>`).join('')}</div>`,
@@ -116,7 +116,7 @@ function buildDeck(n){
       S.push({...base, steps:L.grammar.length, html:`
         <div class="s-tag rise">Grammar review</div>
         <div class="s-rev">${L.grammar.map((g,i)=>`<div class="s-revi st" data-s="${i+1}"><b>${esc(g.t)}</b><span>${esc(g.ex[0])}</span></div>`).join('')}</div>`,
-        note: how('ចុចបន្ទាប់ ដើម្បីរំលឹកវេយ្យាករណ៍ម្តងមួយៗ', 'ឱ្យសិស្សផ្តល់ឧទាហរណ៍ថ្មី')});
+        note: how(window.COURSE&&COURSE.sg?'ចុចបន្ទាប់ ដើម្បីរំលឹកសំឡេង Phonicsម្តងមួយៗ':'ចុចបន្ទាប់ ដើម្បីរំលឹកវេយ្យាករណ៍ម្តងមួយៗ', 'ឱ្យសិស្សផ្តល់ឧទាហរណ៍ថ្មី')});
       u.quiz.forEach((q,qi) => S.push({...base, kind:'quiz', steps:1, html:`
         <div class="s-tag rise">Unit quiz ${qi+1}/${u.quiz.length}</div>
         <div class="s-quiz"><div class="q rise">${esc(q.q).replace('___','<u>&nbsp;?&nbsp;</u>')}</div>
@@ -295,5 +295,5 @@ function init(){
   $('#dStage').addEventListener('touchend',e=>{ if(tx==null) return; const dx=e.changedTouches[0].clientX-tx; if(Math.abs(dx)>50){ dx<0?next():prev(); } tx=null; });
 }
 function help(){ $('#dHelp').classList.toggle('show'); }
-window.Deck = { notes, init, open, close, next, prev, goto, curtain, laser, bookToggle, gridToggle, playSlide, key, help, buildDeck, D };
+window.Deck = { notes, init, open:function(){ const a=arguments; if(window.COURSE&&COURSE.sg) return COURSE.loadPages().then(()=>open.apply(null,a)); return open.apply(null,a); }, close, next, prev, goto, curtain, laser, bookToggle, gridToggle, playSlide, key, help, buildDeck, D };
 })();

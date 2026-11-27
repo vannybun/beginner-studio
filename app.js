@@ -1,7 +1,7 @@
-/* ===================== Beginner English Studio — app.js ===================== */
+/* ===================== Sounds Great Studio — app.js ===================== */
 /* ---------- paths ---------- */
-const AUDIO_DIR = "../2. Beginner Audio/";
-const BOOKS = {
+const AUDIO_DIR = (window.COURSE&&COURSE.audio) || "../2. Beginner Audio/";
+const BOOKS = (window.COURSE&&COURSE.pdf) || {
   1: "../1. Book/1. Headway.Fifth edition.Beginner.Student's Book - secure.pdf",
   2: "../1. Book/Headway_5ed_Beginner_Teacher_Guide_www.frenglish.ru.pdf",
   3: "../1. Book/Headway_5ed_Beginner_Workbook_www.frenglish.ru.pdf"
@@ -12,17 +12,29 @@ function bookUrl(which, page){ return which===1 && page!=null ? Book.img(page) :
 function openPdf(which, page){ window.open(pdfUrl(which, page), '_blank'); }
 function openBook(which, page){ if(which===1 && window.Book){ if(window.Deck && Deck.D && document.getElementById('deck').classList.contains('show')) Deck.close(); Book.open(page); } else openPdf(which, page); }
 
+window.sgBlend=function(rows,say){ return `<div class="sgb">${rows.map(r=>`<button class="sgb-w" onclick="${say(r[3])}"><span class="sgb-em">${(typeof emojiFor==='function'&&emojiFor({emoji:{}},r[3]))||''}</span><span class="sgb-p">${esc(r[0])}<b>${esc(r[1])}</b>${esc(r[2])}</span><small>${esc(r[3])} 🔊</small></button>`).join('')}</div>`; };
 /* ---------- storage ---------- */
 const KEY = 'beginner-studio-v1' + (window.Auth ? Auth.progressKey() : '');
 const ROLE_NOW = window.Auth ? Auth.role() : 'admin';
 let S = { mode:'learn', known:{}, quiz:{}, listened:{}, names:'', teams:[{n:'ក្រុម A',s:0},{n:'ក្រុម B',s:0},{n:'ក្រុម C',s:0}], voice:'', rate:0.9, lastUnit:1 };
 try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch(e){}
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+/* 📚 សិស្សរៀនសៀវភៅបន្ថែម៖ វឌ្ឍនភាពតាម Unit ទុកដាច់ដោយឡែក (ប្រវត្តិរូប លុយ សកម្មភាព ប្រើរួមគ្នា) */
+const XKEY = window.COURSE&&COURSE.extra ? KEY+':'+COURSE.id : null;
+const UNIT_F = ['known','quiz','listened','sec','level','lastUnit','bookPage','ex','tracks'];
+if(XKEY){ let X={}; try{ X=JSON.parse(localStorage.getItem(XKEY)||'{}'); }catch(e){}
+  UNIT_F.forEach(f=>{ delete S[f]; }); Object.assign(S, {known:{}, quiz:{}, listened:{}, lastUnit:1}, X); }
+function save(){ try{
+  if(!XKEY) return localStorage.setItem(KEY, JSON.stringify(S));
+  const X={}, base=(()=>{ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ return {}; } })();
+  Object.keys(S).forEach(k=>{ if(UNIT_F.includes(k)) X[k]=S[k]; else base[k]=S[k]; });
+  localStorage.setItem(KEY, JSON.stringify(base)); localStorage.setItem(XKEY, JSON.stringify(X));
+}catch(e){} }
 /* 💰 លុយ (រៀល) — រកបានពីការរៀន និងធ្វើលំហាត់ (សិស្សតែប៉ុណ្ណោះ; id នីមួយៗទទួលបានតែម្តង) */
 const RIEL = n => Math.round(n||0).toLocaleString('en-US')+'៛';
 function earn(id, amt, why){
   if(!window.Auth || Auth.role()!=='student' || !(amt>0) || (Auth.asStaff&&Auth.asStaff())) return 0;
   const M=S.money=S.money||{t:0,m:{},log:[],got:{}}; M.m=M.m||{}; M.log=M.log||[]; M.got=M.got||{};
+  if(XKEY) id=COURSE.id+':'+id;
   if(M.got[id]) return 0; M.got[id]=1; amt=Math.round(amt);
   const mk=dayKey().slice(0,7); M.t=(M.t||0)+amt; M.m[mk]=(M.m[mk]||0)+amt; M.log.unshift([Date.now(),amt,why]); M.log=M.log.slice(0,150); save();
   coinPop(amt, why); if(window.Rank) setTimeout(()=>Rank.push(S,true),200); return amt;
@@ -79,7 +91,7 @@ function toast(m){ const t=$('#toast'); t.textContent=m; t.style.display='block'
 function fmt(s){ if(!isFinite(s)) return '0:00'; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 function knownCount(n){ return (S.known[n]||[]).length; }
 function tracksDone(n){ return unitTracks(n).filter(t=>S.listened[t.id]).length; }
-function emojiFor(u, w){ const k=w.toLowerCase(); return (u.emoji||{})[k] || (u.emoji||{})[k.replace(/^(a|an|the) /,'')] || ''; }
+function emojiFor(u, w){ const pic=window.picFor&&picFor(String(w).replace(/^(a|an|the) /i,'')); if(pic) return pic; const k=w.toLowerCase(); return (u.emoji||{})[k] || (u.emoji||{})[k.replace(/^(a|an|the) /,'')] || ''; }
 function setUnitColors(n, el){ const st=UNIT_STYLE[n]; (el||document.documentElement).style.setProperty('--c1',st.c1); (el||document.documentElement).style.setProperty('--c2',st.c2); }
 function clean(t){ return String(t).replace(/\(.*?\)/g,'').replace(/[→=↔].*$/,'').trim(); }
 
@@ -222,12 +234,12 @@ function stuNav(){
 function stuOpenExams(){ const me=Auth.user(), X=(window.Exam&&Exam.data())||{}; const m=new Map(); (X.open||[]).forEach(se=>{ const k=se.n+'|'+se.cls, o=m.get(k); if(!o||se.ts>o.ts) m.set(k,se); }); return [...m.values()].filter(se=>se.cls===me.classId && !(se.once && (X.results||[]).some(r=>r.sess===se.id && (r.uid===me.id||r.sid===me.studentId)))); }
 function unitPct(u){ const kp=knownCount(u.n)/u.vocab.length, sp=((S.sec||{})[u.n]||[]).length/LESSONS[u.n].sections.length, q=(S.quiz[u.n]||0)/100; return Math.round((kp+sp+q)/3*100); }
 function renderStuHome(){
-  if(window.Cloud&&Cloud.refresh&&Date.now()-(renderStuHome.t||0)>15000){ renderStuHome.t=Date.now(); Promise.all([Cloud.refresh('beginner-studio-exams-v1'),Cloud.refresh(WS.key),Cloud.refresh('beginner-studio-class-v1')]).then(([a,b,c])=>{ if(a) Exam.reload(); if(b) WS.reload(); if(c){ tUnlocked.c=null; myGate.t=0; } if(a||b||c){ if(view.name==='home') render(); else stuNav(); } }).catch(()=>{}); }
+  if(window.Cloud&&Cloud.refresh&&Date.now()-(renderStuHome.t||0)>15000){ renderStuHome.t=Date.now(); Promise.all([Cloud.refresh('beginner-studio-exams-v1'),Cloud.refresh(WS.key),Cloud.refresh('beginner-studio-class-v1')]).then(([a,b,c])=>{ if(a) Exam.reload(); if(b) WS.reload(); if(c){ tUnlocked.c=null; myGate.t=0; if(window.Course&&Course.stuCheck) Course.stuCheck(); } if(a||b||c){ if(view.name==='home') render(); else stuNav(); } }).catch(()=>{}); }
   if(window.Rank) Rank.push(S);
   const me=Auth.user(), nu=nextUnit(), u=U(nu), st=UNIT_STYLE[nu]; setUnitColors(nu);
   const totalW=UNITS.reduce((a,x)=>a+x.vocab.length,0), knownW=UNITS.reduce((a,x)=>a+knownCount(x.n),0), passed=Object.values(S.quiz).filter(v=>v>=80).length;
   const ox=stuOpenExams(), wp=WS.pending(), first=(((S.profile||{}).name)||me.name||'').trim().split(/\s+/).slice(-1)[0];
-  $('#main').innerHTML=`<div class="stu-hi"><div>${Auth.avatarFor(me,52)}</div><div><small>សួស្តី 👋</small><b>${esc(first)}</b><button class="stu-edit" onclick="Auth.editMe()">✏️ កែព័ត៌មាន</button></div>${(()=>{const cc=(window.Class&&Auth.user().classId)?(JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===Auth.user().classId):null, b=courseOf(cc); return `<span class="stu-book">${b.icon} ${esc(b.name)}</span>`;})()}</div>
+  $('#main').innerHTML=`<div class="stu-hi"><div>${Auth.avatarFor(me,52)}</div><div><small>សួស្តី 👋</small><b>${esc(first)}</b><button class="stu-edit" onclick="Auth.editMe()">✏️ កែព័ត៌មាន</button></div>${(()=>{const cc=(window.Class&&Auth.user().classId)?(JSON.parse(localStorage.getItem('beginner-studio-class-v1')||'{}').classes||[]).find(x=>x.id===Auth.user().classId):null, b=cc?courseOf(cc):(COURSES.find(x=>x.id===(window.COURSE&&COURSE.id))||courseOf(cc)); return `<span class="stu-book">${b.icon} ${esc(b.name)}</span>`;})()}</div>
     <button class="stu-wallet" onclick="walletInfo()"><span>💰</span><div><small>លុយរបស់ខ្ញុំ</small>${(W=>`<b class="${W.t<0?'neg':''}">${W.t<0?'−'+RIEL(-W.t):RIEL(W.t)}</b></div><em>ខែនេះ ${sRIEL(W.m)}</em>`)(myMoney())}<i>›</i></button>
     ${window.Cert?(n=>`<button class="stu-cert" onclick="go('certs')"><span>🏅</span><div><small>ប័ណ្ណសរសើររបស់ខ្ញុំ</small><b>${n?n+' ប័ណ្ណ':'មិនទាន់មាន'}</b></div><i>›</i></button>`)(Cert.count()):''}
     ${window.Cloud&&Cloud.installBanner?Cloud.installBanner():''}
@@ -239,7 +251,7 @@ function renderStuHome(){
       <div class="bar"><i style="width:${unitPct(u)}%"></i></div>
       <div class="b"><button class="btn white" onclick="go('unit',${nu},'lesson')">▶ បន្តរៀន</button><button class="btn ghost" onclick="go('unit',${nu},'practice')">✍️ លំហាត់</button></div>
     </div>
-    <div class="stu-stats"><div><b>${knownW}</b><span>🔤 ពាក្យចេះ</span></div><div><b>${Object.values(S.sec||{}).reduce((a,x)=>a+x.length,0)}</b><span>📖 ផ្នែករៀនរួច</span></div><div><b>${passed}<small>/14</small></b><span>🏅 មេរៀនឆ្លង</span></div></div>
+    <div class="stu-stats"><div><b>${knownW}</b><span>🔤 ពាក្យចេះ</span></div><div><b>${Object.values(S.sec||{}).reduce((a,x)=>a+x.length,0)}</b><span>📖 ផ្នែករៀនរួច</span></div><div><b>${passed}<small>/${NU()}</small></b><span>🏅 មេរៀនឆ្លង</span></div></div>
     ${PREVIEW()?'<div class="pv-note">👀 Mode គ្រូមើលជាសិស្ស — គ្រប់មេរៀនបើកទាំងអស់</div>':''}
     <h3 class="stu-sub">🗺 ផែនទីរៀន <button class="btn ghost sm" style="float:right" onclick="go('units')">ពេញអេក្រង់ ›</button></h3>${mapHtml()}`;
 }
@@ -309,7 +321,7 @@ function mapWho(n, sid){ const R=mapRows(), list=n?R.filter(r=>(r.e.cu||1)===n):
 window.mapWho=mapWho;
 function renderStuUnits(){ setUnitColors(nextUnit());
   const done=UNITS.filter(u=>unitPassed(u.n)).length;
-  $('#main').innerHTML=`<div class="stu-head"><h2>🗺 ផែនទីរៀន</h2><div class="row" style="gap:6px"><button class="map-cls" onclick="mapWho(0)">👥 មិត្តរួមថ្នាក់</button><span class="map-prog">🏅 ${done}/14</span></div></div>
+  $('#main').innerHTML=`<div class="stu-head"><h2>🗺 ផែនទីរៀន</h2><div class="row" style="gap:6px"><button class="map-cls" onclick="mapWho(0)">👥 មិត្តរួមថ្នាក់</button><span class="map-prog">🏅 ${done}/${NU()}</span></div></div>
     ${PREVIEW()?'<div class="pv-note">👀 Mode គ្រូមើលជាសិស្ស — គ្រប់មេរៀនបើកទាំងអស់ (សិស្សពិតត្រូវរៀនឆ្លងតាមលំដាប់)</div>':`<p class="map-tip">រៀនគ្រប់ផ្នែក ✅ ហើយធ្វើ 🏁 លំហាត់ឆ្លងកម្រិត បាន ${PASS}% ឡើងទៅ ដើម្បីដោះសោមេរៀនបន្ទាប់ 🔓</p>`}
     ${mapHtml()}`;
   if(window.Cloud&&Cloud.refresh&&window.Rank&&Date.now()-(renderStuUnits.t||0)>20000){ renderStuUnits.t=Date.now(); Rank.push(S,true); Promise.all([Cloud.refresh(Rank.key),Cloud.refresh('beginner-studio-class-v1')]).then(r=>{ if((r[0]||r[1])&&view.name==='units'){ const w=document.querySelector('.map-wrap'); if(w) w.outerHTML=mapHtml(); } }).catch(()=>{}); }
@@ -324,7 +336,7 @@ function renderPreviewTasks(){ setUnitColors(4);
 function renderPreviewMe(){ setUnitColors(5); $('#main').innerHTML=`<div class="stu-head"><h2>📊 ខ្ញុំ</h2></div><div class="pv-note">👀 ទំព័រនេះបង្ហាញពិន្ទុ និងវឌ្ឍនភាពរបស់សិស្សម្នាក់ៗ ពេលសិស្សចូលប្រព័ន្ធ។ ដើម្បីមើលសិស្សទាំងអស់ សូមចូល 👥 ថ្នាក់រៀន → 📊 តាមដានសិស្ស</div><div class="row" style="justify-content:center"><button class="btn teal" onclick="setMode('teach');go('class',null,'track')">📊 តាមដានសិស្ស</button></div>`; }
 
 /* ---------- 🎓 student unit: lesson cards (no slides) — phone first, roomy on PC ---------- */
-const TABS_STU = () => [['lesson','📖 មេរៀន'],['vocab','🔤 ពាក្យ'],['grammar','📐 វេយ្យាករណ៍'],['practice','✍️ លំហាត់'],['rich',window.Rich?Rich.label():'💰']].concat(window.IS_WEB?[]:[['listen','🎧 ស្តាប់']]);
+const TABS_STU = () => [['lesson','📖 មេរៀន'],['vocab','🔤 ពាក្យ']].concat(window.COURSE&&COURSE.sg?[]:[['grammar','📐 វេយ្យាករណ៍']]).concat([['practice','✍️ លំហាត់'],['rich',window.Rich?Rich.label():'💰']]).concat(window.IS_WEB?[]:[['listen','🎧 ស្តាប់']]);
 function secDone(n){ S.sec=S.sec||{}; return S.sec[n]=S.sec[n]||[]; }
 function renderStuUnit(u, tabs){
   const st=UNIT_STYLE[u.n], L=LESSONS[u.n], done=secDone(u.n).length;
@@ -332,7 +344,7 @@ function renderStuUnit(u, tabs){
       <button class="su-nav" onclick="go('units')">‹</button>
       <div class="n">${u.n}</div><div class="t"><b>${esc(u.en)}</b><span>${u.km}</span><div class="bar"><i style="width:${unitPct(u)}%"></i></div><small>📖 ${done}/${L.sections.length} ផ្នែក • 📘 សៀវភៅ p${u.start}–${u.end}</small></div>
       <div class="e">${ANIMALS[u.n-1]}</div>
-      <div class="pn"><button ${u.n<=1?'disabled':''} onclick="go('unit',${u.n-1},'${view.tab}')">◀</button><button ${u.n>=14||!unitOpen(u.n+1)?'disabled':''} onclick="go('unit',${u.n+1},'${view.tab}')">▶</button></div>
+      <div class="pn"><button ${u.n<=1?'disabled':''} onclick="go('unit',${u.n-1},'${view.tab}')">◀</button><button ${u.n>=NU()||!unitOpen(u.n+1)?'disabled':''} onclick="go('unit',${u.n+1},'${view.tab}')">▶</button></div>
     </div>
     <div class="tabs su-tabs">${tabs.map(t=>`<button class="${t[0]===view.tab?'on':''}" onclick="go('unit',${u.n},'${t[0]}')">${t[1]}</button>`).join('')}</div>
     <div id="tab"></div>`;
@@ -342,7 +354,7 @@ function renderStuUnit(u, tabs){
 let openSec=null;
 function passBanner(u){
   const n=u.n, L=LESSONS[n].sections.length, d=secsDone(n), q=lvl(n), pass=unitPassed(n);
-  if(pass) return `<div class="pass-b ok"><span>🏆</span><div><b>បានឆ្លង Unit ${n}!</b><small>${n<14?`Unit ${n+1} បានដោះសោ ${ANIMALS[n]}`:'អ្នកបញ្ចប់គ្រប់មេរៀនហើយ 🎉'}</small></div>${n<14?`<button class="btn sun sm" onclick="go('unit',${n+1},'lesson')">Unit ${n+1} ›</button>`:''}</div>`;
+  if(pass) return `<div class="pass-b ok"><span>🏆</span><div><b>បានឆ្លង Unit ${n}!</b><small>${n<NU()?`Unit ${n+1} បានដោះសោ ${ANIMALS[n]}`:'អ្នកបញ្ចប់គ្រប់មេរៀនហើយ 🎉'}</small></div>${n<NU()?`<button class="btn sun sm" onclick="go('unit',${n+1},'lesson')">Unit ${n+1} ›</button>`:''}</div>`;
   return `<div class="pass-b"><span>${ANIMALS[n-1]}</span><div><b>ដើម្បីឆ្លង Unit ${n}</b>
     <small class="${d>=L?'y':''}">${d>=L?'✅':'⬜'} ១. រៀនគ្រប់ផ្នែក (${d}/${L})</small><small class="${(q||0)>=PASS?'y':''}">${(q||0)>=PASS?'✅':'⬜'} ២. 🏁 លំហាត់ឆ្លងកម្រិត បាន ${PASS}%+ (ល្អបំផុត ${q!=null?q+'%':'—'})</small></div>
     ${d>=L?`<button class="btn sun sm" onclick="startLevel(${n})">🏁 ធ្វើ</button>`:''}</div>`;
@@ -350,17 +362,18 @@ function passBanner(u){
 function tabLesson(u){
   const L=LESSONS[u.n], dn=secDone(u.n); if(openSec==null || openSec.n!==u.n){ const f=L.sections.findIndex((x,i)=>!dn.includes(i)); openSec={n:u.n, i:f<0?0:f}; }
   const say=t=>`speak(${JSON.stringify(t).replace(/"/g,'&quot;')})`;
-  $('#tab').innerHTML=passBanner(u)+`<div class="les">${L.sections.map((s,si)=>{ const K=KIND[s.k], on=openSec.i===si, ok=dn.includes(si);
+  $('#tab').innerHTML=passBanner(u)+(window.LVL?LVL.road(u.n):'')+`<div class="les">${L.sections.map((s,si)=>{ const K=KIND[s.k], on=openSec.i===si, ok=dn.includes(si);
     let body='';
     if(on){
-      if(s.w&&s.w.length) body+=`<div class="les-w">${s.w.map(w=>`<button onclick="${say(w[0])}"><span class="em">${w[2]||'🔤'}</span><b>${esc(w[0])}</b><small>${esc(w[1]||'')}</small></button>`).join('')}</div>`;
-      if(s.g) body+=s.g.map(gi=>{ const g=L.grammar[gi]; if(!g) return ''; return `<div class="les-g"><h4>📐 ${esc(g.t)}</h4><p class="km">${g.km}</p>
-        ${g.form?`<div class="les-form">${g.form.map(row=>`<div>${row.map((c,ci)=>`<span class="${ci===1?'hl':''}">${esc(c)}</span>`).join('')}<button onclick="${say(row.join(' '))}">🔊</button></div>`).join('')}</div>`:''}
+      if(s.w&&s.w.length) body+=`<div class="les-w">${s.w.map(w=>`<button onclick="${say(w[0])}"><span class="em">${(window.picFor&&picFor(w[0]))||w[2]||'🔤'}</span><b>${esc(w[0])}</b><small>${esc(w[1]||'')}</small></button>`).join('')}</div>`;
+      if(s.g) body+=s.g.map(gi=>{ const g=L.grammar[gi]; if(!g) return ''; return `<div class="les-g"><h4>${COURSE.sg?'🔊':'📐'} ${esc(g.t)}</h4><p class="km">${g.km}</p>
+        ${g.form&&COURSE.sg?sgBlend(g.form,say):''}${g.form&&!COURSE.sg?`<div class="les-form">${g.form.map(row=>`<div>${row.map((c,ci)=>`<span class="${ci===1?'hl':''}">${esc(c)}</span>`).join('')}<button onclick="${say(row.join(' '))}">🔊</button></div>`).join('')}</div>`:''}
         ${g.ex?g.ex.map(e=>`<div class="les-ph" onclick="${say(e)}"><span>🔊</span><b>${esc(e)}</b></div>`).join(''):''}
         ${g.err?g.err.map(e=>`<div class="les-err"><s>❌ ${esc(e[0])}</s><b>✅ ${esc(e[1])}</b></div>`).join(''):''}</div>`; }).join('');
       if(s.ph&&s.ph.length) body+=`<div class="les-phs">${s.ph.map(p=>`<div class="les-ph" onclick="${say(p[0])}"><span>🔊</span><div><b>${esc(p[0])}</b><small>${esc(p[1]||'')}</small></div></div>`).join('')}</div>`;
       if(s.qs&&s.qs.length) body+=`<div class="les-q"><h4>❓ សំណួរ — ឆ្លើយដោយខ្លួនឯង</h4>${s.qs.map((q,qi)=>`<div onclick="${say(q)}"><span>${qi+1}</span>${esc(q)} 🔊</div>`).join('')}</div>`;
       if(s.k==='review') body+=`<div class="les-rev">🏁 ធ្វើលំហាត់ដើម្បីពិនិត្យខ្លួនឯង <button class="btn teal" onclick="go('unit',${u.n},'practice')">✍️ ធ្វើលំហាត់</button></div>`;
+      if(window.LVL) body+=LVL.pre(u.n,si,s);
       if(!body) body=`<p class="note">📘 សូមបើកសៀវភៅទំព័រ ${s.p} ហើយធ្វើតាមការណែនាំរបស់គ្រូ</p>`;
       if(window.LEX) body+=LEX.block(u.n,si);
       const rdy=PREVIEW()||!window.LEX||LEX.ready(u.n,si);
@@ -398,12 +411,13 @@ function renderHome(){
         <button class="btn sun xl glow" onclick="Deck.open(${nu})">▶ ${teach?'បង្រៀន':'រៀន'} Unit ${nu} ជាស្លាយ</button>
         <button class="btn ghost" onclick="go('unit',${nu})">📚 មេរៀន ${nu}</button>
         <button class="btn ghost" onclick="Book.open()">📖 សៀវភៅឌីជីថល</button>
+        ${teach&&window.Course&&Course.menu?`<button class="btn ghost" onclick="Course.menu()">📚 ប្តូរសៀវភៅ (${esc(COURSE.short)})</button>`:''}
       </div>
     </div>
     <div class="statbox">
       <div class="stat"><div class="ring" style="--p:${Math.round(knownW/totalW*100)}" data-v="${Math.round(knownW/totalW*100)}%"></div><b>${knownW}</b><span>ពាក្យចេះ / ${totalW}</span></div>
       <div class="stat"><div class="ic">🎧</div><b>${doneT}</b><span>បទបានស្តាប់ / ${TRACKS.length}</span></div>
-      <div class="stat"><div class="ic">🏅</div><b>${passed}<small style="font-size:16px;color:var(--mute)">/14</small></b><span>មេរៀនឆ្លង • មធ្យម ${avg}%</span></div>
+      <div class="stat"><div class="ic">🏅</div><b>${passed}<small style="font-size:16px;color:var(--mute)">/${NU()}</small></b><span>មេរៀនឆ្លង • មធ្យម ${avg}%</span></div>
       <div class="tip-card">💡 <b>គន្លឹះ៖</b> ${teach?'ភ្ជាប់ Remote Presenter (USB) → បើកស្លាយ → ចុច ▶ / ◀ ដើម្បីបង្ហាញចំណុចម្តងមួយៗ។ ចុច B ដើម្បីបិទអេក្រង់ខ្មៅ ពេលចង់ឱ្យសិស្សផ្តោតលើគ្រូ។':'រៀនតាមលំដាប់៖ 📚 ស្លាយមេរៀន → 🎧 ស្តាប់ → 🔤 ពាក្យ → ✍️ លំហាត់ (80%+ ដើម្បីឆ្លង)។'}</div>
     </div>
   </div>
@@ -423,10 +437,10 @@ function renderHome(){
       ${q>=80?'<span class="done-badge">✓ ឆ្លង</span>':''}
     </button>`}).join('')}</div>`;
 }
-function nextUnit(){ if(stuUI()&&!PREVIEW()){ const o=UNITS.filter(u=>unitOpen(u.n)&&!unitPassed(u.n)); if(o.length) return o[o.length-1].n; } for(const u of UNITS){ if(stuUI() ? !unitPassed(u.n) : (S.quiz[u.n]||0)<80) return u.n; } return 14; }
+function nextUnit(){ if(stuUI()&&!PREVIEW()){ const o=UNITS.filter(u=>unitOpen(u.n)&&!unitPassed(u.n)); if(o.length) return o[o.length-1].n; } for(const u of UNITS){ if(stuUI() ? !unitPassed(u.n) : (S.quiz[u.n]||0)<80) return u.n; } return NU(); }
 
 /* ---------- unit ---------- */
-const TABS_LEARN = [['path','📚 មេរៀនតាមសៀវភៅ'],['listen','🎧 ស្តាប់'],['vocab','🔤 វាក្យសព្ទ'],['grammar','📐 វេយ្យាករណ៍'],['practice','✍️ លំហាត់'],['rich','💰 សេដ្ឋី/ជំទាវ'],['exam','📝 ប្រឡងបញ្ចប់មេរៀន']];
+const TABS_LEARN = [['path','📚 មេរៀនតាមសៀវភៅ'],['listen','🎧 ស្តាប់'],['vocab','🔤 វាក្យសព្ទ']].concat(window.COURSE&&COURSE.sg?[]:[['grammar','📐 វេយ្យាករណ៍']]).concat([['practice','✍️ លំហាត់'],['rich','💰 សេដ្ឋី/ជំទាវ'],['exam','📝 ប្រឡងបញ្ចប់មេរៀន']]);
 const TABS_TEACH = [['plan','📋 ផែនការបង្រៀន'],['worksheet','📄 សន្លឹកលំហាត់']];
 function renderUnit(){
   const u = U(view.unit), st = UNIT_STYLE[u.n];
@@ -437,17 +451,17 @@ function renderUnit(){
   $('#main').innerHTML = `
   <div class="uhero">
     <div class="big">${u.n}</div>
-    <div><h2>${esc(u.en)}</h2><div class="kmt">${u.km}</div><div class="pgs">📘 Student's Book p${u.start}–${u.end} • ${LESSONS[u.n].sections.length} ផ្នែក • ${unitTracks(u.n).length} បទសំឡេង • ${u.vocab.length} ពាក្យ</div></div>
+    <div><h2>${esc(u.en)}</h2><div class="kmt">${u.km}</div><div class="pgs">📘 ${COURSE.sg?COURSE.short:"Student's Book"} p${u.start}–${u.end} • ${LESSONS[u.n].sections.length} ផ្នែក • ${unitTracks(u.n).length} បទសំឡេង • ${u.vocab.length} ពាក្យ</div></div>
     <div class="emo float">${st.icon}</div>
     <div class="act">
       <button class="btn white xl" onclick="Deck.open(${u.n})">▶ ${S.mode==='teach'?'បង្រៀនជាស្លាយ':'រៀនជាស្លាយ'}</button>
       <button class="btn ghost" onclick="Book.open(${u.start})">📖 សៀវភៅឌីជីថល p${u.start}</button>
-      <button class="btn ghost" onclick="openPdf(3)">📗 Workbook</button>
-      <button class="btn ghost teach-only" onclick="openPdf(2)">📕 Teacher's Guide</button>
+      <button class="btn ghost" onclick="openPdf(3)">📗 Workbook</button>${COURSE.sg?`<button class="btn ghost" onclick="Games.open&&Games.open()">🎮 ល្បែង</button>`:''}
+      <button class="btn ghost teach-only" onclick="openPdf(2)">📕 ${COURSE.sg?'សៀវភៅមានចម្លើយ':"Teacher's Guide"}</button>
       <span style="flex:1"></span>
       <button class="btn ghost sm" onclick="go('home')">⌂</button>
       <button class="btn ghost sm" ${u.n<=1?'disabled style="opacity:.4"':''} onclick="go('unit',${u.n-1},'${view.tab}')">◀</button>
-      <button class="btn ghost sm" ${u.n>=14?'disabled style="opacity:.4"':''} onclick="go('unit',${u.n+1},'${view.tab}')">▶</button>
+      <button class="btn ghost sm" ${u.n>=NU()?'disabled style="opacity:.4"':''} onclick="go('unit',${u.n+1},'${view.tab}')">▶</button>
     </div>
   </div>
   <div class="tabs">${tabs.map(t=>`<button class="${t[0]===view.tab?'on':''}" onclick="go('unit',${u.n},'${t[0]}')">${t[1]}</button>`).join('')}</div>
@@ -473,7 +487,7 @@ function tabPath(u){
       <div class="panel">
         <h3 class="sec">🎯 គោលបំណងមេរៀន</h3>
         ${u.goals.map(g=>`<div class="km" style="margin:6px 0">✅ ${g}</div>`).join('')}
-        <h3 class="sec" style="margin-top:16px">📐 វេយ្យាករណ៍ (តាមសៀវភៅ)</h3>
+        <h3 class="sec" style="margin-top:16px">${COURSE.sg?'🔊 សំឡេង Phonics':'📐 វេយ្យាករណ៍'} (តាមសៀវភៅ)</h3>
         <div>${L.grammar.map(g=>`<span class="chip">${esc(g.t)} <small>p${g.p}</small></span>`).join('')}</div>
         <h3 class="sec" style="margin-top:16px">📊 វឌ្ឍនភាព</h3>
         <div class="note">🎧 ${tracksDone(u.n)} / ${unitTracks(u.n).length} បទ</div><div class="bar"><i style="width:${tracksDone(u.n)/unitTracks(u.n).length*100}%"></i></div>
@@ -550,17 +564,17 @@ function tabGrammar(u){
       <div class="row" style="justify-content:space-between"><h4>${esc(g.t)}</h4>
         <div class="row"><button class="btn sm ghost" onclick="openBook(1,${g.p})">📘 p${g.p}</button><button class="btn sm teal" onclick="Deck.open(${u.n},${g.p})">▶ ស្លាយ</button></div></div>
       <p class="rule">${g.km}</p>
-      ${g.form?`<table class="ftable">${g.form.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`:''}
+      ${g.form&&COURSE.sg?sgBlend(g.form,t=>`speak(${attr(t)})`):''}${g.form&&!COURSE.sg?`<table class="ftable">${g.form.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`:''}
       ${g.ex.map(e=>`<div class="ex"><button class="spk" onclick="speak(${attr(e)})">🔊</button><span>${esc(e)}</span></div>`).join('')}
       ${(g.more||[]).length?`<div class="more">${g.more.map(m=>`<div>💡 ${m}</div>`).join('')}</div>`:''}
       ${(g.err||[]).length?`<div class="errs"><div class="note">⚠️ កំហុសដែលសិស្សតែងធ្វើ</div>${g.err.map(e=>`<div class="err"><span class="bad">❌ ${esc(e[0])}</span>→<span class="good">✅ ${esc(e[1])}</span></div>`).join('')}</div>`:''}
-    </div>`).join('') + `<div class="row"><button class="btn" onclick="openBook(1,${u.gr})">📘 Grammar reference p${u.gr}</button><button class="btn sun" onclick="startQuiz(${u.n},'grammar')">✍️ ធ្វើលំហាត់វេយ្យាករណ៍</button></div>`;
+    </div>`).join('') + `<div class="row"><button class="btn" onclick="openBook(1,${u.gr})">📘 Grammar reference p${u.gr}</button><button class="btn sun" onclick="startQuiz(${u.n},'grammar')">✍️ ធ្វើលំហាត់សំឡេង Phonics</button></div>`;
 }
 
 /* ---------- practice ---------- */
 const QTYPES = [
   ['mix','🎯','លាយចម្រុះ','សំណួរគ្រប់ប្រភេទ ១០ សំណួរ'],
-  ['grammar','📐','វេយ្យាករណ៍','ជ្រើសពាក្យត្រឹមត្រូវបំពេញចន្លោះ'],
+  (window.COURSE&&COURSE.sg?['grammar','🔊','សំឡេង Phonics','ជ្រើសសំឡេង/អក្សរដែលបាត់ក្នុងពាក្យ']:['grammar','📐','វេយ្យាករណ៍','ជ្រើសពាក្យត្រឹមត្រូវបំពេញចន្លោះ']),
   ['en2km','🇬🇧','អង់គ្លេស → ខ្មែរ','មើលពាក្យអង់គ្លេស ជ្រើសន័យខ្មែរ'],
   ['km2en','🇰🇭','ខ្មែរ → អង់គ្លេស','មើលពាក្យខ្មែរ ជ្រើសពាក្យអង់គ្លេស'],
   ['pic','🖼️','រូបភាព → ពាក្យ','មើលរូប ជ្រើសពាក្យត្រឹមត្រូវ'],
@@ -571,7 +585,7 @@ const QTYPES = [
 function levelSize(n){ const u=U(n), w=vocabPool(u).length, g=(window.Exam&&Exam.grammarPool)?Exam.grammarPool(n).length:u.quiz.length, sc=LESSONS[n].sections.length; return Math.max(25, Math.min(100, Math.round(w*0.9 + g + sc))); }
 function tabPractice(u){
   const N=levelSize(u.n), b=lvl(u.n), ok=(b||0)>=PASS;
-  $('#tab').innerHTML = `${stuUI()?passBanner(u):''}<button class="lvl-card ${ok?'ok':''}" onclick="startLevel(${u.n})"><span class="i">${ok?'🏆':'🏁'}</span><span class="t"><b>លំហាត់ឆ្លងកម្រិត Unit ${u.n}</b><small>${N} សំណួរ • ពាក្យ វេយ្យាករណ៍ ស្តាប់ សរសេរ • ត្រូវបាន ${PASS}% ដើម្បីឆ្លង</small>${b!=null?`<em>ល្អបំផុត ${b}% ${ok?'✅ ឆ្លង':''}</em>`:''}</span><span class="go">▶</span></button>
+  $('#tab').innerHTML = `${stuUI()?passBanner(u):''}<button class="lvl-card ${ok?'ok':''}" onclick="startLevel(${u.n})"><span class="i">${ok?'🏆':'🏁'}</span><span class="t"><b>លំហាត់ឆ្លងកម្រិត Unit ${u.n}</b><small>${N} សំណួរ • ពាក្យ សំឡេង Phonics ស្តាប់ សរសេរ • ត្រូវបាន ${PASS}% ដើម្បីឆ្លង</small>${b!=null?`<em>ល្អបំផុត ${b}% ${ok?'✅ ឆ្លង':''}</em>`:''}</span><span class="go">▶</span></button>
   <div class="panel"><h3 class="sec">✍️ លំហាត់អនុវត្ត — ជ្រើសប្រភេទណាក៏បាន</h3>
     <div class="qtypes">${QTYPES.map((q,i)=>`<button class="qtype" style="animation-delay:${i*0.05}s" onclick="startQuiz(${u.n},'${q[0]}')"><div class="qi">${q[1]}</div><b>${q[2]}</b><span>${q[3]}</span></button>`).join('')}</div>
     <p class="note" style="margin-top:14px">ពិន្ទុល្អបំផុត៖ ${S.quiz[u.n]!=null?S.quiz[u.n]+'%':'—'} • លំហាត់ទាំងនេះសម្រាប់ហាត់ — ឆ្លងមេរៀនដោយ 🏁 លំហាត់ឆ្លងកម្រិត</p></div>`;
@@ -669,11 +683,11 @@ function finishQ(){ setTimeout(()=>{ if(window.Rank) Rank.push(S,true); },300);
   if(!LV && pct>=50) earn(`q:${Q.n}:${Q.type}:${dayKey()}`, Math.min(1000, Math.round(pct/10)*100), `លំហាត់ Unit ${Q.n} (${pct}%)`);
   if(stuUI() && !wasPass && unitPassed(Q.n) && window.Notify) Notify.passed(Q.n);
   if(stuUI() && !wasPass && unitPassed(Q.n)) earn(`unit:${Q.n}`, 10000, `រៀនចប់ Unit ${Q.n} 🎉`);
-  if(stuUI() && !wasPass && unitPassed(Q.n)){ setTimeout(()=>{ if(window.pageConfetti) pageConfetti(); toast(`🏆 បានឆ្លង Unit ${Q.n}!`+(Q.n<14?` Unit ${Q.n+1} ${ANIMALS[Q.n]} បានដោះសោ`:'')); },600); }
+  if(stuUI() && !wasPass && unitPassed(Q.n)){ setTimeout(()=>{ if(window.pageConfetti) pageConfetti(); toast(`🏆 បានឆ្លង Unit ${Q.n}!`+(Q.n<NU()?` Unit ${Q.n+1} ${ANIMALS[Q.n]} បានដោះសោ`:'')); },600); }
   $('#tab').innerHTML=`<div class="panel result"><div style="font-size:64px" class="pop">${pct>=80?'🏆':pct>=50?'👍':'💪'}</div><div class="score">${pct}%</div>
     <p class="km" style="font-size:18px">${pct>=80?(LV?'🎉 អស្ចារ្យ! អ្នកឆ្លងកម្រិត Unit '+Q.n+' ហើយ':'🎉 អស្ចារ្យ! ពូកែណាស់'):pct>=50?'👍 ល្អ! ហាត់បន្ថែមបន្តិចទៀត':'💪 កុំបោះបង់! រៀនវាក្យសព្ទម្តងទៀត ហើយសាកល្បងម្តងទៀត'}</p>
     <p class="note">ត្រូវ ${Q.score} / ${Q.qs.length}</p>
-    <div class="row" style="justify-content:center"><button class="btn teal" onclick="${LV?`startLevel(${Q.n})`:`startQuiz(${Q.n},'${Q.type}')`}">↺ ធ្វើម្តងទៀត</button><button class="btn ghost" onclick="tabPractice(U(${Q.n}))">ប្រភេទផ្សេង</button>${Q.n<14?`<button class="btn sun" onclick="go('unit',${Q.n+1})">Unit ${Q.n+1} ▶</button>`:''}</div></div>`;
+    <div class="row" style="justify-content:center"><button class="btn teal" onclick="${LV?`startLevel(${Q.n})`:`startQuiz(${Q.n},'${Q.type}')`}">↺ ធ្វើម្តងទៀត</button><button class="btn ghost" onclick="tabPractice(U(${Q.n}))">ប្រភេទផ្សេង</button>${Q.n<NU()?`<button class="btn sun" onclick="go('unit',${Q.n+1})">Unit ${Q.n+1} ▶</button>`:''}</div></div>`;
   if(pct>=80) pageConfetti();
 }
 let actx;
@@ -691,7 +705,7 @@ const ACT = {
   speak:'គ្រូធ្វើគំរូជាមួយសិស្សម្នាក់ → សិស្សហាត់ជាគូ (Role-play) → គូ២–៣ បង្ហាញមុខថ្នាក់។',
   write:'បង្ហាញឃ្លាគំរូលើស្លាយ → សិស្សសរសេរ ៥–៦ ប្រយោគ → ផ្លាស់ប្តូរកែជាមួយមិត្ត។',
   everyday:'ស្តាប់ការសន្ទនា → និយាយតាមឃ្លាសំខាន់ៗ → Role-play ស្ថានភាពពិត។',
-  review:'រំលឹកវេយ្យាករណ៍ទាំងអស់ → Unit quiz លើស្លាយ (ប្រកួតជាក្រុម 🏆) → ដាក់កិច្ចការផ្ទះ។'
+  review:(window.COURSE&&COURSE.sg?'រំលឹកសំឡេង Phonicsទាំងអស់':'រំលឹកវេយ្យាករណ៍ទាំងអស់')+' → Unit quiz លើស្លាយ (ប្រកួតជាក្រុម 🏆) → ដាក់កិច្ចការផ្ទះ។'
 };
 const MIN = {open:5,grammar:15,practice:10,vocab:10,read:15,listen:12,speak:10,write:12,everyday:12,review:10};
 function tabPlan(u){

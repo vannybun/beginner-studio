@@ -243,6 +243,7 @@ function launcher(){
       <button class="btn ghost sm" onclick="Auth.editStaff()">✏️ កែព័ត៌មាន</button></div>
     ${CL&&CL.wallet?`<button class="lx-wal" onclick="closeModal();Class.reward()"><span>💰 កាបូបគ្រូ</span><b>${CL.wallet().left.toLocaleString('en-US')}៛</b><em>🎁 ផ្តល់រង្វាន់</em></button>`:''}
     <div class="lx-mode"><button class="${teach?'':'on'}" onclick="closeModal();setMode('learn')">🎓 មើលជាសិស្ស</button><button class="${teach?'on':''}" onclick="closeModal();setMode('teach')">👩‍🏫 បង្រៀន / គ្រប់គ្រង</button></div>
+    ${window.Course&&Course.menu&&window.COURSE?`<button class="lx-book" onclick="closeModal();Course.menu()"><span>${COURSE.icon}</span><div><small>📚 សៀវភៅកំពុងប្រើ</small><b>${esc(COURSE.name)}</b></div><em>ប្តូរសៀវភៅ ▾</em></button>`:''}
     <div class="lx-sec"><h4>👥 ថ្នាក់រៀន</h4>${V.length?`<select class="cl-sel" onchange="Class._setCur(this.value);Auth.menu()">${V.map(c=>`<option value="${c.id}" ${cur&&c.id===cur.id?'selected':''}>${esc(c.name)} (${c.students.length})</option>`).join('')}</select>`:''}</div>
     <div class="lx-grid">${tabs}</div>
     <div class="lx-sec"><h4>🧰 ឧបករណ៍បង្រៀន</h4></div>

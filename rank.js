@@ -18,6 +18,7 @@ function summ(S){ const cut=dk(Date.now()-70*864e5), d={}; Object.entries((S.act
   return {cu:cu||N, sr, pc:Math.round(pcs/N*100), d, p:lv.filter(v=>v>=80).length, l:lv.length?Math.round(lv.reduce((a,b)=>a+b,0)/lv.length):0, w:Object.values(S.known||{}).reduce((a,x)=>a+x.length,0), lv:S.level||{}, r:M.t||0, rm:M.m||{}, sm:(()=>{ const o={}; Object.entries((S.act&&S.act.d)||{}).forEach(([k,v])=>{ const m=k.slice(0,7); o[m]=(o[m]||0)+(+v||0); }); return o; })(), rd:(()=>{ const o={}, lim=Date.now()-70*864e5; (M.log||[]).forEach(([t,a])=>{ if(t>=lim&&a>0){ const k=dk(t); o[k]=(o[k]||0)+a; } }); return o; })()}; }
 function push(S, force){
   if(!window.Auth||Auth.role()!=='student'||(Auth.asStaff&&Auth.asStaff())) return; const me=Auth.user(); if(!me||!S) return;
+  if(window.COURSE&&COURSE.extra) return;   // ចំណាត់ថ្នាក់គិតតាមសៀវភៅគោលរបស់ថ្នាក់
   if(!force && Date.now()-(push.t||0)<90000) return; push.t=Date.now();
   const e={c:me.classId, s:me.studentId, ...summ(S)};
   const B=J(BK)||{}, old=B[me.id]; if(old){ const o={...old}; delete o.ts; if(JSON.stringify(o)===JSON.stringify(e)) return; }
@@ -80,7 +81,7 @@ function resView(c, meSid){
 function unitView(c, R, meSid){
   const X=(window.Exam&&Exam.data())||{results:[]};
   const score=(x,n)=>{ const ex=(X.results||[]).filter(r=>r.n===n&&((x.uid&&r.uid===x.uid)||r.sid===x.s.id)); if(ex.length) return {v:Math.max(...ex.map(r=>r.pct)), k:'📝'}; const l=(x.e.lv||{})[n]; return l!=null?{v:l,k:'🏁'}:null; };
-  const has=n=>R.some(x=>score(x,n)); const ns=[...Array(14)].map((_,i)=>i+1);
+  const has=n=>R.some(x=>score(x,n)); const ns=[...Array(NU())].map((_,i)=>i+1);
   const n=UNIT&&ns.includes(UNIT)?UNIT:(ns.filter(has).pop()||1);
   const L=rankBy(R.map(x=>({...x, sc:score(x,n)})), x=>x.sc?x.sc.v:0);
   return `<p class="rk-why">📘 ពិន្ទុប្រឡងបញ្ចប់មេរៀន (📝) ឬ 🏁 លំហាត់ឆ្លងកម្រិត ពេលមិនទាន់ប្រឡង</p><div class="rk-sub rk-units">${ns.map(k=>`<button class="chip ${k===n?'on':''} ${has(k)?'':'dim'}" onclick="Rank.unit(${k})">U${k}</button>`).join('')}</div>`+

@@ -101,7 +101,7 @@ function win(got){ const n=G.n, t=T(), rr=R(n); rr.wins=(rr.wins||0)+1; save(); 
   if(!G.wasWin && isStu() && window.Notify && Notify.post){ try{ const me=Auth.user(); Notify.post(me.classId,{to:'friends', kind:'pass', t:`${t.ic} បានក្លាយជា${t.who} Unit ${n}! 💰`, x:'លេង «'+t.name+'» ដើម្បីក្លាយជាអ្នកមានដូចគ្នា 🎤'}); }catch(e){} }
   $('#tab').innerHTML=`<div class="rich end win"><div class="rich-big">${t.ic}</div><h2>🎉 អបអរសាទរ! អ្នកបានក្លាយជា${t.who} Unit ${n}!</h2>
     <p>អ្នកនិយាយបានត្រឹមត្រូវទាំង ១០ ជាន់ ${got||bonus?`• <b>+${riel(got+bonus)}</b>`:G.wasWin?'• ថ្ងៃនេះបានទទួលរង្វាន់រួចហើយ':''}</p>
-    <div class="row" style="justify-content:center"><button class="btn sun" onclick="Rich.start(${n})">↺ លេងម្តងទៀត</button>${n<14?`<button class="btn ghost" onclick="go('unit',${n+1},'rich')">Unit ${n+1} ▶</button>`:''}</div></div>`;
+    <div class="row" style="justify-content:center"><button class="btn sun" onclick="Rich.start(${n})">↺ លេងម្តងទៀត</button>${n<NU()?`<button class="btn ghost" onclick="go('unit',${n+1},'rich')">Unit ${n+1} ▶</button>`:''}</div></div>`;
   if(window.pageConfetti) pageConfetti(); G=null; }
 function quit(){ if(G&&G.k>0&&!confirm('ចេញពីហ្គេម? (លុយដែលបានរួចមិនបាត់)')) return; const n=G?G.n:null; Voice.stop(); G=null; if(n) tab(U(n)); }
 

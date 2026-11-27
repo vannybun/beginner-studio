@@ -1,6 +1,6 @@
 // =====================================================================
 //  lessonex.js — ✍️ លំហាត់តាមផ្នែកនីមួយៗនៃមេរៀន (រៀនផង ធ្វើលំហាត់ផង)
-//  • ចេញពីខ្លឹមសារផ្នែកនោះ (ពាក្យ ឃ្លា វេយ្យាករណ៍) + ប្រយោគបរិបទកម្ពុជា (ctx.js)
+//  • ចេញពីខ្លឹមសារផ្នែកនោះ (ពាក្យ ឃ្លា សំឡេង Phonics) + ប្រយោគបរិបទកម្ពុជា (ctx.js)
 //  • ធ្វើបានច្រើនដងមិនកំណត់ — ខុសសាកម្តងទៀតរហូតដល់ត្រូវ • កត់ «ត្រូវលើកទីមួយ» ដើម្បីដឹងសមត្ថភាព
 // =====================================================================
 (function(){
@@ -55,6 +55,8 @@ function build(n, si){
     const pickOne=pick(ph,1)[0]||pick(ex,1)[0];
     if(pickOne) res.push({t:'speak', mode:Math.random()<.5?'read':'repeat', text:pickOne.text, km:pickOne.km, skipAfter:3});
     else { const w=pick((s.w||[]).filter(w=>w[0]&&w[1]&&!/[\/→]/.test(w[0])),1)[0]; if(w) res.push({t:'speak', mode:'say', text:clean(w[0]).replace(/^(a|an|the) /i,''), km:w[1], em:w[2]||'', skipAfter:3}); } }
+  /* 🎮 levelup.js: ប្រកប • អានខ្លួនឯង • វេយ្យាករណ៍ តាមកម្រិតសៀវភៅ */
+  if(window.LVL){ try{ return LVL.extend(n, si, s, res); }catch(e){ console.warn('LVL', e); } }
   return res;
 }
 
@@ -84,20 +86,22 @@ function itemHtml(n,si,it,i,E){
       ${st.ok?`<div class="lex-fb">✅ ${esc(it.text)} <button class="lex-say" onclick="${say(it.text)}">🔊</button>${st.pct!=null?` • ${st.pct}%`:''}</div>`:Voice.card(`lx${k}-${i}`, it, r=>spoke(k,i,r))}</div>`;
   }
   if(it.t==='mc'){
-    return `<div class="lex-i ${st.ok?'done':''}" data-i="${i}">${head}<div class="lex-o ${it.km?'km':''}">${it.opts.map((o,j)=>`<button class="${st.ok&&o===it.a?'right':''}" ${st.ok?'disabled':''} onclick="LEX.mc('${k}',${i},${j},this)">${esc(o)}</button>`).join('')}</div>
+    return `<div class="lex-i ${st.ok?'done':''}" data-i="${i}">${head}<div class="lex-o ${it.km?'km':''} ${it.cls||''}">${it.opts.map((o,j)=>`<button class="${st.ok&&o===it.a?'right':''}" ${st.ok?'disabled':''} onclick="LEX.mc('${k}',${i},${j},this)">${esc(o)}</button>`).join('')}</div>
       ${st.ok&&(it.full||it.sayAns)?`<div class="lex-fb">✅ ${esc(it.full||it.a)} <button class="lex-say" onclick="${say(it.full||it.a)}">🔊</button></div>`:''}</div>`;
   }
   const sel=E.sel[i]||[];
-  return `<div class="lex-i ${st.ok?'done':''}" data-i="${i}">${head}
-    <div class="lex-ans">${st.ok?`<b>${esc(it.a)}</b> <button class="lex-say" onclick="${say(it.a)}">🔊</button>`:sel.map((t,p)=>`<button onclick="LEX.untile('${k}',${i},${p})">${esc(it.tiles[t])}</button>`).join('')||'<span class="ph">ចុចពាក្យខាងក្រោម…</span>'}</div>
-    ${st.ok?'':`<div class="lex-tiles">${it.tiles.map((w,t)=>`<button ${sel.includes(t)?'disabled':''} onclick="LEX.tile('${k}',${i},${t})">${esc(w)}</button>`).join('')}</div>
-    <div class="lex-row"><button class="btn ghost sm" onclick="LEX.clearT('${k}',${i})">↺ សម្អាត</button><button class="btn teal sm" ${sel.length===it.tiles.length?'':'disabled'} onclick="LEX.checkT('${k}',${i})">✓ ពិនិត្យ</button></div>`}</div>`;
+  const need=it.need||it.tiles.length, sp=it.j==='';
+  return `<div class="lex-i ${st.ok?'done':''} ${sp?'lex-spell':''}" data-i="${i}">${head}
+    <div class="lex-ans">${st.ok?`<b>${esc(it.a)}</b> <button class="lex-say" onclick="${say(it.a)}">🔊</button>`:sel.map((t,p)=>`<button onclick="LEX.untile('${k}',${i},${p})">${esc(it.tiles[t])}</button>`).join('')||`<span class="ph">${sp?'ចុចអក្សរខាងក្រោមតាមលំដាប់…':'ចុចពាក្យខាងក្រោម…'}</span>`}${!st.ok&&sp&&sel.length<need?'<span class="lex-slot"></span>'.repeat(need-sel.length):''}</div>
+    ${st.ok?'':`<div class="lex-tiles">${it.tiles.map((w,t)=>`<button ${sel.includes(t)||sel.length>=need?'disabled':''} onclick="LEX.tile('${k}',${i},${t})">${esc(w)}</button>`).join('')}</div>
+    <div class="lex-row">${sp&&st.tries>=2?`<span class="lex-hint2">💡 ចាប់ផ្តើមដោយ <b>${esc(it.a[0])}</b>…</span>`:''}<button class="btn ghost sm" onclick="LEX.clearT('${k}',${i})">↺ សម្អាត</button><button class="btn teal sm" ${sel.length===need?'':'disabled'} onclick="LEX.checkT('${k}',${i})">✓ ពិនិត្យ</button></div>`}</div>`;
 }
 function rerender(k){ const [n,si]=k.split('-').map(Number), el=document.getElementById('lex-'+k); if(el) el.outerHTML=block(n,si); refreshFoot(n,si); }
 function refreshFoot(n,si){ const b=document.querySelector(`[data-lexfoot="${n}-${si}"]`); if(b){ const ok=!has(n,si)||passed(n,si)||(CUR[key(n,si)]&&CUR[key(n,si)].st.every(x=>x.ok)); b.disabled=!ok; b.classList.toggle('lockd',!ok); } }
 function mark(k,i,ok){
-  const E=CUR[k], st=E.st[i]; st.tries++; if(st.first===null) st.first=ok; if(ok) st.ok=true;
+  const E=CUR[k], st=E.st[i]; st.tries++; const isFirst=st.first===null; if(st.first===null) st.first=ok; if(ok) st.ok=true;
   if(typeof beep==='function') beep(ok);
+  if(window.LVL) LVL.hit(ok, isFirst);
   if(E.st.every(x=>x.ok)){ const [n,si]=k.split('-').map(Number); const f=E.st.filter(x=>x.first).length, r=rec(n,si)||{}; if(!r.done && window.earn) earn(`ex:${n}:${si}`, 200+100*f, `លំហាត់ផ្នែក Unit ${n} (${f}/${E.items.length})`);
     S.ex[n][si]={done:true, t:E.items.length, last:f, best:Math.max(r.best||0,f), n:(r.n||0)+1, ts:Date.now()}; save();
     if(typeof track==='function') track('ex', n+':'+si+':'+f+'/'+E.items.length); }
@@ -110,11 +114,11 @@ function mc(k,i,j,btn){
 function spoke(k,i,r){ const E=CUR[k], st=E.st[i]; if(st.ok) return;
   if(r.pass||r.skip){ st.pct=r.best; if(r.skip&&st.first===null) st.first=false; mark(k,i,true); setTimeout(()=>rerender(k), r.skip?0:1400); }
   else { st.tries++; if(st.first===null) st.first=false; } }
-function tile(k,i,t){ const E=CUR[k]; (E.sel[i]=E.sel[i]||[]).push(t); rerender(k); }
+function tile(k,i,t){ const E=CUR[k], it=E.items[i], s=(E.sel[i]=E.sel[i]||[]); if(s.includes(t) || s.length>=(it.need||it.tiles.length)) return; s.push(t); if(it.j==='' && it.tiles[t].length===1) speak(it.tiles[t].toUpperCase()); rerender(k); }
 function untile(k,i,p){ CUR[k].sel[i].splice(p,1); rerender(k); }
 function clearT(k,i){ CUR[k].sel[i]=[]; rerender(k); }
 function checkT(k,i){
-  const E=CUR[k], it=E.items[i], got=(E.sel[i]||[]).map(t=>it.tiles[t]).join(' '), ok=got===it.a; mark(k,i,ok);
+  const E=CUR[k], it=E.items[i], got=(E.sel[i]||[]).map(t=>it.tiles[t]).join(it.j!=null?it.j:' '), ok=got===it.a; mark(k,i,ok);
   if(ok){ rerender(k); speak(it.a); }
   else { E.sel[i]=[]; rerender(k); const el=document.querySelector(`#lex-${k} .lex-i[data-i="${i}"]`); if(el){ el.classList.add('shake'); el.insertAdjacentHTML('beforeend','<div class="lex-fb no">❌ មិនទាន់ត្រូវ — សាកម្តងទៀត</div>'); } }
 }

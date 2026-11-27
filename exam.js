@@ -1,8 +1,8 @@
 // =====================================================================
 //  exam.js — 📝 ប្រឡងបញ្ចប់មេរៀន (End-of-unit test)
-//  • បង្កើតសំណួរពី Wordlist + វេយ្យាករណ៍នៃមេរៀន (សំណួរថ្មី មិនមែនចម្លងពីសៀវភៅ)
+//  • បង្កើតសំណួរពី Wordlist + សំឡេង Phonicsនៃមេរៀន (សំណួរថ្មី មិនមែនចម្លងពីសៀវភៅ)
 //  • ៣ របៀប: 🖨 បោះពុម្ព (Version A/B + ចម្លើយ + អត្ថបទស្តាប់) • 💻 ប្រឡងក្នុង App • 🌐 Online (ឯកសារ HTML + កូដលទ្ធផល)
-//  • ពិន្ទុសរុប ៥០ • A វាក្យសព្ទ 10 • B វេយ្យាករណ៍ 10 • C ផ្គូផ្គង 8 • D ស្តាប់ 6 • E សរសេរ 8 • F រៀបប្រយោគ 4×2
+//  • ពិន្ទុសរុប ៥០ • A វាក្យសព្ទ 10 • B សំឡេង Phonics 10 • C ផ្គូផ្គង 8 • D ស្តាប់ 6 • E សរសេរ 8 • F រៀបប្រយោគ 4×2
 // =====================================================================
 (function(){
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -27,6 +27,7 @@ function grammarItems(n, r){
   shuf(u.quiz,r).forEach(q=>{ const m=mcFrom(q.o[q.a], q.o.filter((_,k)=>k!==q.a)); B.push({t:'mc',q:q.q,...m}); });
   L.grammar.forEach(g=>(g.err||[]).forEach(e=>{ const m=mcFrom(e[1],[e[0]]); B.push({t:'mc',q:'Which sentence is correct?',qKm:'ប្រយោគណាត្រឹមត្រូវ?',...m}); }));
   L.grammar.forEach(g=>{ const keys=[...new Set((g.t+' '+(g.form||[]).flat().join(' ')).toLowerCase().replace(/[^a-z' ]/g,' ').split(/\s+/).filter(w=>w.length>1&&!['and','the','or','with','to','noun','verb','past','present','simple','questions','negatives','short','answers'].includes(w)))];
+    if(window.COURSE&&COURSE.sg){ const V=new Set(u.vocab.map(v=>v[0].toLowerCase())); keys.splice(0,keys.length,...keys.filter(k=>V.has(k))); }
     g.ex.forEach(ex=>{ const ws=ex.split(' '); const i=ws.findIndex(w=>keys.includes(w.toLowerCase().replace(/[^a-z']/g,''))); if(i<0||keys.length<3) return;
       const ans=ws[i].replace(/[^A-Za-z']/g,''); const others=shuf(keys.filter(k=>k!==ans.toLowerCase()),r).slice(0,2); const m=mcFrom(ans,others);
       B.push({t:'mc',q:ws.map((w,j)=>j===i?w.replace(/[A-Za-z']+/,'_____'):w).join(' '),...m}); }); });
@@ -50,7 +51,7 @@ function build(n, ver, sp){
   parts.push({id:'A',km:'វាក្យសព្ទ',en:'Vocabulary',ins:'Choose the correct answer.',insKm:'ជ្រើសចម្លើយត្រឹមត្រូវ។',pts:1,qs:A});
   // B — Grammar (10): unit quiz + correct-sentence + gap from examples
   const B=grammarItems(n, r);
-  parts.push({id:'B',km:'វេយ្យាករណ៍',en:'Grammar',ins:'Choose the correct answer.',insKm:'ជ្រើសចម្លើយត្រឹមត្រូវ។',pts:1,qs:shuf(B,r).slice(0,10)});
+  parts.push({id:'B',km:(window.COURSE&&COURSE.sg)?'សំឡេង Phonics':'វេយ្យាករណ៍',en:(window.COURSE&&COURSE.sg)?'Phonics':'Grammar',ins:'Choose the correct answer.',insKm:'ជ្រើសចម្លើយត្រឹមត្រូវ។',pts:1,qs:shuf(B,r).slice(0,10)});
   // C — Matching (8)
   const C=take(words,sp?6:8); const right=shuf(C.map(v=>v[2]),r);
   parts.push({id:'C',km:'ផ្គូផ្គង',en:'Matching',ins:'Match the English words with the Khmer meanings.',insKm:'ផ្គូផ្គងពាក្យអង់គ្លេសជាមួយន័យខ្មែរ។',pts:1,

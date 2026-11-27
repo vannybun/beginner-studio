@@ -9,7 +9,7 @@ const shuf = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.flo
 const say = t => { try{ speak(t); }catch(e){} };
 const sayA = t => JSON.stringify(t).replace(/"/g,'&quot;');
 const GAMES = [
-  ['quiz','❓','សំណួររហ័ស','ជ្រើស A B C D — ពាក្យ ស្តាប់ វេយ្យាករណ៍','#7c3aed'],
+  ['quiz','❓','សំណួររហ័ស','ជ្រើស A B C D — ពាក្យ ស្តាប់ សំឡេង Phonics','#7c3aed'],
   ['hang','🔤','ទាយពាក្យ','ទាយអក្សរម្តងមួយៗ មុនប៉េងប៉ោងបែកអស់','#ea580c'],
   ['scr','🔀','រៀបអក្សរ','រៀបអក្សរដែលច្របូកច្របល់ឱ្យជាពាក្យ','#0891b2'],
   ['mem','🃏','ផ្គូផ្គងកាត','បើកកាតពីរ — អង់គ្លេស និងន័យខ្មែរ','#16a34a'],
