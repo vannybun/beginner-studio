@@ -23,8 +23,32 @@ const grade = p => GRADES.find(g=>p>=g[0]);
 const gname = g => g==='F'?'ស្រី':g==='M'?'ប្រុស':'—';
 
 let C = { classes:[], cur:null, month:monthNow() };
-try { Object.assign(C, JSON.parse(localStorage.getItem(CK)||'{}')); } catch(e){}
-function saveC(){ try{ localStorage.setItem(CK, JSON.stringify(C)); if(window.Course) setTimeout(Course.check,0); return true; }catch(e){ toast('⚠️ ទំហំទិន្នន័យពេញ — សូម Backup ហើយកាត់បន្ថយរូបថត'); return false; } }
+let SEEN = null;   // 🛡️ ទិន្នន័យថ្នាក់ដែលទំព័រនេះបានអាន/សរសេរចុងក្រោយ
+try { SEEN=localStorage.getItem(CK); Object.assign(C, JSON.parse(SEEN||'{}')); } catch(e){}
+/* 🛡️ ការពារការបាត់ថ្នាក់៖ Cloud ឬ Tab ផ្សេងកែទិន្នន័យថ្នាក់ → អានថ្មីភ្លាម (កុំយកច្បាប់ចាស់ទៅសរសេរជាន់) */
+function reloadC(){ try{ const cur=localStorage.getItem(CK); if(cur==null || cur===SEEN) return false; SEEN=cur; C=Object.assign({classes:[],cur:null,month:monthNow()}, JSON.parse(cur)); return true; }catch(e){ return false; } }
+window.addEventListener('cloud-key', e=>{ if(e.detail===CK && reloadC() && typeof view!=='undefined' && view.name==='class') render(); });
+window.addEventListener('storage', e=>{ if(e.key===CK) reloadC(); });
+function saveC(){ try{
+  const cur=localStorage.getItem(CK);   // មានអ្នកផ្សេងកែតាំងពីយើងអាន → បញ្ចូលគ្នា (រក្សាថ្នាក់ថ្មីរបស់គេ) មុននឹងសរសេរ
+  if(cur!=null && cur!==SEEN && window.Cloud && Cloud.merge){ try{ C=Object.assign({classes:[],cur:null,month:monthNow()}, Cloud.merge(JSON.parse(SEEN||'{}'), JSON.parse(JSON.stringify(C)), JSON.parse(cur))); }catch(e){} }
+  const s=JSON.stringify(C); localStorage.setItem(CK, s); SEEN=s; if(window.Course) setTimeout(Course.check,0); return true; }catch(e){ toast('⚠️ ទំហំទិន្នន័យពេញ — សូម Backup ហើយកាត់បន្ថយរូបថត'); return false; } }
+/* ♻️ គណនីសិស្សដែលថ្នាក់បាត់ → Admin ស្តារថ្នាក់វិញពីគណនី (ឈ្មោះ • គណនី • វឌ្ឍនភាព នៅដដែល) */
+function orphans(){ if(!window.Auth||!Auth.data||Auth.role()!=='admin') return []; const ids=new Set(C.classes.map(c=>c.id)), by={};
+  (Auth.data().users||[]).filter(u=>u.role==='student'&&u.classId&&!ids.has(u.classId)).forEach(u=>{ (by[u.classId]=by[u.classId]||[]).push(u); });
+  return Object.entries(by).map(([id,L])=>({id, users:L})); }
+function orphanBar(){ const O=orphans(); if(!O.length) return '';
+  return O.map(o=>`<div class="pass-b" style="margin:10px 0;border-color:#f59e0b"><span>♻️</span><div><b>មានគណនីសិស្ស ${o.users.length} នាក់ ដែលថ្នាក់របស់ពួកគេបាត់</b><small>ឧ. ${o.users.slice(0,3).map(u=>esc(u.name)).join(', ')}… • គណនី និងវឌ្ឍនភាពសិស្សនៅដដែល</small></div><button class="btn sun sm" onclick="Class._restoreOrphan('${o.id}')">♻️ ស្តារថ្នាក់</button></div>`).join(''); }
+function restoreOrphanForm(id){ const o=orphans().find(x=>x.id===id); if(!o) return;
+  modal(`<h3>♻️ ស្តារថ្នាក់វិញ</h3><p class="note">នឹងបង្កើតថ្នាក់វិញ ជាមួយសិស្ស ${o.users.length} នាក់ពីគណនីរបស់ពួកគេ (ឈ្មោះ • គណនី • ពាក្យសម្ងាត់ • វឌ្ឍនភាព នៅដដែល)។ រូបថត ឈ្មោះឡាតាំង និងពិន្ទុក្នុងថ្នាក់ចាស់ មិនអាចយកមកវិញបានទេ — អាចបញ្ចូលម្តងទៀតតាមក្រោយ។</p>
+    <label class="me-f"><span>ឈ្មោះថ្នាក់</span><input id="roN" class="cl-in" value="ថ្នាក់ដែលបានស្តារ" maxlength="40"></label>
+    <label class="me-f"><span>សៀវភៅ</span><select id="roB" class="cl-in">${COURSES.map(b=>`<option value="${b.id}">${b.icon} ${esc(b.name)}</option>`).join('')}</select></label>
+    <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" onclick="Class._restoreGo('${id}')">♻️ ស្តារ</button></div>`); }
+function restoreGo(id){ const o=orphans().find(x=>x.id===id); if(!o) return closeModal(); reloadC();
+  const n=(document.getElementById('roN').value||'').trim()||'ថ្នាក់ដែលបានស្តារ', b=document.getElementById('roB').value;
+  const c={id, name:n, book:b, lock:true, bookOpen:[b], cols:JSON.parse(JSON.stringify(DEFAULT_COLS)), scores:{}, groups:null,
+    students:o.users.map(u=>({id:u.studentId||u.id, name:u.name}))};
+  C.classes.push(c); C.cur=id; saveC(); closeModal(); tab='students'; render(); toast(`♻️ បានស្តារថ្នាក់ «${n}» ជាមួយសិស្ស ${c.students.length} នាក់ — សៀវភៅបើកឱ្យសិស្សរួច • ចាត់គ្រូនៅ 🛡️ Admin`); }
 function vis(){ return window.Auth&&Auth.user() ? C.classes.filter(c=>Auth.canSeeClass(c)) : C.classes; }
 function cls(){ const V=vis(); let c=V.find(x=>x.id===C.cur); if(!c && V.length){ c=V[0]; C.cur=c.id; } return c; }
 function newClass(name){ const c={id:uid(), name:name||'ថ្នាក់ Beginner A', book:'hw5-beg', lock:true, bookOpen:[], cols:JSON.parse(JSON.stringify(DEFAULT_COLS)), students:[], scores:{}, groups:null}; if(window.Auth&&Auth.role()==='teacher') c.owner=Auth.user().id; C.classes.push(c); C.cur=c.id; saveC(); return c; }
@@ -77,7 +101,7 @@ function resizePhoto(file, cb){
 /* ---------- main render ---------- */
 const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['attend','🙋 វត្តមាន'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['reward','🎁 រង្វាន់'],['cert','🏅 ប័ណ្ណសរសើរ'],['notify','📣 ជូនដំណឹង'],['chat','💬 ឆាតសិស្ស'],['unlock','🔓 បើក/កាលវិភាគមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
 let tab='students';
-function render(t){ applyProfiles();
+function render(t){ reloadC(); applyProfiles();
   if(t) tab=t;
   setUnitColors(3);
   let c=cls();
@@ -93,7 +117,7 @@ function render(t){ applyProfiles();
       <button class="btn ghost sm" onclick="Class.backup()">⬇ Backup</button>
       ${!window.Auth||Auth.role()==='admin'?`<label class="btn ghost sm">⬆ Restore<input type="file" accept=".json" hidden onchange="Class.restore(this.files[0])"></label>`:''}
     </div>
-  </div>`;
+  </div>` + orphanBar();
   if(!c){
     $('#main').innerHTML = head + (isAdm()?`<div class="panel cl-empty"><div style="font-size:70px" class="float">🏫</div><h3 class="km">ចាប់ផ្តើមដោយបង្កើតថ្នាក់រៀន</h3>
       <div class="row" style="justify-content:center"><button class="btn teal" onclick="Class.addClass()">＋ បង្កើតថ្នាក់ និងចាត់គ្រូ</button></div></div>`
@@ -919,7 +943,7 @@ function bkOpen(id){ const c=cls(); if(!c || !bOf(c).includes(id)) return; const
 function setBook(id){ if(!isAdm()) return toast('⛔ មានតែ Admin ទេដែលអាចកំណត់សៀវភៅរបស់ថ្នាក់'); bkPrim(id); }
 function share(k){ const c=cls(); if(!c) return; c.share=c.share||{}; c.share[k]=!c.share[k]; saveC(); toast(c.share[k]?'👁 សិស្សអាចមើលបានហើយ':'🔒 បានបិទមិនឱ្យសិស្សមើល'); }
 function shareBtn(c,k){ const on=c.share&&c.share[k]; return `<button class="btn sm ${on?'teal':'ghost'}" onclick="Class._share('${k}');Class.render('${k==='res'?'results':'year'}')" title="សិស្សមើលឃើញក្នុង 🏆 ចំណាត់ថ្នាក់">${on?'👁 សិស្សកំពុងមើលបាន':'🙈 សិស្សមើលមិនឃើញ'}</button>`; }
-window.Class = { _ncGo:ncGo, wallet, reward, _rwSet:v=>{ RW.sel=new Set(v==='all'?cls().students.map(s=>s.id):v); rwDraw(); }, _rwTog:id=>{ RW.sel.has(id)?RW.sel.delete(id):RW.sel.add(id); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwA:v=>{ RW.a=Math.max(0,Math.round(+v||0)); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwGo:rwGo, _rwUndo:rwUndo, _gn:gn, gEdit, gManual, gSel, gTo, gName, gEmo, gAdd, gDel, TABS, _setCur:id=>{ if(vis().some(x=>x.id===id)){ C.cur=id; saveC(); if(document.getElementById('clTab')) render(); } }, _save:saveC, att, attFine, attNote, attAll, attClear, attDay, attTell, attPrint, attMon:m=>{ AT.m=m; tAttend(cls()); }, fines, FINE_A, gate, gateAuto, copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, books, _bkIn:bkIn, _bkPrim:bkPrim, _bkOpen:bkOpen, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
+window.Class = { _restoreOrphan:restoreOrphanForm, _restoreGo:restoreGo, _reload:reloadC, _ncGo:ncGo, wallet, reward, _rwSet:v=>{ RW.sel=new Set(v==='all'?cls().students.map(s=>s.id):v); rwDraw(); }, _rwTog:id=>{ RW.sel.has(id)?RW.sel.delete(id):RW.sel.add(id); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwA:v=>{ RW.a=Math.max(0,Math.round(+v||0)); RW.w=(document.getElementById('rwW')||{}).value||RW.w; rwDraw(); }, _rwGo:rwGo, _rwUndo:rwUndo, _gn:gn, gEdit, gManual, gSel, gTo, gName, gEmo, gAdd, gDel, TABS, _setCur:id=>{ if(vis().some(x=>x.id===id)){ C.cur=id; saveC(); if(document.getElementById('clTab')) render(); } }, _save:saveC, att, attFine, attNote, attAll, attClear, attDay, attTell, attPrint, attMon:m=>{ AT.m=m; tAttend(cls()); }, fines, FINE_A, gate, gateAuto, copyFrom, _cpSrc:v=>{ CP.src=v; copyFrom(); }, _cpMode:m=>{ CP.mode=m; copyFrom(); }, _cpGo:cpGo, _share:share, _cur:()=>cls(), _avatar:avatar, _months:monthsWithData, _results:results, _maxTotal:maxTotal, _grade:grade, _yearRows:yearRows, unl, unlTo, setBook, books, _bkIn:bkIn, _bkPrim:bkPrim, _bkOpen:bkOpen, photoBulk, _pbFiles, _pbBackup, _pbApply, render, pick:id=>{ C.cur=id; saveC(); render(); }, addClass, renameClass, backup, restore,
   editStudent, pickPhoto, noPhoto:()=>{ editPhoto=null; $('#clPrev').innerHTML=avatar({name:$('#clN').value},140); }, cam, camStop, saveStudent, photo, delStudent, bulk, impMode, impFile, impPreview, impApply, infoTable, infoSave, template, age:ageOf, sortStudents,
   setMonth:m=>{ if(m){ C.month=m; saveC(); render(); } }, cols, colAdd, colSave, csv, printMonth, csvYear, printYear, certs, certSet, certGrade, certPrint, sigFile, sigDraw, sigScale, sigReset, certShow:i=>{ ctSel=i; certRefresh(); },
   gset:(k,v)=>{ G[k]=v; tGroups(cls()); }, gabs:id=>{ G.absent.has(id)?G.absent.delete(id):G.absent.add(id); tGroups(cls()); }, makeGroups, groupsToScore, groupsFull, printGroups,

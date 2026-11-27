@@ -7,7 +7,7 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.27q';
+const VER='2026.11.27r';
 const FILES=['tts.js','qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','rank.js','chat.js','notify.js','exam.js','worksheet.js','track.js','qrscan.js','auth.js','ctx.js','voice.js','lessonex.js','sg-courses.js','course.js','levelup.js','rich.js','games.js','sig.js','cert.js','app.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
@@ -200,7 +200,7 @@ async function restoreMedia(){
 
 /* ---------- admin panel section ---------- */
 function qrSvg(text, cell){ try{ const q=qrcode(0,'L'); q.addData(text); q.make(); return q.createSvgTag({cellSize:cell||4, margin:2}); }catch(e){ return ''; } }
-async function refreshKey(k){ if(!db) return false; const r=await fetchOne(k); if(r.v!=null && r.v!==_get.call(localStorage,k) && !Q.has(k)){ _set.call(localStorage,k,r.v); BASE[k]=r.v; return true; } return false; }
+async function refreshKey(k){ if(!db) return false; const r=await fetchOne(k); if(r.v!=null && r.v!==_get.call(localStorage,k) && !Q.has(k)){ _set.call(localStorage,k,r.v); BASE[k]=r.v; try{ window.dispatchEvent(new CustomEvent('cloud-key',{detail:k})); }catch(e){} return true; } return false; }
 /* ---------- 🔄 auto-update: check for a newer version and reload (never in the middle of a test) ---------- */
 let updWaiting=false, lastChk=Date.now();
 async function checkUpdate(){
