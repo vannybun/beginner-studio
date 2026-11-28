@@ -306,7 +306,7 @@ function renderMe(){
     months = ms.map(m=>{ const r=c.scores[m][s.id]; let t=0; c.cols.forEach(x=>{ const v=parseFloat(r[x.id]); if(!isNaN(v)) t+=v; }); const p=t/mt*100;
       const all=c.students.map(x=>{ const rr=c.scores[m][x.id]; if(!rr) return null; let tt=0; c.cols.forEach(cc=>{ const v=parseFloat(rr[cc.id]); if(!isNaN(v)) tt+=v; }); return tt; }).filter(v=>v!=null).sort((a,b)=>b-a);
       const rank=all.indexOf(t)+1; const [y,mm]=m.split('-');
-      return `<div class="me-m"><div class="me-mh"><b>ខែ${['មករា','កុម្ភៈ','មីនា','មេសា','ឧសភា','មិថុនា','កក្កដា','សីហា','កញ្ញា','តុលា','វិច្ឆិកា','ធ្នូ'][+mm-1]} ${y}</b><span class="me-rank">${rank<=3?['🥇','🥈','🥉'][rank-1]:'🏅'} ចំណាត់ថ្នាក់ ${rank}/${all.length}</span></div>
+      return `<div class="me-m"><div class="me-mh"><b>ខែ${['មករា','កុម្ភៈ','មីនា','មេសា','ឧសភា','មិថុនា','កក្កដា','សីហា','កញ្ញា','តុលា','វិច្ឆិកា','ធ្នូ'][+mm-1]} ${y}</b>${(c.share&&c.share.res)||role()!=='student'?`<span class="me-rank">${rank<=3?['🥇','🥈','🥉'][rank-1]:'🏅'} ចំណាត់ថ្នាក់ ${rank}/${all.length}</span>`:''}</div>
         <div class="me-cols">${c.cols.map(x=>`<div><span>${esc(x.n)}</span><b>${r[x.id]??'—'}<small>/${x.max}</small></b></div>`).join('')}</div>
         <div class="me-tot"><span>សរុប ${+t.toFixed(2)} / ${mt}</span><div class="bar"><i style="width:${p}%"></i></div><b>${p.toFixed(1)}%</b></div></div>`; }).join('');
   }
