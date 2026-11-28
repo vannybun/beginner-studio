@@ -19,15 +19,23 @@ const ROLE_NOW = window.Auth ? Auth.role() : 'admin';
 let S = { mode:'learn', known:{}, quiz:{}, listened:{}, names:'', teams:[{n:'ក្រុម A',s:0},{n:'ក្រុម B',s:0},{n:'ក្រុម C',s:0}], voice:'', rate:0.9, lastUnit:1 };
 try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch(e){}
 /* 📚 សិស្សរៀនសៀវភៅបន្ថែម៖ វឌ្ឍនភាពតាម Unit ទុកដាច់ដោយឡែក (ប្រវត្តិរូប លុយ សកម្មភាព ប្រើរួមគ្នា) */
-const XKEY = window.COURSE&&COURSE.extra ? KEY+':'+COURSE.id : null;
 const UNIT_F = ['known','quiz','listened','sec','level','lastUnit','bookPage','ex','tracks'];
-if(XKEY){ let X={}; try{ X=JSON.parse(localStorage.getItem(XKEY)||'{}'); }catch(e){}
+/* 👩‍🏫 គ្រូ/Admin នីមួយៗ មានវឌ្ឍនភាពរៀនផ្ទាល់ខ្លួន (ពាក្យចេះ មេរៀន ផ្កាយ …) — ការកំណត់ (សំឡេង ល្បឿន ក្រុម …) ប្រើរួមគ្នាដដែល
+   វឌ្ឍនភាពចាស់ដែលធ្លាប់ប្រើរួមគ្នា ផ្ទេរទៅ Admin ប៉ុណ្ណោះ • គ្រូថ្មីៗចាប់ផ្តើមពីសូន្យ */
+const PERS_F = UNIT_F.concat(['act','rich','profile']);
+const PKEY = (window.Auth && Auth.user && Auth.user() && Auth.role()!=='student') ? 'beginner-studio-sp:'+Auth.user().id : null;
+if(PKEY){ let P=null; try{ P=JSON.parse(localStorage.getItem(PKEY)||'null'); }catch(e){}
+  if(!P){ P={}; if(Auth.role()==='admin') PERS_F.forEach(f=>{ if(S[f]!==undefined) P[f]=S[f]; }); try{ localStorage.setItem(PKEY, JSON.stringify(P)); }catch(e){} }
+  PERS_F.forEach(f=>{ delete S[f]; }); Object.assign(S, {known:{}, quiz:{}, listened:{}, lastUnit:1}, P); }
+const XKEY = window.COURSE&&COURSE.extra ? (PKEY||KEY)+':'+COURSE.id : null;
+if(XKEY){ let X={}; try{ X=JSON.parse(localStorage.getItem(XKEY)||(PKEY&&Auth.role()==='admin'&&localStorage.getItem(KEY+':'+COURSE.id))||'{}'); }catch(e){}
   UNIT_F.forEach(f=>{ delete S[f]; }); Object.assign(S, {known:{}, quiz:{}, listened:{}, lastUnit:1}, X); }
 function save(){ try{
-  if(!XKEY) return localStorage.setItem(KEY, JSON.stringify(S));
-  const X={}, base=(()=>{ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ return {}; } })();
-  Object.keys(S).forEach(k=>{ if(UNIT_F.includes(k)) X[k]=S[k]; else base[k]=S[k]; });
-  localStorage.setItem(KEY, JSON.stringify(base)); localStorage.setItem(XKEY, JSON.stringify(X));
+  if(!XKEY && !PKEY) return localStorage.setItem(KEY, JSON.stringify(S));
+  const X={}, P={}, base=(()=>{ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ return {}; } })();
+  Object.keys(S).forEach(k=>{ if(XKEY && UNIT_F.includes(k)) X[k]=S[k]; else if(PKEY && PERS_F.includes(k)) P[k]=S[k]; else base[k]=S[k]; });
+  if(PKEY){ let old={}; try{ old=JSON.parse(localStorage.getItem(PKEY)||'{}')||{}; }catch(e){} localStorage.setItem(PKEY, JSON.stringify(XKEY?{...old, ...P}:P)); }
+  localStorage.setItem(KEY, JSON.stringify(base)); if(XKEY) localStorage.setItem(XKEY, JSON.stringify(X));
 }catch(e){} }
 /* 💰 លុយ (រៀល) — រកបានពីការរៀន និងធ្វើលំហាត់ (សិស្សតែប៉ុណ្ណោះ; id នីមួយៗទទួលបានតែម្តង) */
 const RIEL = n => Math.round(n||0).toLocaleString('en-US')+'៛';
