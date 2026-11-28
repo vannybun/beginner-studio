@@ -38,7 +38,7 @@ function remind(k, id, quiet){ const t=find(k,id); if(!t) return 0; let n=0;
 /* class tab: everything still open, with who hasn't done it */
 function tab(el, c){ if(!el) return; if(!c){ el.innerHTML='<div class="panel"><p class="note">មិនទាន់មានថ្នាក់</p></div>'; return; }
   const T=tasks(c), tot=T.reduce((a,t)=>a+miss(t).length,0);
-  el.innerHTML=`<div class="panel"><div class="pd-head"><h3 class="sec" style="margin:0">⏳ សិស្សមិនទាន់ប្រឡង / មិនទាន់ធ្វើកិច្ចការ</h3>${tot?`<button class="btn sun sm" onclick="Pending.remindAll('${c.id}')">📣 រំលឹកទាំងអស់</button>`:''}</div>
+  el.innerHTML=`<div class="panel"><div class="pd-head"><h3 class="sec" style="margin:0">⏳ សិស្សមិនទាន់ប្រឡង / មិនទាន់ធ្វើកិច្ចការ</h3><div class="row" style="gap:6px">${window.Exam&&Exam.liveView?`<button class="btn sm ex-livebtn on" onclick="Exam.liveView('${c.id}')">🟢 អ្នកកំពុងប្រឡង (Live)</button>`:''}${tot?`<button class="btn sun sm" onclick="Pending.remindAll('${c.id}')">📣 រំលឹកទាំងអស់</button>`:''}</div></div>
     <p class="note">បង្ហាញតែប្រឡង និងសន្លឹកលំហាត់ដែលកំពុងបើក • ចុចលើកាត ដើម្បីមើល និងរំលឹក</p></div>
     ${T.length?T.map(t=>{ const M=miss(t), n=t.c.students.length, d=n-M.length; return `<div class="panel pd-card ${M.length?'':'ok'}" style="margin-top:12px">
       <div class="pd-ch"><div><b>${esc(t.title)}</b><small>${t.sub}</small></div><div class="pd-pr"><span>✅ ${d}/${n}</span><i><s style="width:${n?d/n*100:0}%"></s></i></div>

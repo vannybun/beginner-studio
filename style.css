@@ -2010,3 +2010,19 @@ img.sgpic{height:1.6em;width:auto;max-width:2.6em;object-fit:contain;vertical-al
 .ct-dlk{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
 .ct-dlk>div{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:10px 12px}.ct-dlk b{display:block;font-size:22px}.ct-dlk small{font-family:var(--kh);color:#64748b}
 .ct-dlk .ok{background:#f0fdf4;border-color:#bbf7d0}.ct-dlk .seen{background:#eff6ff;border-color:#bfdbfe}.ct-dlk .wait{background:#fff7ed;border-color:#fed7aa}
+/* 🟢 live exam monitor */
+.ex-livebtn{background:#f1f5f9;border:1.5px solid #cbd5e1;color:#475569;font-weight:700}
+.ex-livebtn.on{background:#dcfce7;border-color:#4ade80;color:#15803d}.ex-livebtn.on b{animation:auBob 1.6s infinite}
+.exl-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}.exl-h h3{margin:0}
+.exl-n{background:#16a34a;color:#fff;border-radius:999px;padding:0 6px;font-size:11px}.exl-n:empty{display:none}
+.exl-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}.exl-sum>div{border-radius:14px;padding:10px 12px;border:1px solid #e2e8f0}
+.exl-sum b{display:block;font-size:24px}.exl-sum small{font-family:var(--kh);color:#475569}
+.exl-sum .on{background:#f0fdf4;border-color:#86efac}.exl-sum .ok{background:#eff6ff;border-color:#93c5fd}.exl-sum .warn{background:#fff7ed;border-color:#fdba74}
+.exl h4{margin:14px 0 6px;font-family:var(--kh)}
+.exl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.exl-r{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-left:5px solid #22c55e;border-radius:14px;padding:8px 12px}
+.exl-r.warn{border-left-color:#f97316}.exl-r.ok{border-left-color:#3b82f6}
+.exl-t{flex:1;min-width:0}.exl-t b{display:block;font-family:var(--kh)}.exl-t small{color:#64748b;font-family:var(--kh);font-size:12px}
+.exl-bar{height:7px;background:#f1f5f9;border-radius:5px;overflow:hidden;margin:4px 0 2px}.exl-bar i{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#86efac)}
+.exl-v{text-align:right}.exl-v b{display:block;font-variant-numeric:tabular-nums}.exl-v small{color:#64748b;font-family:var(--kh);font-size:12px}
+@media(max-width:600px){.exl-sum{grid-template-columns:1fr 1fr 1fr}.exl-sum b{font-size:18px}}

@@ -104,7 +104,7 @@ function openFor(me){ return uniqOpen((X.open||[]).filter(se=>se.cls===me.classI
 function classes(){ const C=(window.Class&&Class.data())||{classes:[]}; return C.classes.filter(c=>!window.Auth||!Auth.user()||Auth.canSeeClass(c)); }
 function openPanel(u){
   cleanOpen(); const cs=classes(), list=(X.open||[]).filter(se=>se.n===u.n && cs.some(c=>c.id===se.cls));
-  return `<div class="panel ex-gate"><div class="row" style="justify-content:space-between"><h3 class="sec" style="margin:0">🔓 បើកឱ្យសិស្សប្រឡង (លើទូរស័ព្ទ/App របស់សិស្ស)</h3><span class="note">សិស្សមើលមិនឃើញប្រឡងទេ រហូតដល់គ្រូបើក</span></div>
+  return `<div class="panel ex-gate"><div class="row" style="justify-content:space-between"><h3 class="sec" style="margin:0">🔓 បើកឱ្យសិស្សប្រឡង (លើទូរស័ព្ទ/App របស់សិស្ស)</h3><span class="row" style="gap:8px"><span class="note">សិស្សមើលមិនឃើញប្រឡងទេ រហូតដល់គ្រូបើក</span><button class="btn sm ex-livebtn on" onclick="Exam.liveView()">🟢 មើលអ្នកកំពុងប្រឡង (Live)</button></span></div>
     ${cs.length?`<div class="row" style="margin:10px 0;align-items:end">
       <div class="km ex-pick"><span>🏫 ថ្នាក់ <small class="note">(ជ្រើសបានច្រើន)</small></span><div class="ex-chips">${cs.map((c,i)=>`<label class="ex-chip"><input type="checkbox" class="exoC" value="${c.id}" ${i===0?'checked':''}><span>${esc(c.name)}</span></label>`).join('')}${cs.length>1?`<button type="button" class="btn ghost sm" onclick="document.querySelectorAll('.exoC').forEach(x=>x.checked=true)">✔ ទាំងអស់</button>`:''}</div></div>
       <div class="km ex-pick"><span>Version</span><div class="ex-chips">${['A','B'].map((v,i)=>`<label class="ex-chip"><input type="checkbox" class="exoV" value="${v}" ${i===0?'checked':''}><span>${v}</span></label>`).join('')}</div></div>
@@ -113,7 +113,7 @@ function openPanel(u){
       <button class="btn teal" onclick="Exam.openSess(${u.n})">🔓 បើកប្រឡង</button><button class="btn ghost" title="បើក Unit ច្រើនក្នុងពេលតែមួយ" onclick="Exam.openMulti(${u.n})">📚 បើកច្រើន Unit</button></div>`:'<p class="note">មិនទាន់មានថ្នាក់</p>'}
     ${list.length?list.map(se=>{ const c=cs.find(x=>x.id===se.cls)||{name:'?',students:[]}; const done=X.results.filter(r=>r.sess===se.id); const ids=new Set(done.map(r=>r.sid));
       return `<div class="ex-sess"><span class="live">● កំពុងបើក</span><b>Unit ${se.n} • Version ${se.ver}</b><span>🏫 ${esc(c.name)} • ⏱ ${se.min?se.min+' នាទី':'គ្មានកំណត់'} • ${se.once?'ម្តង':'ច្រើនដង'}</span>
-        <span class="cnt">✅ ${ids.size}/${c.students.length} បានប្រឡង</span>${window.Pending?Pending.btn('ex',se.id):''}<button class="btn sm ghost" style="color:#dc2626" onclick="Exam.closeSess('${se.id}')">⛔ បិទ</button></div>`; }).join(''):''}
+        <span class="cnt">✅ ${ids.size}/${c.students.length} បានប្រឡង</span>${window.Pending?Pending.btn('ex',se.id):''}${liveBadge(se)}<button class="btn sm ghost" style="color:#dc2626" onclick="Exam.closeSess('${se.id}')">⛔ បិទ</button></div>`; }).join(''):''}
   </div>`;
 }
 /* 🔓 open one or many exams at once: every chosen class × every chosen version (× every chosen unit) becomes its own session */
@@ -139,6 +139,44 @@ function openMultiGo(){ const U=[...document.querySelectorAll('.exoU:checked')].
     if(window.Notify) Notify.task(c, `ប្រឡង ${U.map(x=>'Unit '+x).join(', ')} បើកហើយ`, 'ចូល 📝 កិច្ចការ ដើម្បីចាប់ផ្តើមប្រឡង • សំណាងល្អ! 🍀'); });
   saveX(); closeModal(); toast(`🔓 បានបើក ${k} ប្រឡង (${U.length} Unit • ${M.cls.length} ថ្នាក់ • Version ${M.vers.join('+')})`); render(); }
 function closeSess(id){ if(!confirm('បិទប្រឡងនេះ? សិស្សនឹងមិនអាចចូលប្រឡងទៀតទេ')) return; const se=(X.open||[]).find(x=>x.id===id); X.open=(X.open||[]).filter(x=>x.id!==id && !(se && x.n===se.n && x.cls===se.cls && (x.ver||'A')===(se.ver||'A'))); saveX(); toast('⛔ បានបិទ'); render(); }
+
+/* ---------- 🟢 LIVE: who is taking an exam right now (realtime: live/examlive_<classId>) ---------- */
+const LV = () => window.Cloud && Cloud.live && Cloud.live.ok() ? Cloud.live : null;
+function answered(run){ let k=0; run.ex.parts.forEach(p=>p.qs.forEach((q,i)=>{ const v=(run.ans[p.id]||{})[i]; if(v!==undefined&&v!==''&&v!==null) k++; })); return k; }
+function livePut(st, extra){ const me=meStu(), l=LV(); if(!me||!l||!RUN) return; const tot=RUN.ex.parts.reduce((a,p)=>a+p.qs.length,0);
+  l.merge(['examlive_'+me.classId], {[me.id]:{sid:me.studentId, name:me.name||RUN.name, n:RUN.ex.n, ver:RUN.ex.ver, sess:RUN.sess||'', t0:RUN.t0, min:RUN.min||0, k:answered(RUN), tot, part:RUN.part||0, st, ts:Date.now(), ...(extra||{})}}); }
+function liveStart(){ if(!meStu()||!RUN) return; livePut('run'); clearInterval(RUN.beat); RUN.beat=setInterval(()=>{ if(RUN&&document.getElementById('exam')&&!document.querySelector('#exam .ex-res')) livePut('run'); }, 15000); }
+function liveStop(st, extra){ if(!RUN) return; clearInterval(RUN.beat); livePut(st, extra); }
+const LW={}, LD={};
+function watchLive(cid){ const l=LV(); if(!l||LW[cid]) return; LW[cid]=l.watch(['examlive_'+cid], d=>{ LD[cid]=d||{}; liveRefresh(); }); }
+const STALE=90000;
+function liveRows(cid, sess){ const d=LD[cid]||{}, now=Date.now();
+  return Object.entries(d).map(([uid,v])=>({uid,...v})).filter(v=>v&&v.ts&&now-v.ts<4*3600e3&&(!sess||v.sess===sess)).map(v=>({...v, lost:v.st==='run'&&now-v.ts>STALE})); }
+const runningN = (cid, sess) => liveRows(cid, sess).filter(v=>v.st==='run'&&!v.lost).length;
+function liveBadge(se){ watchLive(se.cls); const n=runningN(se.cls, se.id);
+  return `<button class="btn sm ex-livebtn ${n?'on':''}" data-live="${se.id}" onclick="Exam.liveView('${se.cls}')">🟢 កំពុងប្រឡង <b>${n}</b></button>`; }
+let LVC=null;
+const mmss = ms => { ms=Math.max(0,ms); const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000); return m+':'+String(s).padStart(2,'0'); };
+function liveHtml(cid){ const c=classes().find(x=>x.id===cid)||{name:'?',students:[]}, R=liveRows(cid), now=Date.now();
+  const run=R.filter(v=>v.st==='run'&&!v.lost).sort((a,b)=>a.t0-b.t0), lost=R.filter(v=>v.lost), done=R.filter(v=>v.st==='done').sort((a,b)=>b.ts-a.ts), quit=R.filter(v=>v.st==='quit');
+  const stu=sid=>c.students.find(x=>x.id===sid)||{name:'?'}, av=s=>window.Class&&Class._avatar?Class._avatar(s,38):'';
+  const card=(v,cls,right)=>{ const s=stu(v.sid); return `<div class="exl-r ${cls}">${av(s)}<div class="exl-t"><b>${esc(s.name||v.name)}</b><small>Unit ${v.n} • Version ${v.ver}</small>
+      <div class="exl-bar"><i style="width:${v.tot?v.k/v.tot*100:0}%"></i></div><small>ឆ្លើយ ${v.k}/${v.tot} សំណួរ</small></div><div class="exl-v">${right}</div></div>`; };
+  const open=(X.open||[]).filter(se=>se.cls===cid);
+  return `<div class="exl-sum"><div class="on"><b>${run.length}</b><small>🟢 កំពុងប្រឡង</small></div><div class="ok"><b>${done.length}</b><small>✅ ប្រគល់រួច (៤ ម៉ោងចុងក្រោយ)</small></div><div class="warn"><b>${lost.length+quit.length}</b><small>⚠️ ដាច់ការភ្ជាប់ / ចាកចេញ</small></div></div>
+    ${open.length&&window.Pending?`<div class="row" style="gap:6px;margin:8px 0">${open.map(se=>Pending.btn('ex',se.id).replace('⏳ មិនទាន់','⏳ Unit '+se.n+' '+se.ver+' មិនទាន់')).join('')}</div>`:''}
+    <h4>🟢 កំពុងប្រឡង (${run.length})</h4><div class="exl-list">${run.map(v=>card(v,'on',`<b>⏱ ${mmss(now-v.t0)}</b><small>${v.min?'នៅសល់ '+mmss(v.t0+v.min*60000-now):'គ្មានកំណត់'}</small>`)).join('')||'<p class="note">មិនមាននរណាកំពុងប្រឡងទេ</p>'}</div>
+    ${lost.length+quit.length?`<h4>⚠️ ដាច់ការភ្ជាប់ ឬចាកចេញ</h4><div class="exl-list">${[...lost,...quit].map(v=>card(v,'warn',`<b>${v.st==='quit'?'🚪 ចាកចេញ':'📶 បាត់សញ្ញា'}</b><small>${mmss(now-v.ts)} មុន</small>`)).join('')}</div>`:''}
+    ${done.length?`<h4>✅ ប្រគល់រួច</h4><div class="exl-list">${done.map(v=>card(v,'ok',`<b>${v.pct!=null?v.pct+'%':'✅'}</b><small>${new Date(v.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})} • ${mmss(v.ts-v.t0)}</small>`)).join('')}</div>`:''}
+    <p class="note">💡 ធ្វើបច្ចុប្បន្នភាពភ្លាមៗ (Live) • «បាត់សញ្ញា» = ទូរស័ព្ទសិស្សមិនបានផ្ញើសញ្ញាលើស ១.៥ នាទី (បិទ App ឬអ៊ីនធឺណិតដាច់)</p>`; }
+function liveView(cid){ if(!LV()) return toast('📶 ត្រូវភ្ជាប់ Cloud (អ៊ីនធឺណិត) ដើម្បីមើល Live');
+  const cs=classes(); cid=cid||((cs[0]||{}).id); cs.forEach(c=>watchLive(c.id)); LVC=cid;
+  modal(`<div class="exl"><div class="exl-h"><h3>🟢 អ្នកកំពុងប្រឡង — Live</h3>${cs.length>1?`<div class="row" style="gap:6px">${cs.map(c=>`<button class="chip ${c.id===cid?'on':''}" onclick="Exam.liveView('${c.id}')">${esc(c.name)} <b class="exl-n" data-lc="${c.id}">${runningN(c.id)||''}</b></button>`).join('')}</div>`:''}</div><div id="exLive">${liveHtml(cid)}</div></div>`);
+  document.getElementById('modal').classList.add('wide');
+  clearInterval(liveView.t); liveView.t=setInterval(()=>{ if(!document.getElementById('exLive')){ clearInterval(liveView.t); return; } liveRefresh(); }, 1000); }
+function liveRefresh(){ const b=document.getElementById('exLive'); if(b&&LVC) b.innerHTML=liveHtml(LVC);
+  document.querySelectorAll('[data-lc]').forEach(e=>{ const n=runningN(e.dataset.lc); e.textContent=n||''; });
+  document.querySelectorAll('[data-live]').forEach(e=>{ const se=(X.open||[]).find(x=>x.id===e.dataset.live); if(!se) return; const n=runningN(se.cls, se.id); e.classList.toggle('on',!!n); const bb=e.querySelector('b'); if(bb) bb.textContent=n; }); }
 let lastRef=0;
 async function studentPage(refresh){
   const me=meStu(); if(!me) return;
@@ -213,6 +251,7 @@ function begin(n, ver, sessId){
   el.innerHTML = examShell(RUN.ex, name, false);
   wireExam(el, RUN, ()=>finish());
   if(RUN.min) startTimer(RUN.min);
+  liveStart();
 }
 function startTimer(min){ const end=RUN.t0+min*60000; const tick=()=>{ if(!RUN) return; const left=Math.max(0,end-Date.now()), m=Math.floor(left/60000), sec=Math.floor(left%60000/1000), el=$('#exTime'); if(el){ el.textContent=`⏱ ${m}:${String(sec).padStart(2,'0')}`; el.classList.toggle('warn',left<60000); } if(left<=0){ toast('⏰ អស់ម៉ោង — ប្រគល់ដោយស្វ័យប្រវត្តិ'); finish(true); return; } RUN.timer=setTimeout(tick,500); }; tick(); }
 
@@ -264,7 +303,7 @@ function finish(force){
   clearTimeout(RUN.timer);
   const sc=score(ex,RUN.ans);
   X.results.push({n:ex.n, ver:ex.ver, name:RUN.name, sid:RUN.sid, sess:RUN.sess, uid:(window.Auth&&Auth.user()&&Auth.role()==='student')?Auth.user().id:null, s:sc.s, t:ex.total, pct:sc.pct, by:sc.by, ts:Date.now(), via:'app', mins:Math.round((Date.now()-RUN.t0)/60000)}); if(window.earn) earn(`exam:${RUN.sess||ex.n}`, Math.min(3000, Math.round(sc.pct/10)*300), `ប្រឡង Unit ${ex.n} (${sc.pct}%)`);
-  saveX();
+  saveX(); liveStop('done', {pct:sc.pct, s:sc.s});
   $('#exam').innerHTML = resultHtml(ex, RUN.ans, sc, RUN.name, false);
   if(sc.pct>=80 && window.pageConfetti) pageConfetti();
 }
@@ -287,7 +326,7 @@ function resultHtml(ex, ans, sc, name, online, code){
     return `<div class="ex-rr ${ok?'ok':'no'}"><span>${ok?'✅':'❌'}</span><div><div class="km">${i+1}. ${esc(qtxt)}</div><small>${ok?esc(mine):`<s>${esc(mine)}</s> → <b>${esc(right)}</b>`}</small></div></div>`; }).join('')}</div>`).join('')}
   </div>`;
 }
-function quit(){ if(RUN && !$('.ex-res') && !confirm('ចាកចេញពីប្រឡង? ចម្លើយនឹងមិនត្រូវបានរក្សាទុកទេ។')) return; if(RUN) clearTimeout(RUN.timer); RUN=null; const el=$('#exam'); if(el) el.remove(); document.body.classList.remove('exam-open'); speechSynthesis.cancel(); if(window.render) render(); }
+function quit(){ if(RUN && !$('.ex-res') && !confirm('ចាកចេញពីប្រឡង? ចម្លើយនឹងមិនត្រូវបានរក្សាទុកទេ។')) return; if(RUN){ clearTimeout(RUN.timer); if(!$('.ex-res')) liveStop('quit'); else clearInterval(RUN.beat); } RUN=null; const el=$('#exam'); if(el) el.remove(); document.body.classList.remove('exam-open'); speechSynthesis.cancel(); if(window.render) render(); }
 
 /* ---------- print (paper test) ---------- */
 function paper(ex, school){
@@ -476,7 +515,7 @@ const EXAM_CSS = `
 `;
 const st=document.createElement('style'); st.textContent=EXAM_CSS; document.head.appendChild(st);
 
-window.Exam = { _sp:(pid,i,r)=>{ if(!RUN||!RUN._set) return; const cur=+((RUN.ans[pid]||{})[i])||0; RUN._set(pid,i,Math.max(cur,r.best||r.pct||0)); const q=document.querySelector(`#exam .ex-q[data-p="${pid}"][data-i="${i}"]`); if(q) q.classList.add('answered');
+window.Exam = { liveView,  _sp:(pid,i,r)=>{ if(!RUN||!RUN._set) return; const cur=+((RUN.ans[pid]||{})[i])||0; RUN._set(pid,i,Math.max(cur,r.best||r.pct||0)); const q=document.querySelector(`#exam .ex-q[data-p="${pid}"][data-i="${i}"]`); if(q) q.classList.add('answered');
     if(r.pass||r.tries>=3){ const m=document.querySelector(`#vc-ex${pid}${i} .vc-mic`); if(m) m.innerHTML=r.pass?'<small>✅ បានរក្សាទុក</small>':'<small>🔒 អស់ឱកាស ៣ ដងហើយ — រក្សាទុកលទ្ធផលល្អបំផុត '+Math.max(cur,r.best||0)+'%</small>'; } }, grammarPool:n=>grammarItems(n,Math.random).map(q=>({q:q.q,qKm:q.qKm,o:q.opts,a:q.a})), studentPage, openSess, openMulti, _openMultiGo:openMultiGo, closeSess, reload:reloadX, build, score, tab, start, begin, quit, print, online, importCodes, doImport, toScores, doScores, csv, clear,
   setting:(k,v)=>{ X.settings[k]=v; saveX(); }, data:()=>X };
 })();
