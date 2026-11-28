@@ -31,14 +31,29 @@ function save(){ try{
 }catch(e){} }
 /* 💰 លុយ (រៀល) — រកបានពីការរៀន និងធ្វើលំហាត់ (សិស្សតែប៉ុណ្ណោះ; id នីមួយៗទទួលបានតែម្តង) */
 const RIEL = n => Math.round(n||0).toLocaleString('en-US')+'៛';
+const canEarn = () => window.Auth && Auth.role()==='student' && !(Auth.asStaff&&Auth.asStaff());
+function wal(){ const M=S.money=S.money||{t:0,m:{},log:[],got:{}}; M.m=M.m||{}; M.log=M.log||[]; M.got=M.got||{}; M.paid=M.paid||{}; return M; }
+function addMoney(amt, why, quiet){ const M=wal(), mk=dayKey().slice(0,7); M.t=(M.t||0)+amt; M.m[mk]=(M.m[mk]||0)+amt; M.log.unshift([Date.now(),amt,why]); M.log=M.log.slice(0,150); save();
+  if(!quiet) coinPop(amt, why); if(window.Rank) setTimeout(()=>Rank.push(S,true),200); return amt; }
 function earn(id, amt, why){
-  if(!window.Auth || Auth.role()!=='student' || !(amt>0) || (Auth.asStaff&&Auth.asStaff())) return 0;
-  const M=S.money=S.money||{t:0,m:{},log:[],got:{}}; M.m=M.m||{}; M.log=M.log||[]; M.got=M.got||{};
-  if(XKEY) id=COURSE.id+':'+id;
-  if(M.got[id]) return 0; M.got[id]=1; amt=Math.round(amt);
-  const mk=dayKey().slice(0,7); M.t=(M.t||0)+amt; M.m[mk]=(M.m[mk]||0)+amt; M.log.unshift([Date.now(),amt,why]); M.log=M.log.slice(0,150); save();
-  coinPop(amt, why); if(window.Rank) setTimeout(()=>Rank.push(S,true),200); return amt;
+  if(!canEarn() || !(amt>0)) return 0;
+  const M=wal(); if(XKEY) id=COURSE.id+':'+id;
+  if(M.got[id]) return 0; M.got[id]=1; return addMoney(Math.round(amt), why);
 }
+/* 💰 «earn up to»: an activity worth `total` (by best result) — pays only the part not paid yet, so a better retry tops up the difference and a worse one changes nothing (never takes money back).
+   legacy = what an old version of the app already paid for this id (before amounts were recorded) */
+function earnUp(id, total, why, legacy){
+  if(!canEarn()) return 0; const M=wal(); if(XKEY) id=COURSE.id+':'+id; total=Math.round(total||0);
+  const prev = M.paid[id]!=null ? M.paid[id] : (M.got[id] ? Math.round(legacy||0) : 0);
+  if(total<=prev){ if(M.paid[id]==null && M.got[id]){ M.paid[id]=prev; save(); } return 0; }
+  M.paid[id]=total; M.got[id]=1; return addMoney(total-prev, prev?why+' (បន្ថែម)':why);
+}
+/* 🔤 +300៛ for every word the student confirms «ចេះ» — paid once per word; words confirmed before this feature are paid automatically */
+const WORD_R=300;
+function payKnown(quiet){ if(!canEarn()||!S.known) return 0; const M=wal(); let n=0;
+  Object.entries(S.known).forEach(([u,ws])=>(ws||[]).forEach(w=>{ let id=`word:${u}:${w}`; if(XKEY) id=COURSE.id+':'+id; if(!M.got[id]){ M.got[id]=1; n++; } }));
+  if(!n) return 0; addMoney(n*WORD_R, `🔤 ចេះពាក្យ ${n} ពាក្យ (${WORD_R}៛/ពាក្យ)`, quiet); return n; }
+window.earnUp=earnUp;
 function coinPop(amt, why){ const d=document.createElement('div'); d.className='coin-pop'; d.innerHTML=`<b>+${RIEL(amt)}</b><span>💰 ${why}</span>`;
   const n=document.querySelectorAll('.coin-pop').length; d.style.top=(80+n*62)+'px'; document.body.appendChild(d); setTimeout(()=>d.remove(),3200); }
 /* 🙋 my attendance fines (from the class data the teacher keeps) */
@@ -49,11 +64,12 @@ function walletInfo(){ const W=myMoney();
   modal(`<div class="wal"><div class="wal-top"><span>💰</span><small>លុយរបស់ខ្ញុំ</small><b class="${W.t<0?'neg':''}">${W.t<0?'−'+RIEL(-W.t):RIEL(W.t)}</b><em>ខែនេះ ${sRIEL(W.m)}</em>${W.fine?`<em class="wal-fine">❌ ដកដោយសារអវត្តមាន −${RIEL(W.fine)}</em>`:''}${W.bonus?`<em class="wal-bonus">🎁 រង្វាន់ពីគ្រូ +${RIEL(W.bonus)}</em>`:''}</div>
     <h4>🪙 របៀបរកលុយ</h4><div class="wal-how">
       <div><span>📖 រៀនចប់ផ្នែកមួយ</span><b>500៛</b></div>
-      <div><span>✍️ លំហាត់ក្នុងផ្នែក (ត្រូវលើកទីមួយ +100៛/សំណួរ)</span><b>200៛+</b></div>
+      <div><span>✍️ លំហាត់ក្នុងផ្នែក (ត្រូវលើកទីមួយ +100៛/សំណួរ) • ធ្វើម្តងទៀតបានផ្កាយច្រើនជាងមុន បន្ថែមលុយ</span><b>200៛+</b></div>
       <div><span>🎯 លំហាត់អនុវត្ត ≥50% (ម្តង/ប្រភេទ/ថ្ងៃ)</span><b>≤1,000៛</b></div>
       <div><span>📄 សន្លឹកលំហាត់ពីគ្រូ</span><b>≤2,000៛</b></div>
       <div><span>📝 ប្រឡងបញ្ចប់មេរៀន</span><b>≤3,000៛</b></div>
-      <div><span>🏁 ឆ្លងកម្រិត (≥80%)</span><b>5,000៛</b></div>
+      <div><span>🔤 ចុចបញ្ជាក់ថាចេះពាក្យ (ម្តង/ពាក្យ)</span><b>300៛</b></div>
+      <div><span>🏁 ឆ្លងកម្រិត (≥80%) — តាមភាគរយ • ប្រឡងម្តងទៀតបានលើសមុន បន្ថែមលុយដែលនៅខ្វះ</span><b>≤5,000៛</b></div>
       <div><span>🏆 រៀនចប់ Unit មួយ</span><b>10,000៛</b></div>
       <div><span>${window.Rich?Rich.label():'💰'} លំហាត់និយាយ ១០ ជាន់ (ក្នុង Unit នីមួយៗ)</span><b>≤10,000៛</b></div>
       <div class="minus"><span>❌ អវត្តមានឥតច្បាប់ (ម្តង)</span><b>−4,000៛</b></div>
@@ -188,6 +204,7 @@ function setMode(m){
 }
 function render(){
   if(!ROLE_NOW) return;
+  try{ if(ROLE_NOW==='student'){ const n=payKnown(true); if(n) setTimeout(()=>coinPop(n*WORD_R, `🔤 ចេះពាក្យ ${n} ពាក្យ`),400); } }catch(e){}
   if(ROLE_NOW==='student' && (view.name==='class'||view.name==='admin')) view.name='home';
   if(ROLE_NOW!=='admin' && view.name==='admin') view.name='home';
   if(stuUI() && view.name!=='class' && view.name!=='admin'){ stuNav(); if(window.COURSE&&COURSE.locked&&!PREVIEW()&&/^(home|units|unit)$/.test(view.name)) return Course.lockedPage($('#main')); if(view.name==='home') return renderStuHome(); if(view.name==='units') return renderStuUnits(); if(view.name==='exams') return PREVIEW()?renderPreviewTasks():Exam.studentPage(); if(view.name==='me' && PREVIEW()) return renderPreviewMe(); if(view.name==='certs') return window.Cert?Cert.page($('#main')):0; if(view.name==='inbox'){ if(PREVIEW()){ view={name:'class',unit:view.unit,tab:'notify'}; setMode('teach'); return; } return Notify.page($('#main')); } if(view.name==='chat'){ if(PREVIEW()){ view={name:'class',unit:view.unit,tab:'chat'}; setMode('teach'); return; } return Chat.page($('#main')); } if(view.name==='rank'){ if(PREVIEW()){ Rank._target(()=>render()); return Rank.page($('#main'), Class._cur(), {staff:true}); } return Rank.stuPage(); } }
@@ -554,7 +571,7 @@ function tabVocab(u){
   }
 }
 function flashMove(d){ const u=U(view.unit); fIdx=(fIdx+d+u.vocab.length)%u.vocab.length; tabVocab(u); }
-function markKnown(n,i,on){ const w=U(n).vocab[i][0]; const set=new Set(S.known[n]||[]); on?set.add(w):set.delete(w); S.known[n]=[...set]; save(); if(vMode==='cards') tabVocab(U(n)); }
+function markKnown(n,i,on){ const w=U(n).vocab[i][0]; const set=new Set(S.known[n]||[]); on?set.add(w):set.delete(w); S.known[n]=[...set]; save(); if(on) payKnown(); if(vMode==='cards') tabVocab(U(n)); }
 function speakAll(n){ const words=U(n).vocab.map(v=>v[0]); if(window.TTS) return TTS.seq(words, S.rate); let i=0; speechSynthesis.cancel(); (function nx(){ if(i>=words.length) return; const u=new SpeechSynthesisUtterance(clean(words[i++])); const v=pickVoice(); if(v){u.voice=v;u.lang=v.lang;} u.rate=S.rate; u.onend=()=>setTimeout(nx,600); speechSynthesis.speak(u);})(); }
 function tryMic(w){ listenWord(w,(ok,heard)=>toast(ok?'✅ ល្អណាស់! "'+heard+'"':'🔁 ព្យាយាមម្តងទៀត — ឮថា "'+heard+'"')); }
 
@@ -679,7 +696,7 @@ function finishQ(){ setTimeout(()=>{ if(window.Rank) Rank.push(S,true); },300);
   const pct=Math.round(Q.score/Q.qs.length*100);
   const LV=Q.type==='level', wasPass=stuUI()&&unitPassed(Q.n); track(LV?'level':'quiz', Q.n+':'+pct);
   if(LV){ S.level=S.level||{}; if(S.level[Q.n]==null || pct>S.level[Q.n]) S.level[Q.n]=pct; } else if(S.quiz[Q.n]==null || pct>S.quiz[Q.n]){ S.quiz[Q.n]=pct; } save();
-  if(LV && pct>=80) earn(`lv:${Q.n}`, 5000, `ឆ្លងកម្រិត Unit ${Q.n}`);
+  if(LV && pct>=PASS) earnUp(`lv:${Q.n}`, 50*pct, `ឆ្លងកម្រិត Unit ${Q.n} (${pct}%)`, 5000);   // 5,000៛ × % — retry for a higher % tops up the rest
   if(!LV && pct>=50) earn(`q:${Q.n}:${Q.type}:${dayKey()}`, Math.min(1000, Math.round(pct/10)*100), `លំហាត់ Unit ${Q.n} (${pct}%)`);
   if(stuUI() && !wasPass && unitPassed(Q.n) && window.Notify) Notify.passed(Q.n);
   if(stuUI() && !wasPass && unitPassed(Q.n)) earn(`unit:${Q.n}`, 10000, `រៀនចប់ Unit ${Q.n} 🎉`);

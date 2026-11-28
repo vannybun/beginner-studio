@@ -102,7 +102,7 @@ function mark(k,i,ok){
   const E=CUR[k], st=E.st[i]; st.tries++; const isFirst=st.first===null; if(st.first===null) st.first=ok; if(ok) st.ok=true;
   if(typeof beep==='function') beep(ok);
   if(window.LVL) LVL.hit(ok, isFirst);
-  if(E.st.every(x=>x.ok)){ const [n,si]=k.split('-').map(Number); const f=E.st.filter(x=>x.first).length, r=rec(n,si)||{}; if(!r.done && window.earn) earn(`ex:${n}:${si}`, 200+100*f, `លំហាត់ផ្នែក Unit ${n} (${f}/${E.items.length})`);
+  if(E.st.every(x=>x.ok)){ const [n,si]=k.split('-').map(Number); const f=E.st.filter(x=>x.first).length, r=rec(n,si)||{}; if(window.earnUp) earnUp(`ex:${n}:${si}`, 200+100*Math.max(f,r.best||0), `លំហាត់ផ្នែក Unit ${n} (${Math.max(f,r.best||0)}/${E.items.length})`, r.done?200+100*(r.best||0):0);
     S.ex[n][si]={done:true, t:E.items.length, last:f, best:Math.max(r.best||0,f), n:(r.n||0)+1, ts:Date.now()}; save();
     if(typeof track==='function') track('ex', n+':'+si+':'+f+'/'+E.items.length); }
 }
