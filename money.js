@@ -1,7 +1,7 @@
 // =====================================================================
 //  money.js — 💰 តាមដានលុយ និងប្រភពលុយ
 //  • 👩‍🏫 គ្រូ៖ មើលលុយសិស្សក្នុងថ្នាក់ (សរុប • ខែនេះ • ប្រភព • ប្រវត្តិ)
-//  • 🛡️ Admin៖ មើលលុយសិស្សគ្រប់ថ្នាក់ + កាបូបគ្រូ • ➕ បន្ថែមលុយឱ្យគ្រូ (មិនអាចបន្ថែមឱ្យខ្លួនឯង)
+//  • 🛡️ Admin៖ មើលលុយសិស្សគ្រប់ថ្នាក់ + កាបូបគ្រូ • ➕ បន្ថែមលុយឱ្យគ្រូ និងខ្លួនឯង (គ្រូមិនអាចបន្ថែមឱ្យខ្លួនឯង)
 //  • កាបូបគ្រូ = 10,000,000៛ + Admin បន្ថែម + រៀនបាន (🎓 មើលជាសិស្ស) − ផ្តល់រង្វាន់សិស្ស
 //  u.grants = [{id, a, w, ts, by, bn}] (ក្នុងគណនីគ្រូ)
 // =====================================================================
@@ -61,18 +61,17 @@ function teacher(uid){ const u=A().users.find(x=>x.id===uid)||{}, T=J(TMK(uid))|
   return {start:TW0, grants, learned, spent, given, left:TW0+grants+learned-spent, T, u}; }
 function teachersPanel(){ const staff=A().users.filter(u=>u.role!=='student'&&!u.disabled), myId=me().id;
   return `<div class="panel"><div class="mo-head"><h3 class="sec" style="margin:0">👩‍🏫 កាបូបគ្រូ</h3></div>
-    <p class="note">កាបូប = ${rl(TW0)} ចាប់ផ្តើម + 🛡️ Admin បន្ថែម + 📚 រៀនបាន (ពេលគ្រូរៀនក្នុង «🎓 មើលជាសិស្ស») − 🎁 ផ្តល់រង្វាន់សិស្ស • គ្រូមិនអាចបន្ថែមលុយឱ្យខ្លួនឯងបានទេ</p>
+    <p class="note">កាបូប = ${rl(TW0)} ចាប់ផ្តើម + 🛡️ Admin បន្ថែម + 📚 រៀនបាន (ពេលគ្រូរៀនក្នុង «🎓 មើលជាសិស្ស») − 🎁 ផ្តល់រង្វាន់សិស្ស • Admin បន្ថែមលុយឱ្យគ្រូ និងខ្លួនឯងបាន • គ្រូមិនអាចបន្ថែមលុយឱ្យខ្លួនឯងបានទេ</p>
     <div class="cl-tablewrap"><table class="cl-table mo-tt"><thead><tr><th>ឈ្មោះ</th><th>🛡️ Admin បន្ថែម</th><th>📚 រៀនបាន</th><th>🎁 ផ្តល់សិស្ស</th><th>💰 នៅសល់</th><th></th></tr></thead><tbody>
     ${staff.map(u=>{ const W=teacher(u.id); return `<tr><td class="l"><b>${esc(u.name)}</b> <small class="note">${u.role==='admin'?'🛡️ Admin':'👩‍🏫 គ្រូ'}</small></td><td>${W.grants?'+'+rl(W.grants):'—'}</td><td>${W.learned?'+'+rl(W.learned):'—'}</td><td>${W.spent?'−'+rl(W.spent)+` <small class="note">(${W.given})</small>`:'—'}</td><td><b>${rl(W.left)}</b></td>
-      <td class="mo-act">${u.id===myId?'<small class="note">ខ្លួនឯង</small>':`<button class="btn sun sm" onclick="Money.grant('${u.id}')">➕ បន្ថែមលុយ</button>`}<button class="btn ghost sm" onclick="Money.tDetail('${u.id}')">📜</button></td></tr>`; }).join('')}</tbody></table></div></div>`; }
-function grant(uid){ const u=A().users.find(x=>x.id===uid); if(!u) return; if(uid===me().id) return toast('⚠️ មិនអាចបន្ថែមលុយឱ្យខ្លួនឯងបានទេ');
-  if(!window.Auth||Auth.role()!=='admin') return toast('🔒 មានតែ Admin ទេដែលអាចបន្ថែមលុយឱ្យគ្រូ');
-  modal(`<div class="rw"><h3>➕ បន្ថែមលុយឱ្យ ${esc(u.name)}</h3><div class="rw-wal"><span>💰 កាបូបបច្ចុប្បន្ន</span><b>${rl(teacher(uid).left)}</b></div>
+      <td class="mo-act">${u.id===myId&&u.role!=='admin'?'<small class="note">ខ្លួនឯង</small>':`<button class="btn sun sm" onclick="Money.grant('${u.id}')">➕ បន្ថែមលុយ</button>`}<button class="btn ghost sm" onclick="Money.tDetail('${u.id}')">📜</button></td></tr>`; }).join('')}</tbody></table></div></div>`; }
+function grant(uid){ const u=A().users.find(x=>x.id===uid); if(!u) return;   if(!window.Auth||Auth.role()!=='admin') return toast('🔒 មានតែ Admin ទេដែលអាចបន្ថែមលុយឱ្យគ្រូ');
+  modal(`<div class="rw"><h3>➕ បន្ថែមលុយឱ្យ ${uid===me().id?'ខ្លួនឯង (Admin)':esc(u.name)}</h3><div class="rw-wal"><span>💰 កាបូបបច្ចុប្បន្ន</span><b>${rl(teacher(uid).left)}</b></div>
     <h4>💵 ចំនួនលុយ</h4><div class="row rw-q">${[100000,500000,1000000,2000000,5000000].map(v=>`<button class="chip" onclick="document.getElementById('grA').value=${v}">${v.toLocaleString('en-US')}</button>`).join('')}<input id="grA" type="number" min="100" step="100" class="cl-in" style="width:140px" value="1000000">៛</div>
     <h4>📝 មូលហេតុ</h4><input id="grW" class="cl-in" style="width:100%" maxlength="80" placeholder="ឧ. បន្ថែមថវិការង្វាន់ខែធ្នូ">
     <div class="rw-foot"><span></span><button class="btn sun" onclick="Money._grantGo('${uid}')">➕ បន្ថែមលុយ</button></div></div>`); }
 function grantGo(uid){ const u=A().users.find(x=>x.id===uid), a=Math.round(+document.getElementById('grA').value||0), w=(document.getElementById('grW').value||'').trim();
-  if(!u||uid===me().id||Auth.role()!=='admin') return; if(!(a>0)) return toast('សូមបញ្ចូលចំនួនលុយ');
+  if(!u||Auth.role()!=='admin') return; if(!(a>0)) return toast('សូមបញ្ចូលចំនួនលុយ');
   u.grants=u.grants||[]; u.grants.push({id:Math.random().toString(36).slice(2,10), a, w, ts:Date.now(), by:me().id, bn:me().name||''}); u.ts=Date.now(); Auth._saveA();
   closeModal(); toast(`➕ បានបន្ថែម ${rl(a)} ឱ្យ ${u.name}`); redo(); }
 function grantUndo(uid, gid){ const u=A().users.find(x=>x.id===uid); if(!u||Auth.role()!=='admin'||!confirm('ដកលុយដែលបានបន្ថែមនេះវិញ?')) return; u.grants=(u.grants||[]).filter(g=>g.id!==gid); u.ts=Date.now(); Auth._saveA(); tDetail(uid); redo(); }
