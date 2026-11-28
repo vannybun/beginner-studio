@@ -113,7 +113,7 @@ function openPanel(u){
       <button class="btn teal" onclick="Exam.openSess(${u.n})">🔓 បើកប្រឡង</button><button class="btn ghost" title="បើក Unit ច្រើនក្នុងពេលតែមួយ" onclick="Exam.openMulti(${u.n})">📚 បើកច្រើន Unit</button></div>`:'<p class="note">មិនទាន់មានថ្នាក់</p>'}
     ${list.length?list.map(se=>{ const c=cs.find(x=>x.id===se.cls)||{name:'?',students:[]}; const done=X.results.filter(r=>r.sess===se.id); const ids=new Set(done.map(r=>r.sid));
       return `<div class="ex-sess"><span class="live">● កំពុងបើក</span><b>Unit ${se.n} • Version ${se.ver}</b><span>🏫 ${esc(c.name)} • ⏱ ${se.min?se.min+' នាទី':'គ្មានកំណត់'} • ${se.once?'ម្តង':'ច្រើនដង'}</span>
-        <span class="cnt">✅ ${ids.size}/${c.students.length} បានប្រឡង</span><button class="btn sm ghost" style="color:#dc2626" onclick="Exam.closeSess('${se.id}')">⛔ បិទ</button></div>`; }).join(''):''}
+        <span class="cnt">✅ ${ids.size}/${c.students.length} បានប្រឡង</span>${window.Pending?Pending.btn('ex',se.id):''}<button class="btn sm ghost" style="color:#dc2626" onclick="Exam.closeSess('${se.id}')">⛔ បិទ</button></div>`; }).join(''):''}
   </div>`;
 }
 /* 🔓 open one or many exams at once: every chosen class × every chosen version (× every chosen unit) becomes its own session */

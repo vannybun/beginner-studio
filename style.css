@@ -1993,3 +1993,14 @@ img.sgpic{height:1.6em;width:auto;max-width:2.6em;object-fit:contain;vertical-al
 .mo-tt td{white-space:nowrap}.mo-act{display:flex;gap:6px;justify-content:flex-end}
 .wal-log>div>button{margin-left:6px}
 @media(max-width:600px){.mo-src>div{grid-template-columns:130px 1fr 90px;font-size:12.5px}}
+/* ⏳ students who haven't done an exam / worksheet */
+.pd-btn{background:#fff7ed;border:1.5px solid #fdba74;color:#c2410c;font-weight:700}.pd-btn:hover{background:#ffedd5}
+.pd-all{color:#16a34a;font-weight:700;font-family:var(--kh);font-size:13px}
+.pd-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.pd-s{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #fed7aa;border-radius:999px;padding:4px 12px 4px 4px;font-family:var(--kh)}
+.pd-s small{color:#94a3b8;font-size:11px}
+.pd-ok{color:#16a34a;font-family:var(--kh);font-weight:600;margin:8px 0 0}
+.pd-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pd-card{border-left:5px solid #f97316}.pd-card.ok{border-left-color:#22c55e}
+.pd-ch{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.pd-ch>div:first-child{flex:1;min-width:200px}.pd-ch b{display:block;font-family:var(--kh)}.pd-ch small{color:#64748b;font-family:var(--kh)}
+.pd-pr{display:flex;align-items:center;gap:8px;font-weight:700}.pd-pr i{width:120px;height:10px;background:#f1f5f9;border-radius:6px;overflow:hidden}.pd-pr s{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#86efac)}

@@ -80,7 +80,7 @@ function assignRow(a, cs){
   const avg=a.mode==='do'&&rs.length?Math.round(rs.reduce((s,r)=>s+r.s/r.t*100,0)/rs.length):null;
   return `<div class="ws-asg ${a.open?'':'closed'}"><span class="st">${a.open?'● បើក':'⛔ បិទ'}</span><b>${a.mode==='do'?'✍️ ធ្វើលើទូរស័ព្ទ':'📖 សរសេរក្នុងសៀវភៅ'}</b>
     <span>🏫 ${esc(c.name)} • ${total(a.ws)} សំណួរ • ${new Date(a.ts).toLocaleDateString('en-GB')}</span>
-    <span class="cnt">✅ ${who.size}/${c.students.length}${avg!=null?` • មធ្យម ${avg}%`:''}</span>
+    <span class="cnt">✅ ${who.size}/${c.students.length}${avg!=null?` • មធ្យម ${avg}%`:''}</span>${a.open&&window.Pending?Pending.btn('ws',a.id):''}
     <button class="btn sm ghost" onclick="WS.results('${a.id}')">📊 លទ្ធផល</button>
     <button class="btn sm ghost" onclick="WS.toggle('${a.id}')">${a.open?'⛔ បិទ':'🔓 បើកវិញ'}</button>
     <button class="btn sm ghost" onclick="WS.del('${a.id}')">🗑</button></div>`;
