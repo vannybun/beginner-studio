@@ -98,7 +98,7 @@ function score(ex, ans){
 /* ---------- 🔓 exam sessions: teacher/admin opens an exam for a class ---------- */
 const meStu = () => { const me=window.Auth&&Auth.user(); return me&&me.role==='student'?me:null; };
 function sessDone(se, me){ return X.results.find(r=>r.sess===se.id && (r.uid===me.id || (r.sid&&r.sid===me.studentId))); }
-function uniqOpen(list){ const m=new Map(); (list||[]).forEach(se=>{ const k=se.n+'|'+se.cls, o=m.get(k); if(!o || se.ts>o.ts) m.set(k,se); }); return [...m.values()]; }
+function uniqOpen(list){ const m=new Map(); (list||[]).forEach(se=>{ const k=se.n+'|'+se.cls+'|'+(se.ver||'A'), o=m.get(k); if(!o || se.ts>o.ts) m.set(k,se); }); return [...m.values()]; }
 function cleanOpen(){ const u=uniqOpen(X.open); if(u.length!==(X.open||[]).length){ X.open=u; saveX(); } }
 function openFor(me){ return uniqOpen((X.open||[]).filter(se=>se.cls===me.classId)); }
 function classes(){ const C=(window.Class&&Class.data())||{classes:[]}; return C.classes.filter(c=>!window.Auth||!Auth.user()||Auth.canSeeClass(c)); }
@@ -106,31 +106,49 @@ function openPanel(u){
   cleanOpen(); const cs=classes(), list=(X.open||[]).filter(se=>se.n===u.n && cs.some(c=>c.id===se.cls));
   return `<div class="panel ex-gate"><div class="row" style="justify-content:space-between"><h3 class="sec" style="margin:0">🔓 បើកឱ្យសិស្សប្រឡង (លើទូរស័ព្ទ/App របស់សិស្ស)</h3><span class="note">សិស្សមើលមិនឃើញប្រឡងទេ រហូតដល់គ្រូបើក</span></div>
     ${cs.length?`<div class="row" style="margin:10px 0;align-items:end">
-      <label class="km">🏫 ថ្នាក់<select id="exoC" class="cl-in">${cs.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
-      <label class="km">Version<select id="exoV" class="cl-in"><option>A</option><option>B</option></select></label>
+      <div class="km ex-pick"><span>🏫 ថ្នាក់ <small class="note">(ជ្រើសបានច្រើន)</small></span><div class="ex-chips">${cs.map((c,i)=>`<label class="ex-chip"><input type="checkbox" class="exoC" value="${c.id}" ${i===0?'checked':''}><span>${esc(c.name)}</span></label>`).join('')}${cs.length>1?`<button type="button" class="btn ghost sm" onclick="document.querySelectorAll('.exoC').forEach(x=>x.checked=true)">✔ ទាំងអស់</button>`:''}</div></div>
+      <div class="km ex-pick"><span>Version</span><div class="ex-chips">${['A','B'].map((v,i)=>`<label class="ex-chip"><input type="checkbox" class="exoV" value="${v}" ${i===0?'checked':''}><span>${v}</span></label>`).join('')}</div></div>
       <label class="km">⏱ នាទី<input id="exoM" type="number" class="cl-in" style="width:70px" min="0" max="180" value="${X.settings.minutes}"></label>
       <label class="km" style="display:flex;gap:6px;align-items:center"><input id="exoOnce" type="checkbox" checked> ធ្វើបានតែម្តង</label>
-      <button class="btn teal" onclick="Exam.openSess(${u.n})">🔓 បើកប្រឡង</button></div>`:'<p class="note">មិនទាន់មានថ្នាក់</p>'}
+      <button class="btn teal" onclick="Exam.openSess(${u.n})">🔓 បើកប្រឡង</button><button class="btn ghost" title="បើក Unit ច្រើនក្នុងពេលតែមួយ" onclick="Exam.openMulti(${u.n})">📚 បើកច្រើន Unit</button></div>`:'<p class="note">មិនទាន់មានថ្នាក់</p>'}
     ${list.length?list.map(se=>{ const c=cs.find(x=>x.id===se.cls)||{name:'?',students:[]}; const done=X.results.filter(r=>r.sess===se.id); const ids=new Set(done.map(r=>r.sid));
       return `<div class="ex-sess"><span class="live">● កំពុងបើក</span><b>Unit ${se.n} • Version ${se.ver}</b><span>🏫 ${esc(c.name)} • ⏱ ${se.min?se.min+' នាទី':'គ្មានកំណត់'} • ${se.once?'ម្តង':'ច្រើនដង'}</span>
         <span class="cnt">✅ ${ids.size}/${c.students.length} បានប្រឡង</span><button class="btn sm ghost" style="color:#dc2626" onclick="Exam.closeSess('${se.id}')">⛔ បិទ</button></div>`; }).join(''):''}
   </div>`;
 }
+/* 🔓 open one or many exams at once: every chosen class × every chosen version (× every chosen unit) becomes its own session */
 function openSess(n){
-  const se={id:Math.random().toString(36).slice(2,10), n, ver:$('#exoV').value, cls:$('#exoC').value, min:+$('#exoM').value||0, once:$('#exoOnce').checked, ts:Date.now(), by:(window.Auth&&Auth.user()&&Auth.user().name)||''};
-  X.open=(X.open||[]).filter(x=>!(x.n===n && x.cls===se.cls)); X.open.push(se); saveX(); if(window.Notify) Notify.task(se.cls, `ប្រឡង Unit ${n} បើកហើយ`, 'ចូល 📝 កិច្ចការ ដើម្បីចាប់ផ្តើមប្រឡង • សំណាងល្អ! 🍀'); toast('🔓 បានបើកប្រឡង Unit '+n+' — សិស្សអាចចូលប្រឡងបានហើយ'); render();
+  const cls=[...document.querySelectorAll('.exoC:checked')].map(x=>x.value), vers=[...document.querySelectorAll('.exoV:checked')].map(x=>x.value), U=[n];
+  if(!cls.length) return toast('🏫 សូមជ្រើសថ្នាក់យ៉ាងហោចណាស់មួយ'); if(!vers.length) return toast('សូមជ្រើស Version យ៉ាងហោចណាស់មួយ');
+  const min=+$('#exoM').value||0, once=$('#exoOnce').checked, by=(window.Auth&&Auth.user()&&Auth.user().name)||'', ts=Date.now(); let k=0;
+  cls.forEach(c=>{ U.forEach(un=>vers.forEach(ver=>{ X.open=(X.open||[]).filter(x=>!(x.n===un && x.cls===c && (x.ver||'A')===ver)); X.open.push({id:Math.random().toString(36).slice(2,10), n:un, ver, cls:c, min, once, ts:ts+(k++), by}); }));
+    if(window.Notify) Notify.task(c, `ប្រឡង ${U.map(x=>'Unit '+x).join(', ')} បើកហើយ`, 'ចូល 📝 កិច្ចការ ដើម្បីចាប់ផ្តើមប្រឡង • សំណាងល្អ! 🍀'); });
+  saveX();
+  toast(`🔓 បានបើក ${k} ប្រឡង (${U.length>1?U.length+' Unit • ':''}${cls.length} ថ្នាក់ • Version ${vers.join('+')})`); render();
 }
-function closeSess(id){ if(!confirm('បិទប្រឡងនេះ? សិស្សនឹងមិនអាចចូលប្រឡងទៀតទេ')) return; const se=(X.open||[]).find(x=>x.id===id); X.open=(X.open||[]).filter(x=>x.id!==id && !(se && x.n===se.n && x.cls===se.cls)); saveX(); toast('⛔ បានបិទ'); render(); }
+function openMulti(n){ const cls=[...document.querySelectorAll('.exoC:checked')].map(x=>x.value), vers=[...document.querySelectorAll('.exoV:checked')].map(x=>x.value), min=$('#exoM').value, once=$('#exoOnce').checked;
+  if(!cls.length) return toast('🏫 សូមជ្រើសថ្នាក់យ៉ាងហោចណាស់មួយ'); if(!vers.length) return toast('សូមជ្រើស Version យ៉ាងហោចណាស់មួយ');
+  MULTI={cls, vers, min, once};
+  modal(`<h3>📚 បើកប្រឡងច្រើន Unit ក្នុងពេលតែមួយ</h3><p class="note">${cls.length} ថ្នាក់ • Version ${vers.join('+')} • ⏱ ${+min?min+' នាទី':'គ្មានកំណត់'} • ${once?'ម្តង':'ច្រើនដង'}</p>
+    <div class="ex-chips" style="margin:10px 0">${UNITS.map((u,i)=>`<label class="ex-chip"><input type="checkbox" class="exoU" value="${i+1}" ${i+1===n?'checked':''}><span>Unit ${i+1} • ${esc(u.en)}</span></label>`).join('')}</div>
+    <div class="row" style="justify-content:flex-end;gap:8px"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" onclick="Exam._openMultiGo()">🔓 បើកប្រឡង</button></div>`); }
+let MULTI=null;
+function openMultiGo(){ const U=[...document.querySelectorAll('.exoU:checked')].map(x=>+x.value); if(!U.length) return toast('សូមជ្រើស Unit យ៉ាងហោចណាស់មួយ');
+  const M=MULTI, by=(window.Auth&&Auth.user()&&Auth.user().name)||'', ts=Date.now(); let k=0;
+  M.cls.forEach(c=>{ U.forEach(un=>M.vers.forEach(ver=>{ X.open=(X.open||[]).filter(x=>!(x.n===un && x.cls===c && (x.ver||'A')===ver)); X.open.push({id:Math.random().toString(36).slice(2,10), n:un, ver, cls:c, min:+M.min||0, once:M.once, ts:ts+(k++), by}); }));
+    if(window.Notify) Notify.task(c, `ប្រឡង ${U.map(x=>'Unit '+x).join(', ')} បើកហើយ`, 'ចូល 📝 កិច្ចការ ដើម្បីចាប់ផ្តើមប្រឡង • សំណាងល្អ! 🍀'); });
+  saveX(); closeModal(); toast(`🔓 បានបើក ${k} ប្រឡង (${U.length} Unit • ${M.cls.length} ថ្នាក់ • Version ${M.vers.join('+')})`); render(); }
+function closeSess(id){ if(!confirm('បិទប្រឡងនេះ? សិស្សនឹងមិនអាចចូលប្រឡងទៀតទេ')) return; const se=(X.open||[]).find(x=>x.id===id); X.open=(X.open||[]).filter(x=>x.id!==id && !(se && x.n===se.n && x.cls===se.cls && (x.ver||'A')===(se.ver||'A'))); saveX(); toast('⛔ បានបិទ'); render(); }
 let lastRef=0;
 async function studentPage(refresh){
   const me=meStu(); if(!me) return;
   if(window.Cloud && Cloud.refresh && (refresh || Date.now()-lastRef>15000)){ lastRef=Date.now(); $('#main').innerHTML='<div class="stu-empty"><div class="spin2"></div><p>កំពុងពិនិត្យប្រឡងថ្មីៗ…</p></div>'; try{ await Promise.all([Cloud.refresh(EK), window.WS?Cloud.refresh(WS.key):0]); }catch(e){} reloadX(); if(window.WS) WS.reload(); if(typeof stuNav==='function') stuNav(); if(view.name!=='exams') return; }
-  const list=openFor(me).sort((a,b)=>a.n-b.n);
+  const list=openFor(me).sort((a,b)=>a.n-b.n||String(a.ver).localeCompare(String(b.ver)));
   const mine=X.results.filter(r=>r.uid===me.id||(r.sid&&r.sid===me.studentId)).sort((a,b)=>b.ts-a.ts);
   setUnitColors(4);
   $('#main').innerHTML=`<div class="stu-head"><h2>📝 កិច្ចការ</h2><button class="btn ghost sm" onclick="Exam.studentPage(true)">🔄</button></div>
     <h3 class="stu-sub">📝 ប្រឡង</h3>${list.length?list.map(se=>{ const u=UNITS[se.n-1], st=UNIT_STYLE[se.n], d=sessDone(se,me), can=!d||!se.once;
-      return `<div class="stu-exam" style="--c1:${st.c1};--c2:${st.c2}"><div class="ic">${st.icon}</div><div class="tx"><b>Unit ${se.n} • ${esc(u.en)}</b><span>50 ពិន្ទុ • ${se.min?'⏱ '+se.min+' នាទី':'គ្មានកំណត់ពេល'}</span>
+      return `<div class="stu-exam" style="--c1:${st.c1};--c2:${st.c2}"><div class="ic">${st.icon}</div><div class="tx"><b>Unit ${se.n} • ${esc(u.en)}${list.filter(x=>x.n===se.n).length>1?' • Version '+se.ver:''}</b><span>50 ពិន្ទុ • ${se.min?'⏱ '+se.min+' នាទី':'គ្មានកំណត់ពេល'}</span>
         ${d?`<span class="dn">✅ បានប្រឡង • ${d.s}/${d.t} (${d.pct}%)</span>`:''}</div>
         ${can?`<button class="btn sun" onclick="Exam.start(${se.n},'${se.ver}','${se.id}')">▶ ${d?'ម្តងទៀត':'ចាប់ផ្តើម'}</button>`:'<span class="lock">🔒</span>'}</div>`; }).join('')
       :`<div class="stu-empty sm"><div style="font-size:40px">🔒</div><b>មិនទាន់មានប្រឡងបើកទេ</b><p>ពេលគ្រូបើក វានឹងបង្ហាញនៅទីនេះ។ ចុច 🔄 ដើម្បីពិនិត្យម្តងទៀត។</p></div>`}
@@ -459,6 +477,6 @@ const EXAM_CSS = `
 const st=document.createElement('style'); st.textContent=EXAM_CSS; document.head.appendChild(st);
 
 window.Exam = { _sp:(pid,i,r)=>{ if(!RUN||!RUN._set) return; const cur=+((RUN.ans[pid]||{})[i])||0; RUN._set(pid,i,Math.max(cur,r.best||r.pct||0)); const q=document.querySelector(`#exam .ex-q[data-p="${pid}"][data-i="${i}"]`); if(q) q.classList.add('answered');
-    if(r.pass||r.tries>=3){ const m=document.querySelector(`#vc-ex${pid}${i} .vc-mic`); if(m) m.innerHTML=r.pass?'<small>✅ បានរក្សាទុក</small>':'<small>🔒 អស់ឱកាស ៣ ដងហើយ — រក្សាទុកលទ្ធផលល្អបំផុត '+Math.max(cur,r.best||0)+'%</small>'; } }, grammarPool:n=>grammarItems(n,Math.random).map(q=>({q:q.q,qKm:q.qKm,o:q.opts,a:q.a})), studentPage, openSess, closeSess, reload:reloadX, build, score, tab, start, begin, quit, print, online, importCodes, doImport, toScores, doScores, csv, clear,
+    if(r.pass||r.tries>=3){ const m=document.querySelector(`#vc-ex${pid}${i} .vc-mic`); if(m) m.innerHTML=r.pass?'<small>✅ បានរក្សាទុក</small>':'<small>🔒 អស់ឱកាស ៣ ដងហើយ — រក្សាទុកលទ្ធផលល្អបំផុត '+Math.max(cur,r.best||0)+'%</small>'; } }, grammarPool:n=>grammarItems(n,Math.random).map(q=>({q:q.q,qKm:q.qKm,o:q.opts,a:q.a})), studentPage, openSess, openMulti, _openMultiGo:openMultiGo, closeSess, reload:reloadX, build, score, tab, start, begin, quit, print, online, importCodes, doImport, toScores, doScores, csv, clear,
   setting:(k,v)=>{ X.settings[k]=v; saveX(); }, data:()=>X };
 })();

@@ -1965,3 +1965,9 @@ img.sgpic{height:1.6em;width:auto;max-width:2.6em;object-fit:contain;vertical-al
 .lv-combo small{display:block;font:600 13px var(--kh)}
 @keyframes lvCombo{0%{opacity:0;transform:translate(-50%,20px) scale(.6)}15%{opacity:1;transform:translate(-50%,0) scale(1.1)}25%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-30px)}}
 @media (max-width:480px){.lv-node{width:56px}.lv-node .lv-c{width:42px;height:42px;font-size:19px}.lv-link{width:10px}.lex-o.pic button{font-size:34px}}
+/* 🔓 open several exams at once: class / version / unit chips */
+.ex-pick{display:flex;flex-direction:column;gap:4px}
+.ex-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ex-chip{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:6px;padding:7px 12px;border:1.5px solid #cbd5e1;border-radius:12px;background:#fff;cursor:pointer;font-family:var(--kh);font-size:14px;user-select:none}
+.ex-chip input{accent-color:#0f766e;margin:0}
+.ex-chip:has(input:checked){border-color:#0f766e;background:#ccfbf1;color:#0f766e;font-weight:600}
