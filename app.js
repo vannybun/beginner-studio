@@ -31,34 +31,40 @@ function save(){ try{
 }catch(e){} }
 /* 💰 លុយ (រៀល) — រកបានពីការរៀន និងធ្វើលំហាត់ (សិស្សតែប៉ុណ្ណោះ; id នីមួយៗទទួលបានតែម្តង) */
 const RIEL = n => Math.round(n||0).toLocaleString('en-US')+'៛';
-const canEarn = () => window.Auth && Auth.role()==='student' && !(Auth.asStaff&&Auth.asStaff());
-function wal(){ const M=S.money=S.money||{t:0,m:{},log:[],got:{}}; M.m=M.m||{}; M.log=M.log||[]; M.got=M.got||{}; M.paid=M.paid||{}; return M; }
-function addMoney(amt, why, quiet){ const M=wal(), mk=dayKey().slice(0,7); M.t=(M.t||0)+amt; M.m[mk]=(M.m[mk]||0)+amt; M.log.unshift([Date.now(),amt,why]); M.log=M.log.slice(0,150); save();
-  if(!quiet) coinPop(amt, why); if(window.Rank) setTimeout(()=>Rank.push(S,true),200); return amt; }
+/* 👩‍🏫 a teacher learning in «🎓 មើលជាសិស្ស» earns too — into their own store (→ 💰 កាបូបគ្រូ), never the shared staff progress */
+const TLEARN = () => window.Auth && Auth.role()==='teacher' && typeof PREVIEW==='function' && PREVIEW();
+const TMK = () => 'beginner-studio-tm:'+Auth.user().id;
+const canEarn = () => window.Auth && ((Auth.role()==='student' && !(Auth.asStaff&&Auth.asStaff())) || TLEARN());
+function fixM(M){ M.t=M.t||0; M.m=M.m||{}; M.log=M.log||[]; M.got=M.got||{}; M.paid=M.paid||{}; M.src=M.src||{}; if(!M.srcFrom) M.srcFrom=Date.now(); return M; }
+function wal(){ if(TLEARN()){ let T={}; try{ T=JSON.parse(localStorage.getItem(TMK())||'{}')||{}; }catch(e){} return fixM(T); } return fixM(S.money=S.money||{}); }
+function saveW(M){ if(TLEARN()){ try{ localStorage.setItem(TMK(), JSON.stringify(M)); }catch(e){} } else save(); }
+const catOf = id => { const k=String(id).split(':')[0]; return k==='richday'?'rich':k; };
+function addMoney(M, amt, why, cat, quiet){ const mk=dayKey().slice(0,7); M.t=(M.t||0)+amt; M.m[mk]=(M.m[mk]||0)+amt; M.src[cat]=(M.src[cat]||0)+amt; M.log.unshift([Date.now(),amt,why]); M.log=M.log.slice(0,150); saveW(M);
+  if(!quiet) coinPop(amt, why); if(window.Rank&&!TLEARN()) setTimeout(()=>Rank.push(S,true),200); return amt; }
 function earn(id, amt, why){
   if(!canEarn() || !(amt>0)) return 0;
-  const M=wal(); if(XKEY) id=COURSE.id+':'+id;
-  if(M.got[id]) return 0; M.got[id]=1; return addMoney(Math.round(amt), why);
+  const M=wal(), cat=catOf(id); if(XKEY) id=COURSE.id+':'+id;
+  if(M.got[id]) return 0; M.got[id]=1; return addMoney(M, Math.round(amt), why, cat);
 }
 /* 💰 «earn up to»: an activity worth `total` (by best result) — pays only the part not paid yet, so a better retry tops up the difference and a worse one changes nothing (never takes money back).
    legacy = what an old version of the app already paid for this id (before amounts were recorded) */
 function earnUp(id, total, why, legacy){
-  if(!canEarn()) return 0; const M=wal(); if(XKEY) id=COURSE.id+':'+id; total=Math.round(total||0);
+  if(!canEarn()) return 0; const M=wal(), cat=catOf(id); if(XKEY) id=COURSE.id+':'+id; total=Math.round(total||0);
   const prev = M.paid[id]!=null ? M.paid[id] : (M.got[id] ? Math.round(legacy||0) : 0);
-  if(total<=prev){ if(M.paid[id]==null && M.got[id]){ M.paid[id]=prev; save(); } return 0; }
-  M.paid[id]=total; M.got[id]=1; return addMoney(total-prev, prev?why+' (បន្ថែម)':why);
+  if(total<=prev){ if(M.paid[id]==null && M.got[id]){ M.paid[id]=prev; saveW(M); } return 0; }
+  M.paid[id]=total; M.got[id]=1; return addMoney(M, total-prev, prev?why+' (បន្ថែម)':why, cat);
 }
 /* 🔤 +300៛ for every word the student confirms «ចេះ» — paid once per word; words confirmed before this feature are paid automatically */
 const WORD_R=300;
-function payKnown(quiet){ if(!canEarn()||!S.known) return 0; const M=wal(); let n=0;
+function payKnown(quiet){ if(!canEarn()||TLEARN()||!S.known) return 0; const M=wal(); let n=0;
   Object.entries(S.known).forEach(([u,ws])=>(ws||[]).forEach(w=>{ let id=`word:${u}:${w}`; if(XKEY) id=COURSE.id+':'+id; if(!M.got[id]){ M.got[id]=1; n++; } }));
-  if(!n) return 0; addMoney(n*WORD_R, `🔤 ចេះពាក្យ ${n} ពាក្យ (${WORD_R}៛/ពាក្យ)`, quiet); return n; }
+  if(!n) return 0; addMoney(M, n*WORD_R, `🔤 ចេះពាក្យ ${n} ពាក្យ (${WORD_R}៛/ពាក្យ)`, 'word', quiet); return n; }
 window.earnUp=earnUp;
 function coinPop(amt, why){ const d=document.createElement('div'); d.className='coin-pop'; d.innerHTML=`<b>+${RIEL(amt)}</b><span>💰 ${why}</span>`;
   const n=document.querySelectorAll('.coin-pop').length; d.style.top=(80+n*62)+'px'; document.body.appendChild(d); setTimeout(()=>d.remove(),3200); }
 /* 🙋 my attendance fines (from the class data the teacher keeps) */
 function myFines(){ try{ const me=Auth.user(); if(!me||me.role!=='student'||!window.Class) return {t:0,m:{},log:[]}; return Class.fines(mapClass(), me.studentId); }catch(e){ return {t:0,m:{},log:[]}; } }
-function myMoney(){ const M=S.money||{}, F=myFines(), mk=dayKey().slice(0,7); return {t:(M.t||0)-F.t, m:((M.m||{})[mk]||0)-(F.m[mk]||0), fine:F.fine||0, bonus:F.bonus||0, log:[...(M.log||[]), ...F.log].sort((a,b)=>b[0]-a[0])}; }
+function myMoney(){ const M=TLEARN()?wal():(S.money||{}), F=myFines(), mk=dayKey().slice(0,7); return {t:(M.t||0)-F.t, m:((M.m||{})[mk]||0)-(F.m[mk]||0), fine:F.fine||0, bonus:F.bonus||0, log:[...(M.log||[]), ...F.log].sort((a,b)=>b[0]-a[0])}; }
 const sRIEL = n => (n>0?'+':n<0?'−':'')+RIEL(Math.abs(n||0));
 function walletInfo(){ const W=myMoney();
   modal(`<div class="wal"><div class="wal-top"><span>💰</span><small>លុយរបស់ខ្ញុំ</small><b class="${W.t<0?'neg':''}">${W.t<0?'−'+RIEL(-W.t):RIEL(W.t)}</b><em>ខែនេះ ${sRIEL(W.m)}</em>${W.fine?`<em class="wal-fine">❌ ដកដោយសារអវត្តមាន −${RIEL(W.fine)}</em>`:''}${W.bonus?`<em class="wal-bonus">🎁 រង្វាន់ពីគ្រូ +${RIEL(W.bonus)}</em>`:''}</div>
@@ -571,7 +577,7 @@ function tabVocab(u){
   }
 }
 function flashMove(d){ const u=U(view.unit); fIdx=(fIdx+d+u.vocab.length)%u.vocab.length; tabVocab(u); }
-function markKnown(n,i,on){ const w=U(n).vocab[i][0]; const set=new Set(S.known[n]||[]); on?set.add(w):set.delete(w); S.known[n]=[...set]; save(); if(on) payKnown(); if(vMode==='cards') tabVocab(U(n)); }
+function markKnown(n,i,on){ const w=U(n).vocab[i][0]; const set=new Set(S.known[n]||[]); on?set.add(w):set.delete(w); S.known[n]=[...set]; save(); if(on) earn(`word:${n}:${w}`, WORD_R, `🔤 ចេះពាក្យ «${w}»`); if(vMode==='cards') tabVocab(U(n)); }
 function speakAll(n){ const words=U(n).vocab.map(v=>v[0]); if(window.TTS) return TTS.seq(words, S.rate); let i=0; speechSynthesis.cancel(); (function nx(){ if(i>=words.length) return; const u=new SpeechSynthesisUtterance(clean(words[i++])); const v=pickVoice(); if(v){u.voice=v;u.lang=v.lang;} u.rate=S.rate; u.onend=()=>setTimeout(nx,600); speechSynthesis.speak(u);})(); }
 function tryMic(w){ listenWord(w,(ok,heard)=>toast(ok?'✅ ល្អណាស់! "'+heard+'"':'🔁 ព្យាយាមម្តងទៀត — ឮថា "'+heard+'"')); }
 

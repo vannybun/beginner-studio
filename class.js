@@ -102,7 +102,7 @@ function resizePhoto(file, cb){
 }
 
 /* ---------- main render ---------- */
-const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['attend','🙋 វត្តមាន'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['reward','🎁 រង្វាន់'],['cert','🏅 ប័ណ្ណសរសើរ'],['notify','📣 ជូនដំណឹង'],['chat','💬 ឆាតសិស្ស'],['unlock','🔓 បើក/កាលវិភាគមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
+const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['attend','🙋 វត្តមាន'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['reward','🎁 រង្វាន់'],['money','💰 លុយសិស្ស'],['cert','🏅 ប័ណ្ណសរសើរ'],['notify','📣 ជូនដំណឹង'],['chat','💬 ឆាតសិស្ស'],['unlock','🔓 បើក/កាលវិភាគមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
 let tab='students';
 function render(t){ reloadC(); applyProfiles();
   if(t) tab=t;
@@ -129,7 +129,7 @@ function render(t){ reloadC(); applyProfiles();
   }
   $('#main').innerHTML = head + `<div class="tabs">${TABS.map(x=>`<button class="${x[0]===tab?'on':''}" onclick="Class.render('${x[0]}')">${x[1]}</button>`).join('')}</div><div id="clTab"></div>`;
   { const on=document.querySelector('#main .tabs .on'); if(on&&on.parentElement.scrollWidth>on.parentElement.clientWidth) on.parentElement.scrollLeft=on.offsetLeft-on.parentElement.clientWidth/2+on.offsetWidth/2; }
-  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, attend:tAttend, reward:tReward, cert:c=>{ if(window.Cert) Cert.tab($('#clTab'),c); }, notify:c=>{ if(window.Notify) Notify.teacherTab($('#clTab'), c); }, chat:c=>{ if(window.Chat) Chat.teacherTab($('#clTab'), c); }, rank:c=>{ Rank._target(()=>Class.render('rank')); Rank.page($('#clTab'), c, {staff:true, head:false}); }, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
+  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, attend:tAttend, reward:tReward, money:c=>{ if(window.Money) Money.classPanel($('#clTab'), c); }, cert:c=>{ if(window.Cert) Cert.tab($('#clTab'),c); }, notify:c=>{ if(window.Notify) Notify.teacherTab($('#clTab'), c); }, chat:c=>{ if(window.Chat) Chat.teacherTab($('#clTab'), c); }, rank:c=>{ Rank._target(()=>Class.render('rank')); Rank.page($('#clTab'), c, {staff:true, head:false}); }, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
 }
 
 /* ---------- 🔓 teacher unlocks units (for students who studied before) ---------- */
@@ -691,7 +691,11 @@ function attPrint(){ const c=cls(), m=AT.m||(AT.d||dkey()).slice(0,7), days=Obje
 /* ---------- 🎁 rewards from the teacher's wallet (c.bonus = [{id,sid,a,w,ts,by,bn}]) ---------- */
 const TW0 = 10000000;   // every teacher/admin account starts with 10,000,000៛ (only staff see it)
 const meId = () => (window.Auth&&Auth.user()&&Auth.user().id)||'local';
-function wallet(uid){ uid=uid||meId(); let spent=0; C.classes.forEach(c=>(c.bonus||[]).forEach(b=>{ if(b.by===uid) spent+=+b.a||0; })); return {start:TW0, spent, left:TW0-spent}; }
+/* 💰 wallet = 10,000,000៛ + 🛡️ Admin បន្ថែម (u.grants) + 📚 រៀនបាន (🎓 មើលជាសិស្ស) − 🎁 ផ្តល់រង្វាន់សិស្ស */
+function wallet(uid){ uid=uid||meId(); let spent=0; C.classes.forEach(c=>(c.bonus||[]).forEach(b=>{ if(b.by===uid) spent+=+b.a||0; }));
+  const u=((window.Auth&&Auth.data().users)||[]).find(x=>x.id===uid)||{}, grants=(u.grants||[]).reduce((a,g)=>a+(+g.a||0),0);
+  let learned=0; try{ learned=(JSON.parse(localStorage.getItem('beginner-studio-tm:'+uid)||'{}')||{}).t||0; }catch(e){}
+  return {start:TW0, grants, learned, spent, left:TW0+grants+learned-spent}; }
 const rl = n => Math.round(n||0).toLocaleString('en-US')+'៛';
 let RW={sel:new Set(), a:1000, w:''};
 function reward(o){ const c=cls(); if(!c) return toast('មិនទាន់មានថ្នាក់'); o=o||{}; RW={sel:new Set(o.sids||[]), a:o.a||RW.a||1000, w:o.w||''}; rwDraw(); }
@@ -717,7 +721,7 @@ function rwGo(){ const c=cls(), w=(document.getElementById('rwW').value||'').tri
   saveC(); closeModal(); toast(`🎁 បានផ្តល់ ${rl(a)} ឱ្យសិស្ស ${n} នាក់`); if(typeof beep==='function') beep(true); if(document.getElementById('clTab')&&tab==='reward') tReward(c); }
 function tReward(c){ const W=wallet(), byId=Object.fromEntries(c.students.map(s=>[s.id,s])), L=(c.bonus||[]).slice().sort((a,b)=>b.ts-a.ts);
   const per=c.students.map(s=>[s,(c.bonus||[]).filter(b=>b.sid===s.id).reduce((t,b)=>t+(+b.a||0),0)]).filter(x=>x[1]).sort((a,b)=>b[1]-a[1]);
-  $('#clTab').innerHTML=`<div class="panel"><div class="rw-top"><div class="rw-wal big"><span>💰 កាបូបគ្រូ</span><b>${rl(W.left)}</b><small>ចាប់ផ្តើម ${rl(W.start)} • ផ្តល់រួច ${rl(W.spent)} • 🔒 មានតែគ្រូទេដែលឃើញ មិនចូលចំណាត់ថ្នាក់ជាមួយសិស្ស</small></div>
+  $('#clTab').innerHTML=`<div class="panel"><div class="rw-top"><div class="rw-wal big"><span>💰 កាបូបគ្រូ</span><b>${rl(W.left)}</b><small>ចាប់ផ្តើម ${rl(W.start)}${W.grants?' • 🛡️ Admin បន្ថែម +'+rl(W.grants):''}${W.learned?' • 📚 រៀនបាន +'+rl(W.learned):''} • ផ្តល់រួច ${rl(W.spent)} • 🔒 មានតែគ្រូទេដែលឃើញ មិនចូលចំណាត់ថ្នាក់ជាមួយសិស្ស</small></div>
       <button class="btn sun xl" onclick="Class.reward()">🎁 ផ្តល់រង្វាន់ឱ្យសិស្ស</button></div>
     <p class="note">💡 លុយរង្វាន់បូកចូលកាបូបសិស្សភ្លាម (សិស្សឃើញ «🎁 រង្វាន់ពីគ្រូ») ហើយសិស្សទទួលដំណឹង។ ចុច ↩ ដើម្បីដកវិញ (លុយត្រឡប់មកកាបូបគ្រូ)។</p></div>
   ${per.length?`<div class="panel" style="margin-top:12px"><h3 class="sec">🏅 សិស្សដែលទទួលរង្វាន់ (ថ្នាក់នេះ)</h3><div class="rw-per">${per.map(([s,a])=>`<div>${avatar(s,34)}<span>${esc(s.name)}</span><b>+${rl(a)}</b></div>`).join('')}</div></div>`:''}
