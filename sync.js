@@ -7,8 +7,8 @@
 // =====================================================================
 (function(){
 window.IS_WEB = true; document.documentElement.classList.add('is-web'); document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('is-web')); if(document.body) document.body.classList.add('is-web');
-const VER='2026.11.28k';
-const FILES=['tts.js','qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','rank.js','chat.js','notify.js','exam.js','worksheet.js','track.js','qrscan.js','auth.js','ctx.js','voice.js','lessonex.js','sg-courses.js','course.js','levelup.js','rich.js','games.js','sig.js','cert.js','money.js','pending.js','app.js'];
+const VER='2026.11.28l';
+const FILES=['tts.js','qrcode.js','tracks.js','data.js','wordlist.js','lessons.js','slides.js','book.js','class.js','rank.js','chat.js','notify.js','exam.js','worksheet.js','track.js','qrscan.js','auth.js','ctx.js','voice.js','lessonex.js','sg-courses.js','course.js','levelup.js','rich.js','games.js','sig.js','cert.js','money.js','pending.js','app.js','online.js'];
 const FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const CK='bs-cloud', PREFIX='beginner-studio', CHUNK=300000;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -118,17 +118,22 @@ function allowed(k){
   if(r==='student') return k===PREFIX+'-exams-v1' || k===PREFIX+'-ws-v1' || k===PREFIX+'-auth-v1' || k===PREFIX+'-board-v1' || k.startsWith(PREFIX+'-v1:');
   return true;
 }
-function queue(k){ if(!cloud || !k.startsWith(PREFIX) || k===PREFIX+'-session') return; Q.set(k,1); if(!db) return; setStatus('wait'); clearTimeout(timer); timer=setTimeout(flush,900); }
+/* 🛡 unsent changes survive a reload, an update or a lost connection: the keys waiting to upload are remembered (bs-pend)
+   and on the next start they are kept (not overwritten by the cloud copy) and merged + uploaded */
+const PEND='bs-pend';
+const pend = () => { try{ return JSON.parse(_get.call(localStorage,PEND)||'[]'); }catch(e){ return []; } };
+function pendSet(k, on){ const a=pend(), i=a.indexOf(k); if(on&&i<0) a.push(k); else if(!on&&i>=0) a.splice(i,1); else return; try{ _set.call(localStorage,PEND,JSON.stringify(a)); }catch(e){} }
+function queue(k){ if(!cloud || !k.startsWith(PREFIX) || k===PREFIX+'-session') return; Q.set(k,1); if(allowed(k)) pendSet(k,1); if(!db) return; setStatus('wait'); clearTimeout(timer); timer=setTimeout(flush,900); }
 async function flush(){
   if(!db) return; if(busy){ clearTimeout(timer); timer=setTimeout(flush,500); return; } if(!Q.size) return;
   busy=true; const keys=[...Q.keys()]; Q.clear();
   try{
-    for(const k of keys){ if(!allowed(k)) continue;
+    for(const k of keys){ if(!allowed(k)){ pendSet(k,0); continue; }
       const local=_get.call(localStorage,k);
       const rem=await fetchOne(k); let out=local;
       if(local!=null && rem.v!=null && rem.v!==local){ try{ out=J(merge(JSON.parse(BASE[k]||'null'),JSON.parse(local),JSON.parse(rem.v))); }catch(e){ out=local; } }
       if(out!==rem.v) await writeOne(k,out,rem.n);
-      BASE[k]=local;   // what this app has seen: our own removals since now count as deletions, others' additions stay
+      BASE[k]=local; if(!Q.has(k)) pendSet(k,0);   // what this app has seen: our own removals since now count as deletions, others' additions stay
     }
     setStatus('ok');
   }catch(e){ console.warn('sync',e); keys.forEach(k=>Q.set(k,1)); setStatus('err'); clearTimeout(timer); timer=setTimeout(flush,8000); }
@@ -353,7 +358,7 @@ async function boot(){
   if(cloud){
     const cached = !!_get.call(localStorage,SYK) && Object.keys(localStorage).some(k=>k.startsWith(PREFIX+'-auth'));
     loader(true, cached ? '⚡ កំពុងពិនិត្យទិន្នន័យថ្មី…' : '☁️ កំពុងទាញទិន្នន័យថ្នាក់ (លើកដំបូង)…');
-    const late=new Set(); let started=false;
+    const late=new Set(pend()); let started=false;
     const job=(async()=>{ await initFB(); await pull(late); })();
     // returning device: never wait long — start with cached data and keep syncing in background
     const winner = await Promise.race([ job.then(()=>'ok',e=>{ console.warn(e); return 'err'; }),
@@ -366,6 +371,7 @@ async function boot(){
     loader(false);
   }
   setBase();
+  if(cloud){ const P=pend(); P.forEach(k=>{ if(_get.call(localStorage,k)!=null){ BASE[k]=null; Q.set(k,1); } else pendSet(k,0); }); if(P.length){ setStatus('wait'); clearTimeout(timer); timer=setTimeout(flush,1200); } }
   loadScripts();
 }
 /* ---------- 💬 live data (presence • friends • chat) — schools/{school}/live/... realtime via onSnapshot ---------- */

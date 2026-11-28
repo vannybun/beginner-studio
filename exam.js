@@ -145,7 +145,7 @@ const LV = () => window.Cloud && Cloud.live && Cloud.live.ok() ? Cloud.live : nu
 function answered(run){ let k=0; run.ex.parts.forEach(p=>p.qs.forEach((q,i)=>{ const v=(run.ans[p.id]||{})[i]; if(v!==undefined&&v!==''&&v!==null) k++; })); return k; }
 function livePut(st, extra){ const me=meStu(), l=LV(); if(!me||!l||!RUN) return; const tot=RUN.ex.parts.reduce((a,p)=>a+p.qs.length,0);
   l.merge(['examlive_'+me.classId], {[me.id]:{sid:me.studentId, name:me.name||RUN.name, n:RUN.ex.n, ver:RUN.ex.ver, sess:RUN.sess||'', t0:RUN.t0, min:RUN.min||0, k:answered(RUN), tot, part:RUN.part||0, st, ts:Date.now(), ...(extra||{})}}); }
-function liveStart(){ if(!meStu()||!RUN) return; livePut('run'); clearInterval(RUN.beat); RUN.beat=setInterval(()=>{ if(RUN&&document.getElementById('exam')&&!document.querySelector('#exam .ex-res')) livePut('run'); }, 15000); }
+function liveStart(){ if(!meStu()||!RUN) return; livePut('run'); clearInterval(RUN.beat); RUN.beat=setInterval(()=>{ if(RUN&&document.getElementById('exam')&&!document.querySelector('#exam .ex-res')){ livePut('run'); snap(); } }, 15000); }
 function liveStop(st, extra){ if(!RUN) return; clearInterval(RUN.beat); livePut(st, extra); }
 const LW={}, LD={};
 function watchLive(cid){ const l=LV(); if(!l||LW[cid]) return; LW[cid]=l.watch(['examlive_'+cid], d=>{ LD[cid]=d||{}; liveRefresh(); }); }
@@ -226,6 +226,7 @@ function tab(u){
 /* ---------- in-app exam ---------- */
 let RUN=null;
 async function start(n, ver, sessId){
+  { const R0=saved(); if(R0&&R0.ex&&R0.ex.n===n&&(R0.sess||null)===(sessId||null)&&!RUN) return resume(); }
   if(window.Auth&&Auth.asStaff&&Auth.asStaff()) return toast('👁 គ្រូកំពុងមើល — មិនអាចប្រឡងជំនួសសិស្សបានទេ');
   if(meStu() && window.Cloud && Cloud.refresh){ try{ await Cloud.refresh(EK); }catch(e){} reloadX(); }
   if(meStu()){ const se=(X.open||[]).find(x=>x.id===sessId && x.cls===meStu().classId); if(!se){ toast('🔒 គ្រូបានបិទប្រឡងនេះហើយ'); studentPage(); return; } if(se.once && sessDone(se,meStu())) return toast('✅ អ្នកបានប្រឡងរួចហើយ'); }
@@ -239,6 +240,28 @@ async function start(n, ver, sessId){
     <input id="exName" class="cl-in" style="width:100%" placeholder="ឈ្មោះ">
     <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeModal()">បោះបង់</button><button class="btn teal" onclick="Exam.begin(${n},'${ver}')">▶ ចាប់ផ្តើមប្រឡង</button></div>`);
 }
+/* 🛡 exam in progress is saved on this device after every answer — after a reload, an update or a lost connection the student continues where they stopped (same questions, same answers, same clock) */
+const RK = () => 'bsx-run:'+(((window.Auth&&Auth.user())||{}).id||'local');
+function snap(){ if(!RUN||RUN.done) return; try{ const {ex,ans,ord,plays,name,sid,t0,part,sess,min}=RUN; localStorage.setItem(RK(), JSON.stringify({ex,ans,ord,plays,name,sid,t0,part,sess,min,at:Date.now()})); }catch(e){} }
+const unsnap = () => { try{ localStorage.removeItem(RK()); }catch(e){} };
+function saved(){ try{ return JSON.parse(localStorage.getItem(RK())||'null'); }catch(e){ return null; } }
+function resumeCheck(){ const R0=saved(); if(!R0||RUN||document.getElementById('exam')) return;
+  const me=meStu(); if(me&&R0.sess){ const se=(X.open||[]).find(x=>x.id===R0.sess); const done=X.results.some(r=>r.sess===R0.sess&&(r.uid===me.id||r.sid===me.studentId)&&r.ts>R0.t0);
+    if(done){ unsnap(); return; } if(!se){ modal(`<h3>📝 ប្រឡង Unit ${R0.ex.n} មិនទាន់ប្រគល់</h3><p class="km">គ្រូបានបិទប្រឡងនេះហើយ — ប្រគល់ចម្លើយដែលអ្នកបានធ្វើរួច?</p><div class="row" style="justify-content:flex-end;gap:8px"><button class="btn ghost" onclick="Exam._resumeDrop()">🗑 បោះបង់</button><button class="btn teal" onclick="Exam._resume(1)">📤 ប្រគល់ចម្លើយ</button></div>`); return; } }
+  const tot=R0.ex.parts.reduce((a,p)=>a+p.qs.length,0); let k=0; R0.ex.parts.forEach(p=>p.qs.forEach((q,i)=>{ const v=(R0.ans[p.id]||{})[i]; if(v!==undefined&&v!==''&&v!==null) k++; }));
+  const over=R0.min&&Date.now()>R0.t0+R0.min*60000;
+  modal(`<div class="ex-resume"><div style="font-size:54px">📝</div><h3>អ្នកមានប្រឡងមិនទាន់បញ្ចប់</h3><p class="km"><b>${esc(R0.ex.title)} • Version ${R0.ex.ver}</b><br>បានឆ្លើយ ${k}/${tot} សំណួរ • ចម្លើយទាំងអស់ត្រូវបានរក្សាទុក ✅</p>
+    ${over?'<p class="note">⏱ ម៉ោងប្រឡងបានផុតហើយ — ចម្លើយនឹងត្រូវប្រគល់ឥឡូវនេះ</p>':R0.min?`<p class="note">⏱ នៅសល់ ${Math.max(0,Math.ceil((R0.t0+R0.min*60000-Date.now())/60000))} នាទី (ម៉ោងបន្តរាប់ពីពេលចាប់ផ្តើមដំបូង)</p>`:''}
+    <div class="row" style="justify-content:center;gap:8px;margin-top:10px">${me?'':`<button class="btn ghost" onclick="Exam._resumeDrop()">🗑 បោះបង់</button>`}<button class="btn sun xl" onclick="Exam._resume(${over?1:0})">${over?'📤 ប្រគល់ចម្លើយ':'▶ ធ្វើបន្ត'}</button></div></div>`); }
+function resume(submitNow){ const R0=saved(); if(!R0) return closeModal(); closeModal();
+  RUN={...R0, ans:R0.ans||{}, part:R0.part||0}; delete RUN.at;
+  const el=document.createElement('div'); el.id='exam'; document.body.appendChild(el); document.body.classList.add('exam-open');
+  el.innerHTML=examShell(RUN.ex, RUN.name, false); RUN.onSave=snap; wireExam(el, RUN, ()=>finish());
+  if(submitNow) return finish(true);
+  if(RUN.min){ if(Date.now()>RUN.t0+RUN.min*60000) return finish(true); startTimer(RUN.min); }
+  liveStart(); toast('↺ បន្តប្រឡង — ចម្លើយពីមុននៅដដែល'); }
+function resumeDrop(){ if(!confirm('បោះបង់ប្រឡងដែលមិនទាន់បញ្ចប់? ចម្លើយនឹងបាត់')) return; unsnap(); closeModal(); }
+setTimeout(()=>{ try{ resumeCheck(); }catch(e){} }, 2500);
 function begin(n, ver, sessId){
   const sel=$('#exWho'), st=(window.Class&&Class.studentsForPicker())||[], me=window.Auth&&Auth.user();
   const s = me&&me.role==='student' ? {id:me.studentId, name:me.name} : sel && sel.value ? st.find(x=>x.id===sel.value) : null;
@@ -249,7 +272,7 @@ function begin(n, ver, sessId){
   RUN={ex:build(n,ver,!!(window.Voice&&Voice.ok())), ans:{}, name, sid:s?s.id:null, t0:Date.now(), part:0, sess:sessId||null, min:se?se.min:X.settings.minutes};
   const el=document.createElement('div'); el.id='exam'; document.body.appendChild(el); document.body.classList.add('exam-open');
   el.innerHTML = examShell(RUN.ex, name, false);
-  wireExam(el, RUN, ()=>finish());
+  RUN.onSave=snap; wireExam(el, RUN, ()=>finish()); snap();
   if(RUN.min) startTimer(RUN.min);
   liveStart();
 }
@@ -275,10 +298,10 @@ function examShell(ex, name, online){
 }
 function wireExam(root, run, onSubmit){
   const ex=run.ex, total=ex.parts.reduce((a,p)=>a+p.qs.length,0);
-  const set=(p,i,v)=>{ (run.ans[p]=run.ans[p]||{})[i]=v; prog(); };
+  const set=(p,i,v)=>{ (run.ans[p]=run.ans[p]||{})[i]=v; prog(); if(run.onSave) run.onSave(); };
   const prog=()=>{ let k=0; ex.parts.forEach(p=>p.qs.forEach((q,i)=>{ const v=(run.ans[p.id]||{})[i]; if(v!==undefined&&v!==''&&v!==null) k++; })); const el=root.querySelector('#exProg'); if(el) el.textContent=`${k} / ${total}`;
     root.querySelectorAll('.ex-nav button').forEach((b,pi)=>{ const p=ex.parts[pi]; const done=p.qs.every((q,i)=>{ const v=(run.ans[p.id]||{})[i]; return v!==undefined&&v!==''&&v!==null; }); b.classList.toggle('done',done); }); };
-  const go=i=>{ root.querySelectorAll('.ex-part').forEach((s,k)=>s.classList.toggle('on',k===+i)); root.querySelectorAll('.ex-nav button').forEach((b,k)=>b.classList.toggle('on',k===+i)); root.querySelector('.ex-body').scrollTop=0; window.scrollTo(0,0); };
+  const go=i=>{ run.part=+i; if(run.onSave) run.onSave(); root.querySelectorAll('.ex-part').forEach((s,k)=>s.classList.toggle('on',k===+i)); root.querySelectorAll('.ex-nav button').forEach((b,k)=>b.classList.toggle('on',k===+i)); root.querySelector('.ex-body').scrollTop=0; window.scrollTo(0,0); };
   const sayIt=t=>{ if(window.TTS) return TTS.say(t,.85); try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(t); const v=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang)); const pv=v.find(x=>/en-GB/i.test(x.lang))||v[0]; if(pv){u.voice=pv;u.lang=pv.lang;} else u.lang='en-GB'; u.rate=.85; speechSynthesis.speak(u); }catch(e){} };
   root.addEventListener('click',e=>{
     const g=e.target.closest('[data-go]'); if(g){ go(g.dataset.go); return; }
@@ -293,8 +316,15 @@ function wireExam(root, run, onSubmit){
     if(t.tagName==='SELECT'){ set('C',+t.dataset.i, t.value===''?null:+t.value); }
   });
   root.addEventListener('input',e=>{ const t=e.target; if(t.classList.contains('ex-in')) set(t.dataset.p,+t.dataset.i,t.value); });
+  /* ↺ resumed exam: put the saved answers back on screen */
+  ex.parts.forEach(p=>Object.entries(run.ans[p.id]||{}).forEach(([i,v])=>{ if(v==null||v==='') return; const q=root.querySelector(`.ex-q[data-p="${p.id}"][data-i="${i}"]`);
+    const r=q&&q.querySelector(`input[type=radio][value="${v}"]`); if(r){ r.checked=true; q.classList.add('answered'); }
+    const t=root.querySelector(`.ex-in[data-p="${p.id}"][data-i="${i}"]`); if(t) t.value=v;
+    if(p.id==='C'){ const sl=root.querySelector(`select[data-i="${i}"]`); if(sl) sl.value=v; }
+    if(q&&q.classList.contains('ex-sp')&&+v>0) q.insertAdjacentHTML('beforeend',`<div class="ex-resumed">✅ បានរក្សាទុក ${v}% (អាចនិយាយម្តងទៀតបាន)</div>`); }));
+  Object.entries(run.ord||{}).forEach(([i,ks])=>(ks||[]).forEach(k=>{ const b=root.querySelector(`.ex-chips button[data-i="${i}"][data-k="${k}"]`); if(b) b.disabled=true; }));
   ex.parts.forEach((p,pi)=>{ if(p.id==='F') p.qs.forEach((q,i)=>drawOrd(i)); });
-  run._set=set; prog();
+  run._set=set; prog(); if(run.part) go(run.part);
 }
 function finish(force){
   if(!RUN) return;
@@ -303,7 +333,7 @@ function finish(force){
   clearTimeout(RUN.timer);
   const sc=score(ex,RUN.ans);
   X.results.push({n:ex.n, ver:ex.ver, name:RUN.name, sid:RUN.sid, sess:RUN.sess, uid:(window.Auth&&Auth.user()&&Auth.role()==='student')?Auth.user().id:null, s:sc.s, t:ex.total, pct:sc.pct, by:sc.by, ts:Date.now(), via:'app', mins:Math.round((Date.now()-RUN.t0)/60000)}); if(window.earn) earn(`exam:${RUN.sess||ex.n}`, Math.min(3000, Math.round(sc.pct/10)*300), `ប្រឡង Unit ${ex.n} (${sc.pct}%)`);
-  saveX(); liveStop('done', {pct:sc.pct, s:sc.s});
+  saveX(); RUN.done=true; unsnap(); liveStop('done', {pct:sc.pct, s:sc.s});
   $('#exam').innerHTML = resultHtml(ex, RUN.ans, sc, RUN.name, false);
   if(sc.pct>=80 && window.pageConfetti) pageConfetti();
 }
@@ -326,7 +356,7 @@ function resultHtml(ex, ans, sc, name, online, code){
     return `<div class="ex-rr ${ok?'ok':'no'}"><span>${ok?'✅':'❌'}</span><div><div class="km">${i+1}. ${esc(qtxt)}</div><small>${ok?esc(mine):`<s>${esc(mine)}</s> → <b>${esc(right)}</b>`}</small></div></div>`; }).join('')}</div>`).join('')}
   </div>`;
 }
-function quit(){ if(RUN && !$('.ex-res') && !confirm('ចាកចេញពីប្រឡង? ចម្លើយនឹងមិនត្រូវបានរក្សាទុកទេ។')) return; if(RUN){ clearTimeout(RUN.timer); if(!$('.ex-res')) liveStop('quit'); else clearInterval(RUN.beat); } RUN=null; const el=$('#exam'); if(el) el.remove(); document.body.classList.remove('exam-open'); speechSynthesis.cancel(); if(window.render) render(); }
+function quit(){ if(RUN && !$('.ex-res') && !confirm('ចាកចេញពីប្រឡង? ចម្លើយនឹងមិនត្រូវបានរក្សាទុកទេ។')) return; if(RUN){ clearTimeout(RUN.timer); if(!$('.ex-res')) liveStop('quit'); else clearInterval(RUN.beat); unsnap(); } RUN=null; const el=$('#exam'); if(el) el.remove(); document.body.classList.remove('exam-open'); speechSynthesis.cancel(); if(window.render) render(); }
 
 /* ---------- print (paper test) ---------- */
 function paper(ex, school){
@@ -515,7 +545,7 @@ const EXAM_CSS = `
 `;
 const st=document.createElement('style'); st.textContent=EXAM_CSS; document.head.appendChild(st);
 
-window.Exam = { liveView,  _sp:(pid,i,r)=>{ if(!RUN||!RUN._set) return; const cur=+((RUN.ans[pid]||{})[i])||0; RUN._set(pid,i,Math.max(cur,r.best||r.pct||0)); const q=document.querySelector(`#exam .ex-q[data-p="${pid}"][data-i="${i}"]`); if(q) q.classList.add('answered');
+window.Exam = { liveView, _resume:resume, _resumeDrop:resumeDrop, resumeCheck,  _sp:(pid,i,r)=>{ if(!RUN||!RUN._set) return; const cur=+((RUN.ans[pid]||{})[i])||0; RUN._set(pid,i,Math.max(cur,r.best||r.pct||0)); const q=document.querySelector(`#exam .ex-q[data-p="${pid}"][data-i="${i}"]`); if(q) q.classList.add('answered');
     if(r.pass||r.tries>=3){ const m=document.querySelector(`#vc-ex${pid}${i} .vc-mic`); if(m) m.innerHTML=r.pass?'<small>✅ បានរក្សាទុក</small>':'<small>🔒 អស់ឱកាស ៣ ដងហើយ — រក្សាទុកលទ្ធផលល្អបំផុត '+Math.max(cur,r.best||0)+'%</small>'; } }, grammarPool:n=>grammarItems(n,Math.random).map(q=>({q:q.q,qKm:q.qKm,o:q.opts,a:q.a})), studentPage, openSess, openMulti, _openMultiGo:openMultiGo, closeSess, reload:reloadX, build, score, tab, start, begin, quit, print, online, importCodes, doImport, toScores, doScores, csv, clear,
   setting:(k,v)=>{ X.settings[k]=v; saveX(); }, data:()=>X };
 })();

@@ -118,6 +118,10 @@ function studentSection(){
       ${a.mode==='view'?`<button class="btn sun" onclick="WS.open('${a.id}')">📖 មើល</button>`:can?`<button class="btn sun" onclick="WS.open('${a.id}')">▶ ${d?'ម្តងទៀត':'ធ្វើ'}</button>`:`<button class="btn ghost" onclick="WS.review('${a.id}')">👁 មើល</button>`}</div>`; }).join('')}`;
 }
 let RUN=null;
+/* 🛡 answers in progress are kept on this device — reopen the worksheet after a reload / update / lost connection and they come back */
+const WRK = id => 'bsx-ws:'+((me&&me()||{}).id||'local')+':'+id;
+function wsSnap(){ if(RUN&&RUN.a) try{ localStorage.setItem(WRK(RUN.a.id), JSON.stringify({ans:RUN.ans, at:Date.now()})); }catch(e){} }
+function wsSaved(id){ try{ return JSON.parse(localStorage.getItem(WRK(id))||'null'); }catch(e){ return null; } }
 function shell(inner){ let el=$('#wsRun'); if(!el){ el=document.createElement('div'); el.id='wsRun'; document.body.appendChild(el); } document.body.classList.add('exam-open'); el.innerHTML=inner; el.scrollTop=0; }
 function close(){ const el=$('#wsRun'); if(el) el.remove(); document.body.classList.remove('exam-open'); RUN=null; if(window.render) render(); }
 async function openA(id){
@@ -126,21 +130,26 @@ async function openA(id){
   if(a.mode==='view') return viewA(a);
   if(a.once && doneOf(a)) return review(id);
   const ws=a.ws, kmOpts=shuf(ws.A.map(w=>w[1]));
-  RUN={a, ans:{A:{},B:{},C:{},D:{}}};
+  const SV=wsSaved(a.id); RUN={a, ans:(SV&&SV.ans)||{A:{},B:{},C:{},D:{}}};
   shell(`<div class="wr-top"><button onclick="WS.close()">✕</button><div><b>${esc(ws.title)}</b><small>${total(ws)} សំណួរ</small></div><span id="wrCnt">0/${total(ws)}</span></div>
     <div class="wr-body">
     ${ws.A.length?`<h3>A. ផ្គូផ្គងពាក្យ <small>Match the words</small></h3>${ws.A.map((w,i)=>`<div class="wr-q"><b>${i+1}. ${esc(w[0])}</b><button class="wr-say" onclick="speak(${JSON.stringify(w[0]).replace(/"/g,'&quot;')})">🔊</button><select onchange="WS.ans('A',${i},this.value)"><option value="">— ជ្រើសអត្ថន័យ —</option>${kmOpts.map(k=>`<option>${esc(k)}</option>`).join('')}</select></div>`).join('')}`:''}
     ${ws.B.length?`<h3>B. ជ្រើសចម្លើយត្រឹមត្រូវ <small>Choose the correct answer</small></h3>${ws.B.map((q,i)=>`<div class="wr-q"><b>${i+1}. ${esc(q.q)}</b>${q.qKm?`<small>${esc(q.qKm)}</small>`:''}<div class="wr-opts">${q.o.map((o,j)=>`<button data-b="${i}" onclick="WS.pick(${i},${j},this)">${letter(j)}. ${esc(o)}</button>`).join('')}</div></div>`).join('')}`:''}
     ${ws.C.length?`<h3>C. សរសេរពាក្យអង់គ្លេស <small>Write the English word</small></h3>${ws.C.map((w,i)=>`<div class="wr-q"><b>${i+1}. ${esc(w[0])}</b><input autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="English…" oninput="WS.ans('C',${i},this.value)"></div>`).join('')}`:''}
     ${(ws.D||[]).length?`<h3>D. 🎤 និយាយ <small>Speaking — ចុច 🎤 ហើយនិយាយ</small></h3>${window.Voice&&Voice.ok()?'':'<p class="note">⚠️ ឧបករណ៍នេះមិនស្គាល់សំឡេង — ផ្នែកនេះមិនរាប់ពិន្ទុទេ (ប្រើ Chrome ឬ Safari ដើម្បីធ្វើផ្នែកនេះ)</p>'}${ws.D.map((d,i)=>`<div class="wr-q"><b>${i+1}. ${DM[d.mode]}</b>${window.Voice?Voice.card('wsD'+i, {...d, noSkip:true, exam:true}, r=>WS._sp(i,r)):''}</div>`).join('')}`:''}
-    <button class="btn teal wr-submit" onclick="WS.submit()">✅ ប្រគល់ ហើយមើលពិន្ទុ</button></div>`);
+    <button class="btn teal wr-submit" onclick="WS.submit()">✅ ប្រគល់ ហើយមើលពិន្ទុ</button></div>`); wsRestore();
 }
+function wsRestore(){ if(!RUN) return; const r=RUN.ans, body=document.querySelector('#wsRun .wr-body'); if(!body) return; let n=0;
+  const sels=body.querySelectorAll('select'); Object.entries(r.A||{}).forEach(([i,v])=>{ if(sels[i]&&v){ sels[i].value=v; n++; } });
+  Object.entries(r.B||{}).forEach(([i,j])=>{ const b=body.querySelectorAll(`[data-b="${i}"]`)[j]; if(b){ b.classList.add('on'); n++; } });
+  const ins=body.querySelectorAll('input:not([type])'); Object.entries(r.C||{}).forEach(([i,v])=>{ if(ins[i]&&v){ ins[i].value=v; n++; } });
+  if(n){ count(); toast('↺ ចម្លើយពីមុនត្រូវបានរក្សាទុក — ធ្វើបន្តបាន'); } }
 function count(){ const r=RUN.ans, k=Object.values(r.A).filter(Boolean).length+Object.keys(r.B).length+Object.values(r.C).filter(v=>v.trim()).length+(VOK()?Object.keys(r.D||{}).length:0); const el=$('#wrCnt'); if(el) el.textContent=k+'/'+total(RUN.a.ws); return k; }
 const VOK=()=>!!(window.Voice&&Voice.ok());
-function spD(i,r){ if(!RUN) return; const cur=+RUN.ans.D[i]||0; RUN.ans.D[i]=Math.max(cur,r.best||r.pct||0); count();
+function spD(i,r){ if(!RUN) return; const cur=+RUN.ans.D[i]||0; RUN.ans.D[i]=Math.max(cur,r.best||r.pct||0); count(); wsSnap();
   if(r.pass||r.tries>=3){ const m=document.querySelector(`#vc-wsD${i} .vc-mic`); if(m) m.innerHTML=r.pass?'<small>✅ បានរក្សាទុក</small>':'<small>🔒 អស់ឱកាស ៣ ដង — រក្សាទុក '+RUN.ans.D[i]+'%</small>'; } }
-function ans(p,i,v){ RUN.ans[p][i]=v; count(); }
-function pick(i,j,btn){ RUN.ans.B[i]=j; document.querySelectorAll(`[data-b="${i}"]`).forEach(b=>b.classList.toggle('on',b===btn)); count(); }
+function ans(p,i,v){ RUN.ans[p][i]=v; count(); wsSnap(); }
+function pick(i,j,btn){ RUN.ans.B[i]=j; document.querySelectorAll(`[data-b="${i}"]`).forEach(b=>b.classList.toggle('on',b===btn)); count(); wsSnap(); }
 function grade(ws, ans){
   const A=ws.A.map((w,i)=>ans.A[i]===w[1]), B=ws.B.map((q,i)=>ans.B[i]===q.a), C=ws.C.map((w,i)=>!!ans.C[i] && normA(ans.C[i])===normA(w[1]));
   const noD=ans.noD, D=noD?[]:(ws.D||[]).map((d,i)=>(ans.D||{})[i]!=null&&+(ans.D||{})[i]>=d.need);
@@ -150,7 +159,7 @@ function submit(){ if(window.Auth&&Auth.asStaff&&Auth.asStaff()) return toast('�
   const left=total(RUN.a.ws,!VOK())-count(); if(left>0 && !confirm(`នៅសល់ ${left} សំណួរមិនទាន់ឆ្លើយ។ ប្រគល់ឥឡូវ?`)) return;
   if(!VOK()) RUN.ans.noD=1; const m=me(), g=grade(RUN.a.ws, RUN.ans);
   W.results.push({id:uid(), wid:RUN.a.id, uid:m.id, sid:m.studentId, name:m.name, s:g.s, t:g.t, ts:Date.now(), ans:RUN.ans});
-  saveW(); if(typeof track==='function') track('worksheet', RUN.a.n+':'+Math.round(g.s/g.t*100));
+  saveW(); try{ localStorage.removeItem(WRK(RUN.a.id)); }catch(e){} if(typeof track==='function') track('worksheet', RUN.a.n+':'+Math.round(g.s/g.t*100));
   if(window.earn&&g.t) earn(`ws:${RUN.a.id}`, Math.min(2000, Math.round(g.s/g.t*10)*200), `សន្លឹកលំហាត់ (${g.s}/${g.t})`);
   showResult(RUN.a, RUN.ans, g);
 }

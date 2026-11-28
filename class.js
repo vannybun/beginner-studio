@@ -102,7 +102,7 @@ function resizePhoto(file, cb){
 }
 
 /* ---------- main render ---------- */
-const TABS = [['students','👩‍🎓 សិស្ស'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['attend','🙋 វត្តមាន'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['reward','🎁 រង្វាន់'],['money','💰 លុយសិស្ស'],['pending','⏳ មិនទាន់ប្រឡង'],['cert','🏅 ប័ណ្ណសរសើរ'],['notify','📣 ជូនដំណឹង'],['chat','💬 ឆាតសិស្ស'],['unlock','🔓 បើក/កាលវិភាគមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
+const TABS = [['students','👩‍🎓 សិស្ស'],['online','🟢 កំពុងរៀន'],['track','📊 តាមដានសិស្ស'],['scores','✏️ ដាក់ពិន្ទុ'],['results','🏅 លទ្ធផលប្រចាំខែ'],['year','📈 សរុបឆ្នាំ'],['attend','🙋 វត្តមាន'],['groups','👥 បង្កើតក្រុម'],['timer','⏱ នាឡិកា'],['rank','🏆 ចំណាត់ថ្នាក់'],['reward','🎁 រង្វាន់'],['money','💰 លុយសិស្ស'],['pending','⏳ មិនទាន់ប្រឡង'],['cert','🏅 ប័ណ្ណសរសើរ'],['notify','📣 ជូនដំណឹង'],['chat','💬 ឆាតសិស្ស'],['unlock','🔓 បើក/កាលវិភាគមេរៀន'],['accounts','🔑 គណនីសិស្ស']];
 let tab='students';
 function render(t){ reloadC(); applyProfiles();
   if(t) tab=t;
@@ -129,7 +129,7 @@ function render(t){ reloadC(); applyProfiles();
   }
   $('#main').innerHTML = head + `<div class="tabs">${TABS.map(x=>`<button class="${x[0]===tab?'on':''}" onclick="Class.render('${x[0]}')">${x[1]}</button>`).join('')}</div><div id="clTab"></div>`;
   { const on=document.querySelector('#main .tabs .on'); if(on&&on.parentElement.scrollWidth>on.parentElement.clientWidth) on.parentElement.scrollLeft=on.offsetLeft-on.parentElement.clientWidth/2+on.offsetWidth/2; }
-  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, attend:tAttend, reward:tReward, money:c=>{ if(window.Money) Money.classPanel($('#clTab'), c); }, pending:c=>{ if(window.Pending) Pending.tab($('#clTab'), c); }, cert:c=>{ if(window.Cert) Cert.tab($('#clTab'),c); }, notify:c=>{ if(window.Notify) Notify.teacherTab($('#clTab'), c); }, chat:c=>{ if(window.Chat) Chat.teacherTab($('#clTab'), c); }, rank:c=>{ Rank._target(()=>Class.render('rank')); Rank.page($('#clTab'), c, {staff:true, head:false}); }, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
+  ({students:tStudents, scores:tScores, results:tResults, year:tYear, groups:tGroups, timer:tTimer, track:c=>Track.tab(c), unlock:tUnlock, attend:tAttend, reward:tReward, money:c=>{ if(window.Money) Money.classPanel($('#clTab'), c); }, pending:c=>{ if(window.Pending) Pending.tab($('#clTab'), c); }, online:c=>{ if(window.Online) Online.tab($('#clTab'), c); }, cert:c=>{ if(window.Cert) Cert.tab($('#clTab'),c); }, notify:c=>{ if(window.Notify) Notify.teacherTab($('#clTab'), c); }, chat:c=>{ if(window.Chat) Chat.teacherTab($('#clTab'), c); }, rank:c=>{ Rank._target(()=>Class.render('rank')); Rank.page($('#clTab'), c, {staff:true, head:false}); }, accounts:c=>{ $('#clTab').innerHTML=Auth.accountsPanel(c); }})[tab](c);
 }
 
 /* ---------- 🔓 teacher unlocks units (for students who studied before) ---------- */

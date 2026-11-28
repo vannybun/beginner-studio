@@ -61,16 +61,20 @@ function build(n, si){
 }
 
 /* ---------- state ---------- */
+/* 🛡 exercises in progress are kept on this device (same questions, answers already right stay right) — survives reload / update / lost connection */
+const LXK = () => 'bsx-lex:'+(((window.Auth&&Auth.user())||{}).id||'local')+':'+((window.COURSE&&COURSE.id)||'');
 let CUR={};   // key → {items, st:[{ok, first, tries}], sel:{i:[tileIdx...]}}
+let LXL=false; function lxLoad(){ if(LXL) return; LXL=true; try{ const o=JSON.parse(localStorage.getItem(LXK())||'{}')||{}; Object.entries(o).forEach(([k,E])=>{ if(E&&Array.isArray(E.items)&&Array.isArray(E.st)&&!E.st.every(x=>x.ok)&&!CUR[k]) CUR[k]=E; }); }catch(e){} }
+let lxT=null; function lxSave(){ clearTimeout(lxT); lxT=setTimeout(()=>{ try{ const o={}; Object.entries(CUR).forEach(([k,E])=>{ if(E&&E.items&&E.items.length&&E.st.some(x=>x.tries>0)&&!E.st.every(x=>x.ok)) o[k]=E; }); localStorage.setItem(LXK(), JSON.stringify(o)); }catch(e){} },300); }
 const key=(n,si)=>n+'-'+si;
 function rec(n,si){ S.ex=S.ex||{}; S.ex[n]=S.ex[n]||{}; return S.ex[n][si]; }
 function passed(n,si){ const r=rec(n,si); return !!(r&&r.done); }
-function has(n,si){ const k=key(n,si); if(!CUR[k]) CUR[k]=fresh(n,si); return CUR[k].items.length>0; }
+function has(n,si){ lxLoad(); const k=key(n,si); if(!CUR[k]) CUR[k]=fresh(n,si); return CUR[k].items.length>0; }
 function fresh(n,si){ const items=build(n,si); return {items, st:items.map(()=>({ok:false, first:null, tries:0})), sel:{}}; }
 
 /* ---------- render ---------- */
 function block(n, si){
-  const k=key(n,si); if(!CUR[k]) CUR[k]=fresh(n,si); const E=CUR[k]; if(!E.items.length) return '';
+lxLoad();   const k=key(n,si); if(!CUR[k]) CUR[k]=fresh(n,si); const E=CUR[k]; if(!E.items.length) return '';
   const okN=E.st.filter(x=>x.ok).length, firstN=E.st.filter(x=>x.first===true).length, all=okN===E.items.length, r=rec(n,si);
   return `<div class="lex" id="lex-${k}"><div class="lex-h"><b>✍️ លំហាត់ផ្នែកនេះ</b><span>${okN}/${E.items.length}</span></div>
     <div class="lex-bar"><i style="width:${okN/E.items.length*100}%"></i></div>
@@ -96,10 +100,10 @@ function itemHtml(n,si,it,i,E){
     ${st.ok?'':`<div class="lex-tiles">${it.tiles.map((w,t)=>`<button ${sel.includes(t)||sel.length>=need?'disabled':''} onclick="LEX.tile('${k}',${i},${t})">${esc(w)}</button>`).join('')}</div>
     <div class="lex-row">${sp&&st.tries>=2?`<span class="lex-hint2">💡 ចាប់ផ្តើមដោយ <b>${esc(it.a[0])}</b>…</span>`:''}<button class="btn ghost sm" onclick="LEX.clearT('${k}',${i})">↺ សម្អាត</button><button class="btn teal sm" ${sel.length===need?'':'disabled'} onclick="LEX.checkT('${k}',${i})">✓ ពិនិត្យ</button></div>`}</div>`;
 }
-function rerender(k){ const [n,si]=k.split('-').map(Number), el=document.getElementById('lex-'+k); if(el) el.outerHTML=block(n,si); refreshFoot(n,si); }
+function rerender(k){ const [n,si]=k.split('-').map(Number), el=document.getElementById('lex-'+k); if(el) el.outerHTML=block(n,si); refreshFoot(n,si); lxSave(); }
 function refreshFoot(n,si){ const b=document.querySelector(`[data-lexfoot="${n}-${si}"]`); if(b){ const ok=!has(n,si)||passed(n,si)||(CUR[key(n,si)]&&CUR[key(n,si)].st.every(x=>x.ok)); b.disabled=!ok; b.classList.toggle('lockd',!ok); } }
 function mark(k,i,ok){
-  const E=CUR[k], st=E.st[i]; st.tries++; const isFirst=st.first===null; if(st.first===null) st.first=ok; if(ok) st.ok=true;
+  const E=CUR[k], st=E.st[i]; st.tries++; lxSave(); const isFirst=st.first===null; if(st.first===null) st.first=ok; if(ok) st.ok=true;
   if(typeof beep==='function') beep(ok);
   if(window.LVL) LVL.hit(ok, isFirst);
   if(E.st.every(x=>x.ok)){ const [n,si]=k.split('-').map(Number); const f=E.st.filter(x=>x.first).length, r=rec(n,si)||{}; if(window.earnUp) earnUp(`ex:${n}:${si}`, 200+100*Math.max(f,r.best||0), `លំហាត់ផ្នែក Unit ${n} (${Math.max(f,r.best||0)}/${E.items.length})`, r.done?200+100*(r.best||0):0);

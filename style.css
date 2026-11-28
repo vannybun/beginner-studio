@@ -2026,3 +2026,13 @@ img.sgpic{height:1.6em;width:auto;max-width:2.6em;object-fit:contain;vertical-al
 .exl-bar{height:7px;background:#f1f5f9;border-radius:5px;overflow:hidden;margin:4px 0 2px}.exl-bar i{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#86efac)}
 .exl-v{text-align:right}.exl-v b{display:block;font-variant-numeric:tabular-nums}.exl-v small{color:#64748b;font-family:var(--kh);font-size:12px}
 @media(max-width:600px){.exl-sum{grid-template-columns:1fr 1fr 1fr}.exl-sum b{font-size:18px}}
+/* 🟢 who is studying now */
+.ol-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.ol-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:olP 1.6s infinite;vertical-align:middle;margin-left:4px}
+@keyframes olP{70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.ol-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}.ol-list.sm{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.ol-r{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-left:5px solid #22c55e;border-radius:14px;padding:8px 12px}
+.ol-r.ex{border-left-color:#f59e0b;background:#fffbeb}.ol-r.rec{border-left-color:#94a3b8}.ol-r.off{border-left-color:#e2e8f0;opacity:.8}
+.ol-r>div{min-width:0}.ol-r b{display:block;font-family:var(--kh)}.ol-r span{display:block;font-family:var(--kh);font-size:13px;color:#0f766e}.ol-r small{color:#64748b;font-family:var(--kh);font-size:12px}
+/* 🛡 resume */
+.ex-resume{text-align:center}.ex-resumed{margin-top:6px;font-family:var(--kh);font-size:13px;color:#15803d}
