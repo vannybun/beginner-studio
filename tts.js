@@ -29,7 +29,7 @@
     const h=fnv(key(t));
     if(IDX && IDX.has(h)){
       seqStop=false; try{ if(au){ au.onended=null; au.pause(); } if(hasVoice()) speechSynthesis.cancel(); }catch(e){}
-      au = au || new Audio(); au.preload='auto'; au.src='tts/'+h+'.mp3'; au.playbackRate = Math.max(.6, Math.min(1.3, (rate||0.9)/0.9));
+      au = au || new Audio(); au.preload='auto'; au.src='tts/'+h+'.mp3?v=2'; au.playbackRate = Math.max(.6, Math.min(1.3, (rate||0.9)/0.9));
       au.onended = onend || null;
       const p=au.play(); if(p&&p.catch) p.catch(()=>device(t, rate, onend));
       return true;
