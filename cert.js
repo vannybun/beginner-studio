@@ -216,14 +216,26 @@ let LASTF=null;
 function edIns(tok){ const el=LASTF&&document.body.contains(LASTF)?LASTF:null; if(!el) return toast('👆 ចុចក្នុងប្រអប់ខ្លឹមសារជាមុនសិន'); const a=el.selectionStart??el.value.length, b=el.selectionEnd??a;
   const pre=el.value.slice(0,a), post=el.value.slice(b); tok=(pre&&!/\s$/.test(pre)?' ':'')+tok+(post&&!/^\s/.test(post)?' ':''); el.value=pre+tok+post; el.focus(); el.selectionStart=el.selectionEnd=a+tok.length; edSet(el.dataset.k, el.value); }
 function edSig(){ const keep=ED; Sig.open('', url=>{ ED=keep; if(url){ const u=Auth.data().users.find(x=>x.id===me().id); if(u){ u.sig=url; u.ts=Date.now(); Auth._saveA&&Auth._saveA(); } ED.v.sigBy=me().id; } edDraw(); }); }
-async function view(cid, id){ const c=findC(cid), t=c&&CS(c).find(x=>x.id===id); if(!t) return; const s=c.students.find(x=>x.id===t.sid);
+/* 📥 a student's own opens / downloads / prints of a certificate → their synced progress (S.certDl) so teachers & admin can follow */
+function track(id, kind){ try{ if(!(window.Auth&&Auth.role()==='student'&&!(Auth.asStaff&&Auth.asStaff()))||typeof S==='undefined') return;
+  S.certDl=S.certDl||{}; const o=S.certDl[id]=S.certDl[id]||{v:0,d:0,p:0}; o[kind]=(o[kind]||0)+1; const now=Date.now(); if(!o.f) o.f=now; o.l=now; if(kind!=='v'&&!o.fd) o.fd=now; save(); }catch(e){} }
+const stuU = (c, sid) => ((window.Auth&&Auth.data().users)||[]).find(x=>x.role==='student'&&x.classId===c.id&&x.studentId===sid);
+function dlOf(c, t){ const u=stuU(c,t.sid); if(!u) return {acc:false}; const P=J('beginner-studio-v1:'+u.id)||{}; return {acc:true, ...((P.certDl||{})[t.id]||{})}; }
+const dd = t => new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+function dlChip(c, t){ const o=dlOf(c,t);
+  if(!o.acc) return '<span class="ct-dl no" title="សិស្សនេះមិនទាន់មានគណនី App">🚫 គ្មានគណនី</span>';
+  if(o.d||o.p) return `<span class="ct-dl ok" title="បើកមើល ${o.v||0} • ទាញយក ${o.d||0} • បោះពុម្ព ${o.p||0} • ចុងក្រោយ ${dd(o.l)}">⬇ ${o.d?'ទាញយក '+o.d+'ដង':''}${o.d&&o.p?' • ':''}${o.p?'🖨 '+o.p+'ដង':''} • ${dd(o.fd||o.l)}</span>`;
+  if(o.v) return `<span class="ct-dl seen" title="បើកមើល ${o.v} ដង • ចុងក្រោយ ${dd(o.l)}">👁 បានមើល (មិនទាន់ទាញយក)</span>`;
+  return '<span class="ct-dl wait">⏳ មិនទាន់បើក</span>'; }
+const dlState = (c,t) => { const o=dlOf(c,t); return !o.acc?'no':(o.d||o.p)?'dl':o.v?'seen':'wait'; };
+async function view(cid, id){ const c=findC(cid), t=c&&CS(c).find(x=>x.id===id); if(!t) return; const s=c.students.find(x=>x.id===t.sid); track(id,'v');
   modal(`<div class="ct-view"><div class="ct-img"><p class="note">⏳ កំពុងរៀបចំ…</p></div>
     <div class="row" style="justify-content:center;gap:8px;margin-top:10px"><button class="btn teal" onclick="Cert.png('${cid}','${id}')">⬇ ទាញយករូបភាព (PNG)</button><button class="btn ghost" onclick="Cert.print('${cid}','${id}')">🖨 បោះពុម្ព</button>${window.Auth&&Auth.role()!=='student'?`<button class="btn ghost" onclick="Cert.edit('${cid}','${id}')">✏️ កែ</button>`:''}</div></div>`);
   document.getElementById('modal').classList.add('wide');
   const url=await toURL(t,s,c); const box=$('.ct-img'); if(box) box.innerHTML=`<img src="${url}" alt="certificate">`; }
-async function png(cid,id){ const c=findC(cid), t=CS(c).find(x=>x.id===id), s=c.students.find(x=>x.id===t.sid), url=await toURL(t,s,c);
+async function png(cid,id){ track(id,'d'); const c=findC(cid), t=CS(c).find(x=>x.id===id), s=c.students.find(x=>x.id===t.sid), url=await toURL(t,s,c);
   const a=document.createElement('a'); a.href=url; a.download=`ប័ណ្ណសរសើរ_${(s&&(s.latin||s.name)||'student').replace(/\s+/g,'_')}_${t.t}.png`; document.body.appendChild(a); a.click(); a.remove(); }
-async function print(cid,id){ const c=findC(cid), t=CS(c).find(x=>x.id===id), s=c.students.find(x=>x.id===t.sid), url=await toURL(t,s,c);
+async function print(cid,id){ track(id,'p'); const c=findC(cid), t=CS(c).find(x=>x.id===id), s=c.students.find(x=>x.id===t.sid), url=await toURL(t,s,c);
   $('#printArea').innerHTML=`<style>@page{size:A4 landscape;margin:0}</style><img src="${url}" style="width:100%;display:block">`; setTimeout(()=>window.print(),300); }
 const findC = id => window.Class&&Class.data ? Class.data().classes.find(x=>x.id===id) : (J(CK)||{classes:[]}).classes.find(x=>x.id===id);
 
@@ -252,8 +264,8 @@ function tab(el, c){ const sug=suggest(c), ok=CS(c).filter(x=>x.st==='ok'), sent
       <select onchange="Cert._tt('key',this.value)">${opts.map(k=>`<option value="${k}" ${k===key?'selected':''}>${esc(perLabel({y:TT.y,key:k}))}</option>`).join('')}</select></div>
     ${man.length?`<div class="ct-list">${man.map(x=>{ const k=`${TT.t}:${TT.y}:${key}:${x.s.id}`, st=(CS(c).find(v=>v.k===k)||{}).st; const it={k,t:TT.t,sid:x.s.id,p:{y:TT.y,key},rk:x.rk,v:x.v,...(x.goal!=null?{goal:x.goal}:{})};
       return row(c,it, st==='sent'?'<span class="ct-st sent">📤 បានផ្ញើ</span>':st==='ok'?'<span class="ct-st">✅ បានអនុម័ត</span>':`<button class="btn teal sm" onclick='Cert.okItem(${JSON.stringify(it).replace(/'/g,"&#39;")})'>✅ អនុម័ត</button>`); }).join('')}</div>`:'<p class="ct-empty">មិនទាន់មានទិន្នន័យសម្រាប់រយៈពេលនេះ</p>'}</div>
-  <div class="panel"><div class="ct-sh"><h3 class="sec">📜 ប័ណ្ណដែលបានផ្ញើ</h3>${yrs.length?`<select onchange="Cert._tt('yr',+this.value)">${yrs.map(y=>`<option ${y===yr?'selected':''}>${y}</option>`).join('')}</select>`:''}</div>
-    ${sent.length?`<div class="ct-list">${sent.filter(x=>new Date(x.sent||x.ts).getFullYear()===yr).sort((a,b)=>(b.sent||0)-(a.sent||0)).map(x=>row(c,x,`<button class="btn ghost sm" onclick="Cert.view('${c.id}','${x.id}')">👁</button><button class="btn ghost sm" title="កែ" onclick="Cert.edit('${c.id}','${x.id}')">✏️</button><button class="btn ghost sm" onclick="Cert.png('${c.id}','${x.id}')">⬇</button><button class="btn ghost sm" title="ដកហូតប័ណ្ណ" onclick="Cert.revoke('${x.id}')">🗑</button>`)).join('')}</div>`:'<p class="ct-empty">មិនទាន់បានផ្ញើប័ណ្ណ</p>'}</div>`;
+  <div class="panel"><div class="ct-sh"><h3 class="sec">📜 ប័ណ្ណដែលបានផ្ញើ</h3>${sent.length?`<button class="btn ghost sm" onclick="Cert.dlOpen('${c.id}')">📥 តាមដានការទាញយក</button>`:''}${yrs.length?`<select onchange="Cert._tt('yr',+this.value)">${yrs.map(y=>`<option ${y===yr?'selected':''}>${y}</option>`).join('')}</select>`:''}</div>
+    ${sent.length?`<div class="ct-list">${sent.filter(x=>new Date(x.sent||x.ts).getFullYear()===yr).sort((a,b)=>(b.sent||0)-(a.sent||0)).map(x=>row(c,x,`${dlChip(c,x)}<button class="btn ghost sm" onclick="Cert.view('${c.id}','${x.id}')">👁</button><button class="btn ghost sm" title="កែ" onclick="Cert.edit('${c.id}','${x.id}')">✏️</button><button class="btn ghost sm" onclick="Cert.png('${c.id}','${x.id}')">⬇</button><button class="btn ghost sm" title="ដកហូតប័ណ្ណ" onclick="Cert.revoke('${x.id}')">🗑</button>`)).join('')}</div>`:'<p class="ct-empty">មិនទាន់បានផ្ញើប័ណ្ណ</p>'}</div>`;
   TAB={el, c, sug}; }
 let TAB=null;
 const me = () => (window.Auth&&Auth.user())||{};
@@ -298,5 +310,19 @@ function cfgSave(){ const c=TAB.c, o={exam:{min:+document.getElementById('cf_exa
   ['busy','rich'].forEach(t=>{ o[t]={}; ['w','m','y'].forEach(y=>{ const g=k=>document.getElementById(`cf_${t}_${y}_${k}`).value, v=Math.max(0,+g('v')||0);
     o[t][y]={mode:g('m'), n:Math.max(1,Math.min(20,Math.round(+g('n')||3))), min:t==='busy'?Math.round(v*3600):Math.round(v)}; if(o[t][y].mode==='goal'&&!o[t][y].min) o[t][y].min=t==='busy'?3600:5000; }); });
   if(c.certCfg&&c.certCfg.tpl) o.tpl=c.certCfg.tpl; c.certCfg=o; closeModal(); redo(); toast('💾 បានរក្សាទុកលក្ខខណ្ឌ'); }
-window.Cert = { _tplEdit:tplEdit, _tplSave:tplSave, _edIns:edIns, _edFocus:el=>{ LASTF=el; }, _edDemo:(k,v)=>{ ED[k]=v; edDraw(); }, _edFrame:edFrame, FRS, _cfgOpen:cfgOpen, _cfgSave:cfgSave, _cfgReset:()=>{ const tp=TAB.c.certCfg&&TAB.c.certCfg.tpl; delete TAB.c.certCfg; if(tp) TAB.c.certCfg={tpl:tp}; closeModal(); redo(); toast('↺ ត្រឡប់លំនាំដើម (លេខ ១–៣)'); }, edit, _edSet:edSet, _edSave:edSave, _edPng:edPng, _edReset:edReset, _edSig:edSig, tab, page, count, view, png, print, ok, okItem, okAll, no, undo, send, sendAll, revoke, suggest, draw, _tt:(k,v)=>{ TT[k]=v; if(k==='y'||k==='t') TT.key=null; if(k==='key') TT.key=TT.y+v; if(TAB) tab(TAB.el,TAB.c); } };
+/* 📥 download tracker: per class (teacher) or every class (admin) */
+let DLF='all';
+const DLN={all:'ទាំងអស់', dl:'⬇ ទាញយករួច', seen:'👁 មើលតែមិនទាន់ទាញយក', wait:'⏳ មិនទាន់បើក', no:'🚫 គ្មានគណនី'};
+function dlHtml(cs){ const R=[]; cs.forEach(c=>CS(c).filter(x=>x.st==='sent').forEach(x=>R.push({c,x,st:dlState(c,x)})));
+  const n=k=>R.filter(r=>r.st===k).length, L=R.filter(r=>DLF==='all'||r.st===DLF).sort((a,b)=>(b.x.sent||0)-(a.x.sent||0));
+  return `<div class="ct-dlk"><div><b>${R.length}</b><small>ប័ណ្ណបានផ្ញើ</small></div><div class="ok"><b>${n('dl')}</b><small>⬇ ទាញយក/បោះពុម្ពរួច</small></div><div class="seen"><b>${n('seen')}</b><small>👁 មើលតែមិនទាន់ទាញយក</small></div><div class="wait"><b>${n('wait')}</b><small>⏳ មិនទាន់បើក</small></div></div>
+    <div class="row" style="gap:6px;margin:10px 0">${Object.entries(DLN).map(([k,l])=>`<button class="chip ${DLF===k?'on':''}" onclick="Cert._dlF('${k}')">${l}${k==='all'?'':' ('+n(k)+')'}</button>`).join('')}</div>
+    <div class="ct-list">${L.map(({c,x})=>row(c,x,`${cs.length>1?`<span class="ct-dl cls">🏫 ${esc(c.name)}</span>`:''}${dlChip(c,x)}<button class="btn ghost sm" onclick="Cert.view('${c.id}','${x.id}')">👁</button>`)).join('')||'<p class="ct-empty">—</p>'}</div>
+    <p class="note">💡 ទិន្នន័យមកពីទូរស័ព្ទសិស្ស — ធ្វើបច្ចុប្បន្នភាពពេលសិស្សភ្ជាប់អ៊ីនធឺណិត • ដាក់ម៉ៅស៍លើស្លាក ដើម្បីមើលចំនួនដង និងពេលចុងក្រោយ</p>`; }
+let DLC=null;
+function dlOpen(cid){ DLC={cid}; const c=findC(cid); modal(`<div class="ct-dlw"><h3>📥 តាមដានការទាញយកប័ណ្ណ — ${esc(c?c.name:'')}</h3><div id="ctDl">${dlHtml(c?[c]:[])}</div></div>`); document.getElementById('modal').classList.add('wide'); }
+const allC = () => window.Class&&Class.data ? Class.data().classes : (J(CK)||{classes:[]}).classes;
+function dlPanel(el){ DLC={el}; el.innerHTML=`<div class="panel"><h3 class="sec">📥 តាមដានការទាញយកប័ណ្ណសរសើរ — គ្រប់ថ្នាក់</h3><div id="ctDl">${dlHtml(allC())}</div></div>`; }
+function dlF(k){ DLF=k; if(DLC&&DLC.el&&document.body.contains(DLC.el)) return dlPanel(DLC.el); const b=document.getElementById('ctDl'); if(b&&DLC) b.innerHTML=dlHtml([findC(DLC.cid)].filter(Boolean)); }
+window.Cert = { dlOpen, dlPanel, _dlF:dlF, _tplEdit:tplEdit, _tplSave:tplSave, _edIns:edIns, _edFocus:el=>{ LASTF=el; }, _edDemo:(k,v)=>{ ED[k]=v; edDraw(); }, _edFrame:edFrame, FRS, _cfgOpen:cfgOpen, _cfgSave:cfgSave, _cfgReset:()=>{ const tp=TAB.c.certCfg&&TAB.c.certCfg.tpl; delete TAB.c.certCfg; if(tp) TAB.c.certCfg={tpl:tp}; closeModal(); redo(); toast('↺ ត្រឡប់លំនាំដើម (លេខ ១–៣)'); }, edit, _edSet:edSet, _edSave:edSave, _edPng:edPng, _edReset:edReset, _edSig:edSig, tab, page, count, view, png, print, ok, okItem, okAll, no, undo, send, sendAll, revoke, suggest, draw, _tt:(k,v)=>{ TT[k]=v; if(k==='y'||k==='t') TT.key=null; if(k==='key') TT.key=TT.y+v; if(TAB) tab(TAB.el,TAB.c); } };
 })();

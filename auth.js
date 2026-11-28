@@ -366,7 +366,7 @@ let atab='users';
 function renderAdmin(t){
   if(role()!=='admin'){ go('home'); return; }
   if(t) atab=t; setUnitColors(3);
-  const tabs=[['users','👥 គណនី'],['students','🎓 គណនីសិស្ស'],['classes','🏫 ថ្នាក់ & គ្រូ'],['money','💰 លុយ'],['data','💾 ទិន្នន័យ'],['log','📜 កំណត់ហេតុ']];
+  const tabs=[['users','👥 គណនី'],['students','🎓 គណនីសិស្ស'],['classes','🏫 ថ្នាក់ & គ្រូ'],['money','💰 លុយ'],['certdl','🏅 ប័ណ្ណ'],['data','💾 ទិន្នន័យ'],['log','📜 កំណត់ហេតុ']];
   const n=r=>A.users.filter(u=>u.role===r&&!u.disabled).length;
   /* 🎓 រាប់តែសិស្សដែលនៅក្នុងបញ្ជីថ្នាក់ពិតៗ • គណនីក្រៅបញ្ជី បង្ហាញដាច់ដោយឡែក (Admin សម្រេច៖ ដាក់ចូលវិញ ឬលុប) */
   const CD=classData(), CL=CD.classes||[], stu=A.users.filter(u=>u.role==='student'&&!u.disabled);
@@ -395,6 +395,7 @@ function renderAdmin(t){
     el.innerHTML=`<div class="panel"><h3 class="sec">🏫 កំណត់គ្រូបន្ទុកថ្នាក់</h3><p class="note">គ្រូមើលឃើញតែថ្នាក់ដែលខ្លួនទទួលបន្ទុកប៉ុណ្ណោះ។ ថ្នាក់ដែលគ្មានគ្រូបន្ទុក មានតែ Admin ទេដែលមើលឃើញ។</p>
       ${(D.classes||[]).map(c=>`<div class="au-crow"><b>🏫 ${esc(c.name)}</b><span class="note">${c.students.length} សិស្ស</span>
         <select class="cl-in" onchange="Auth._own('${c.id}',this.value)"><option value="">— គ្មានគ្រូបន្ទុក (Admin តែប៉ុណ្ណោះ) —</option>${teachers.map(t=>`<option value="${t.id}" ${c.owner===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>`).join('')||'<p class="note">មិនទាន់មានថ្នាក់</p>'}</div>`;
+  } else if(atab==='certdl'){ if(window.Cert&&Cert.dlPanel) Cert.dlPanel(el);
   } else if(atab==='money'){ if(window.Money) Money.adminPanel(el); else el.innerHTML='<p class="note">⏳</p>';
   } else if(atab==='data'){
     const pre=window.Cloud?Cloud.panel():'';
