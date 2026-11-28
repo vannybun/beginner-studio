@@ -70,8 +70,12 @@ const THEMES={teal:['#0f766e','#14b8a6'], gold:['#b45309','#f59e0b'], blue:['#1d
 const MK2=d=>'ថ្ងៃទី '+d.getDate()+' ខែ'+MK[d.getMonth()]+' ឆ្នាំ '+d.getFullYear();
 /* default text of a certificate — every field can be overridden by the teacher (t.ed) */
 /* 🎨 class templates for the two award types (💪 busy • 💰 rich): one template serves week / month / year */
-const TPLN={busy:'💪 សិស្សឧស្សាហ៍', rich:'💰 សិស្សប្រឹងរៀនរកលុយ'};
+const TPLN={busy:'💪 សិស្សឧស្សាហ៍', rich:'💰 សិស្សប្រឹងរៀនរកលុយ', exam:'📝 ប្រឡងបញ្ចប់មេរៀន'};
 function tplDef(type, c){ const B=type==='busy';
+  if(type==='exam') return {theme:'blue', medal:'', frame:(c&&c.certCfg&&c.certCfg.frame)||'classic', head:'កម្មវិធីគ្រប់គ្រងថ្នាក់រៀន • {ថ្នាក់}',
+    title:'ប័ណ្ណសរសើរ', titleEn:'Certificate of Achievement', pre:'សូមប្រគល់ជូន • This certificate is proudly presented to',
+    kh:'បានប្រឡងបញ្ចប់ Unit {មេរៀន} ជាប់និទ្ទេស {និទ្ទេស} ({កម្រិត})', en:'for passing the Unit {unit} test with grade {grade} — {level} ({pct}%)',
+    val:'{pct}% • និទ្ទេស {និទ្ទេស}', role:'គ្រូបង្រៀន • Teacher', sig:true, sigS:1, sigX:0, sigY:0};
   return {theme:B?'teal':'gold', medal:B?'💪':'💰', frame:(c&&c.certCfg&&c.certCfg.frame)||'classic', head:'កម្មវិធីគ្រប់គ្រងថ្នាក់រៀន • {ថ្នាក់}',
     title:'ប័ណ្ណសរសើរ', titleEn:'Certificate of Achievement', pre:'សូមប្រគល់ជូន • This certificate is proudly presented to',
     kh:B?'សិស្សឧស្សាហ៍រៀនជាងគេ {លេខ} {រយៈពេល}':'សិស្សប្រឹងរៀនរកលុយបានច្រើនជាងគេ {លេខ} {រយៈពេល}',
@@ -80,20 +84,23 @@ function tplDef(type, c){ const B=type==='busy';
     enG:B?'Hard-working Student — studied over {goal} — {period}':'Hard-working Earner — earned over {goal} — {period}',
     val:B?'រៀនបាន {តម្លៃ}':'រកបាន {តម្លៃ}', role:'គ្រូបង្រៀន • Teacher', sig:true, sigS:1, sigX:0, sigY:0}; }
 const tplOf = (type, c) => ({...tplDef(type,c), ...(((c&&c.certCfg&&c.certCfg.tpl)||{})[type]||{})});
+const PHX=[['{មេរៀន}','1'],['{unit}','1'],['{និទ្ទេស}','A'],['{grade}','A'],['{កម្រិត}','ល្អប្រសើរ'],['{level}','Excellent'],['{pct}','92'],['{ថ្នាក់}','Beginner 1'],['{ឈ្មោះ}','ឈ្មោះសិស្ស']];
 const PH=[['{លេខ}','លេខ ១'],['{rank}','No. 1'],['{រយៈពេល}','ខែវិច្ឆិកា 2026'],['{period}','November 2026'],['{តម្លៃ}','12 ម៉ោង'],['{គោលដៅ}','5 ម៉ោង'],['{goal}','5 hours'],['{ថ្នាក់}','Beginner 1'],['{ឈ្មោះ}','ឈ្មោះសិស្ស']];
 function fill(str, t, s, c){ if(typeof str!=='string') return str; const B=t.t==='busy', gl=t.goal||0;
   const map={'{លេខ}':t.rk?RK[t.rk]:'', '{rank}':t.rk?'No. '+t.rk:'', '{រយៈពេល}':t.p?perLabel(t.p):'', '{period}':t.p?perEn(t.p):'',
     '{តម្លៃ}':B?fmtT(t.v):riel(t.v), '{គោលដៅ}':B?fmtT(gl):riel(gl), '{goal}':B?(Math.round(gl/360)/10)+' hours':Math.round(gl).toLocaleString('en-US')+' riel', '{ថ្នាក់}':c?c.name:'', '{ឈ្មោះ}':s?s.name:''};
+  if(t.t==='exam'){ const g=GR.find(x=>x[1]===t.g)||GR[4]; Object.assign(map,{'{មេរៀន}':t.n, '{unit}':t.n, '{និទ្ទេស}':g[1], '{grade}':g[1], '{កម្រិត}':g[2], '{level}':g[3], '{pct}':t.v}); }
   return str.replace(/\{[^}]+\}/g, k=>map[k]!=null?map[k]:k).replace(/\s+—\s+—\s+/g,' — ').replace(/\s{2,}/g,' ').trim(); }
 function defs(t, s, c){ const L=lines(t);
   const base={theme:{busy:'teal',rich:'gold',exam:'blue'}[t.t], medal:t.t==='exam'?L.big:TYPES[t.t][0], head:'កម្មវិធីគ្រប់គ្រងថ្នាក់រៀន • '+(c?c.name:''),
     title:'ប័ណ្ណសរសើរ', titleEn:'Certificate of Achievement', pre:'សូមប្រគល់ជូន • This certificate is proudly presented to',
     name:s?s.name:'—', latin:s&&s.latin||'', kh:L.title, en:L.en, val:L.val, date:MK2(new Date(t.sent||t.ts||Date.now())),
     tn:t.tn||'គ្រូបង្រៀន', role:'គ្រូបង្រៀន • Teacher', sig:true, sigBy:t.by||'', frame:(c&&c.certCfg&&c.certCfg.frame)||'classic', sigS:1, sigX:0, sigY:0};
-  if(t.t!=='busy'&&t.t!=='rich') return base;
+  if(!TPLN[t.t]) return base;
   const T=tplOf(t.t,c), F=v=>fill(v,t,s,c);
   ['theme','medal','frame','sig','sigS','sigX','sigY','_themeSet'].forEach(k=>{ if(T[k]!==undefined) base[k]=T[k]; });
   ['head','title','titleEn','pre','val','role'].forEach(k=>{ base[k]=F(T[k]); });
+  if(t.t==='exam'){ if(!T.medal) base.medal=L.big; base.kh=F(T.kh); base.en=F(T.en); return base; }
   base.kh=F(t.rk?T.kh:T.khG); base.en=F(t.rk?T.en:T.enG); return base; }
 const imgOf = url => new Promise(r=>{ if(!url) return r(null); const im=new Image(); im.onload=()=>r(im); im.onerror=()=>r(null); im.src=url; });
 /* 🖼 frames: drawn styles + the Khmer ornament images used by the monthly certificates (cert-frames/f1–f8.jpg) */
@@ -168,19 +175,20 @@ const TFIELDS=[['title','ចំណងជើង'],['titleEn','ចំណងជើ�
 const FIELDS=[['title','ចំណងជើង'],['titleEn','ចំណងជើង (English)'],['head','បន្ទាត់ខាងលើ (សាលា • ថ្នាក់)'],['pre','ឃ្លាប្រគល់ជូន'],['name','ឈ្មោះសិស្ស'],['latin','ឈ្មោះ Latin'],['kh','ខ្លឹមសារ (ខ្មែរ)','ta'],['en','ខ្លឹមសារ (English)','ta'],['val','លទ្ធផល'],['date','កាលបរិច្ឆេទ'],['tn','ឈ្មោះគ្រូ'],['role','តួនាទី']];
 async function edit(cid, id){ const c=findC(cid), t=c&&CS(c).find(x=>x.id===id); if(!t) return; const s=c.students.find(x=>x.id===t.sid);
   ED={cid, id, v:{...defs(t,s,c), ...(t.ed||{})}}; if(ED.v.sig&&!(Auth.sigOf&&Auth.sigOf(ED.v.sigBy))&&Auth.sigOf(me().id)) ED.v.sigBy=me().id; edDraw(); }
-function ctx(){ const c=findC(ED.cid); if(ED.tpl){ const P=periods(), key={w:P.cw,m:P.cm,y:P.cy}[ED.dy], B=ED.tpl==='busy';
+function ctx(){ const c=findC(ED.cid); if(ED.tpl==='exam'){ const g=GR.find(x=>x[1]===(ED.dx||'A'))||GR[0], t={id:'demo0000', t:'exam', n:1, g:g[1], v:Math.min(100,g[0]+2), ts:Date.now(), by:me().id, tn:me().name||''}; return {c, t, s:c.students[0]||{name:'សុខ សុភា', latin:'SOK Sophea'}}; }
+  if(ED.tpl){ const P=periods(), key={w:P.cw,m:P.cm,y:P.cy}[ED.dy], B=ED.tpl==='busy';
     const t={id:'demo0000', t:ED.tpl, rk:ED.dg?0:1, goal:ED.dg?(B?18000:5000):0, p:{y:ED.dy,key}, v:B?45600:12500, ts:Date.now(), by:me().id, tn:me().name||''}; return {c, t, s:c.students[0]||{name:'សុខ សុភា', latin:'SOK Sophea'}}; }
   const t=CS(c).find(x=>x.id===ED.id); return {c, t, s:t&&c.students.find(x=>x.id===t.sid)}; }
-function edDraw(){ const {c,t}=ctx(), V=ED.v, mySig=window.Auth&&Auth.sigOf(me().id), TP=!!ED.tpl;
-  modal(`<div class="ce"><h3>${TP?'🎨 គំរូប័ណ្ណ — '+TPLN[ED.tpl]:'✏️ កែប័ណ្ណសរសើរ'}</h3>${TP?`<p class="note">គំរូនេះប្រើសម្រាប់ប័ណ្ណ${TPLN[ED.tpl]} ប្រចាំ <b>សប្តាហ៍ ខែ និងឆ្នាំ</b> — រយៈពេល លេខចំណាត់ថ្នាក់ និងចំនួន បំពេញឱ្យស្វ័យប្រវត្តិ</p>
-      <div class="row ce-demo"><span>👁 មើល Demo៖</span>${[['w','សប្តាហ៍'],['m','ខែ'],['y','ឆ្នាំ']].map(([k,l])=>`<button class="chip ${ED.dy===k?'on':''}" onclick="Cert._edDemo('dy','${k}')">${l}</button>`).join('')}<span class="sep"></span><button class="chip ${ED.dg?'':'on'}" onclick="Cert._edDemo('dg',0)">🏆 លេខ ១</button><button class="chip ${ED.dg?'on':''}" onclick="Cert._edDemo('dg',1)">🎯 គោលដៅ</button></div>`:''}<div class="ce-g">
+function edDraw(){ const {c,t}=ctx(), V=ED.v, mySig=window.Auth&&Auth.sigOf(me().id), TP=!!ED.tpl, EX=ED.tpl==='exam';
+  modal(`<div class="ce"><h3>${TP?'🎨 គំរូប័ណ្ណ — '+TPLN[ED.tpl]:'✏️ កែប័ណ្ណសរសើរ'}</h3>${TP?`${EX?`<p class="note">គំរូនេះប្រើសម្រាប់ប័ណ្ណ <b>ប្រឡងបញ្ចប់មេរៀន</b> របស់សិស្សទាំងអស់គ្នា គ្រប់ Unit — លេខ Unit និទ្ទេស និងពិន្ទុ បំពេញឱ្យស្វ័យប្រវត្តិ • ទុក «រូបមេដាយ» ទទេ = បង្ហាញនិទ្ទេស (A–E)</p>`:`<p class="note">គំរូនេះប្រើសម្រាប់ប័ណ្ណ${TPLN[ED.tpl]} ប្រចាំ <b>សប្តាហ៍ ខែ និងឆ្នាំ</b> — រយៈពេល លេខចំណាត់ថ្នាក់ និងចំនួន បំពេញឱ្យស្វ័យប្រវត្តិ</p>`}
+      ${EX?`<div class="row ce-demo"><span>👁 មើល Demo៖</span>${GR.map(g=>`<button class="chip ${(ED.dx||'A')===g[1]?'on':''}" onclick="Cert._edDemo('dx','${g[1]}')">${g[1]} • ${g[2]}</button>`).join('')}</div>`:''}${EX?'':`<div class="row ce-demo"><span>👁 មើល Demo៖</span>${[['w','សប្តាហ៍'],['m','ខែ'],['y','ឆ្នាំ']].map(([k,l])=>`<button class="chip ${ED.dy===k?'on':''}" onclick="Cert._edDemo('dy','${k}')">${l}</button>`).join('')}<span class="sep"></span><button class="chip ${ED.dg?'':'on'}" onclick="Cert._edDemo('dg',0)">🏆 លេខ ១</button><button class="chip ${ED.dg?'on':''}" onclick="Cert._edDemo('dg',1)">🎯 គោលដៅ</button></div>`}`:''}<div class="ce-g">
     <div class="ce-prev"><img id="ceImg" alt=""><div class="row" style="justify-content:center;gap:6px;margin-top:8px"><button class="btn ghost sm" onclick="Cert._edReset()">↺ លំនាំដើម</button><button class="btn ghost sm" onclick="Cert._edPng()">⬇ PNG</button></div></div>
     <div class="ce-f">
       <div class="me-f"><span>🖼 ស៊ុម</span><div class="ce-frs">${FRS.map(([k,l])=>`<button class="ce-fr ${V.frame===k?'on':''}" onclick="Cert._edFrame('${k}')">${/^f\d$/.test(k)?`<img src="${BASE}cert-frames/${k}.jpg" alt="">`:`<i class="fr-${k}"></i>`}<small>${l}</small></button>`).join('')}</div></div>
       <div class="me-f"><span>🎨 ពណ៌ប័ណ្ណ</span><div class="row" style="gap:6px">${Object.entries(THEMES).map(([k,p])=>`<button class="ce-th ${V.theme===k?'on':''}" style="background:linear-gradient(135deg,${p[0]},${p[1]})" onclick="Cert._edSet('theme','${k}',1)"></button>`).join('')}</div></div>
       <div class="me-f"><span>🏅 រូបមេដាយ</span><div class="row" style="gap:4px">${['💪','💰','📝','🏆','⭐','🥇','🎓','👑','🌟','A','B','C'].map(m=>`<button class="ce-md ${V.medal===m?'on':''}" onclick="Cert._edSet('medal','${m}',1)">${m}</button>`).join('')}<input class="cl-in" style="width:64px" value="${esc(V.medal)}" maxlength="3" oninput="Cert._edSet('medal',this.value)"></div></div>
-      ${TP?`<div class="me-f"><span>🔤 ពាក្យជំនួស <small class="note">(ចុចដើម្បីបញ្ចូលក្នុងប្រអប់ដែលកំពុងសរសេរ)</small></span><div class="ce-ph">${PH.map(([k,e])=>`<button class="chip" title="ឧ. ${esc(e)}" onmousedown="event.preventDefault()" onclick="Cert._edIns('${k}')">${k}</button>`).join('')}</div></div>`:''}
-      ${(TP?TFIELDS:FIELDS).map(([k,l,ta])=>`<label class="me-f"><span>${l}</span>${ta?`<textarea class="cl-in" rows="2" data-k="${k}" onfocus="Cert._edFocus(this)" oninput="Cert._edSet('${k}',this.value)">${esc(V[k])}</textarea>`:`<input class="cl-in" data-k="${k}" onfocus="Cert._edFocus(this)" value="${esc(V[k])}" oninput="Cert._edSet('${k}',this.value)">`}</label>`).join('')}
+      ${TP?`<div class="me-f"><span>🔤 ពាក្យជំនួស <small class="note">(ចុចដើម្បីបញ្ចូលក្នុងប្រអប់ដែលកំពុងសរសេរ)</small></span><div class="ce-ph">${(EX?PHX:PH).map(([k,e])=>`<button class="chip" title="ឧ. ${esc(e)}" onmousedown="event.preventDefault()" onclick="Cert._edIns('${k}')">${k}</button>`).join('')}</div></div>`:''}
+      ${(EX?TFIELDS.filter(f=>!/G$/.test(f[0])).map(f=>[f[0],f[1].replace(/ — 🏆 ចំណាត់ថ្នាក់/,''),f[2]]):TP?TFIELDS:FIELDS).map(([k,l,ta])=>`<label class="me-f"><span>${l}</span>${ta?`<textarea class="cl-in" rows="2" data-k="${k}" onfocus="Cert._edFocus(this)" oninput="Cert._edSet('${k}',this.value)">${esc(V[k])}</textarea>`:`<input class="cl-in" data-k="${k}" onfocus="Cert._edFocus(this)" value="${esc(V[k])}" oninput="Cert._edSet('${k}',this.value)">`}</label>`).join('')}
       <label class="row" style="gap:6px;margin:6px 0"><input type="checkbox" ${V.sig?'checked':''} onchange="Cert._edSet('sig',this.checked,1)"> <b>✍️ បង្ហាញហត្ថលេខាគ្រូ</b></label>
       ${V.sig?`<div class="ce-sig"><label><span>🔍 ទំហំ <b id="ceSS">${Math.round((+V.sigS||1)*100)}%</b></span><input type="range" min="40" max="250" value="${Math.round((+V.sigS||1)*100)}" oninput="document.getElementById('ceSS').textContent=this.value+'%';Cert._edSet('sigS',this.value/100)"></label>
         <label><span>↔️ ឆ្វេង / ស្តាំ</span><input type="range" min="-900" max="160" value="${+V.sigX||0}" oninput="Cert._edSet('sigX',+this.value)"></label>
@@ -190,7 +198,8 @@ function edDraw(){ const {c,t}=ctx(), V=ED.v, mySig=window.Auth&&Auth.sigOf(me()
     </div></div>
     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn ghost" onclick="closeModal()">បោះបង់</button>${TP?`<button class="btn teal" onclick="Cert._tplSave()">💾 រក្សាទុកគំរូ</button>`:''}<button class="btn teal" style="${TP?'display:none':''}" onclick="Cert._edSave()">💾 រក្សាទុក</button>${!TP&&t.st==='ok'?`<button class="btn sun" onclick="Cert._edSave(1)">💾 រក្សាទុក និង 📤 ផ្ញើ</button>`:''}</div></div>`);
   document.getElementById('modal').classList.add('wide'); edPrev(); }
-const edOver = (t,s,c) => { if(!ED.tpl) return ED.v; const o={...ED.v}; ['head','title','titleEn','pre','val','role'].forEach(k=>o[k]=fill(o[k],t,s,c)); o.kh=fill(t.rk?ED.v.kh:ED.v.khG,t,s,c); o.en=fill(t.rk?ED.v.en:ED.v.enG,t,s,c); return o; };
+const edOver = (t,s,c) => { if(!ED.tpl) return ED.v; const o={...ED.v}; ['head','title','titleEn','pre','val','role'].forEach(k=>o[k]=fill(o[k],t,s,c)); if(t.t==='exam'){ o.kh=fill(ED.v.kh,t,s,c); o.en=fill(ED.v.en,t,s,c); if(!o.medal) o.medal=lines(t).big; return o; }
+  o.kh=fill(t.rk?ED.v.kh:ED.v.khG,t,s,c); o.en=fill(t.rk?ED.v.en:ED.v.enG,t,s,c); return o; };
 function edPrev(){ clearTimeout(ED.pt); ED.pt=setTimeout(async()=>{ const {c,t,s}=ctx(), url=await toURL({...t, ed:{}}, s, c, edOver(t,s,c),'image/jpeg',.85); const im=document.getElementById('ceImg'); if(im) im.src=url; },150); }
 function edFrame(k){ ED.v.frame=k; const KF=KFR.find(f=>f[0]===k); if(KF) delete ED.v._themeSet; edDraw(); }
 function edSet(k,v,re){ if(k==='theme') ED.v._themeSet=1; ED.v[k]=v; re?edDraw():edPrev(); }
@@ -229,7 +238,7 @@ function tab(el, c){ const sug=suggest(c), ok=CS(c).filter(x=>x.st==='ok'), sent
   const man=top(c, TT.t, {y:TT.y, key});
   el.innerHTML=`<div class="panel"><div class="ct-head"><h3 class="sec" style="margin:0">🏅 ប័ណ្ណសរសើរ</h3>
       <div class="ct-cnt"><span>🔔 ស្នើ <b>${sug.length}</b></span><span>✅ អនុម័ត <b>${ok.length}</b></span><span>📤 បានផ្ញើ <b>${sent.length}</b></span></div></div>
-    <div class="row ct-cfgrow"><button class="btn ghost sm ct-cfgb" onclick="Cert._cfgOpen()">⚙️ កំណត់លក្ខខណ្ឌទទួលប័ណ្ណ</button><span class="note">🎨 គំរូប័ណ្ណ៖</span><button class="btn ghost sm" onclick="Cert._tplEdit('busy')">${TPLN.busy}${((c.certCfg||{}).tpl||{}).busy?' ✓':''}</button><button class="btn ghost sm" onclick="Cert._tplEdit('rich')">${TPLN.rich}${((c.certCfg||{}).tpl||{}).rich?' ✓':''}</button></div>
+    <div class="row ct-cfgrow"><button class="btn ghost sm ct-cfgb" onclick="Cert._cfgOpen()">⚙️ កំណត់លក្ខខណ្ឌទទួលប័ណ្ណ</button><span class="note">🎨 គំរូប័ណ្ណ៖</span><button class="btn ghost sm" onclick="Cert._tplEdit('busy')">${TPLN.busy}${((c.certCfg||{}).tpl||{}).busy?' ✓':''}</button><button class="btn ghost sm" onclick="Cert._tplEdit('rich')">${TPLN.rich}${((c.certCfg||{}).tpl||{}).rich?' ✓':''}</button><button class="btn ghost sm" onclick="Cert._tplEdit('exam')">${TPLN.exam}${((c.certCfg||{}).tpl||{}).exam?' ✓':''}</button></div>
     <div class="ct-rules">${(()=>{ const K=cfg(c); return ['busy','rich'].map(t=>['w','m','y'].map(y=>{ const k=K[t][y]; return k.mode==='off'?'':`<span>${TYPES[t][0]} ${PER[y]}: ${k.mode==='goal'?'គ្រប់គ្នាដែល ≥ '+(t==='busy'?fmtT(k.min):riel(k.min)):'លេខ ១–'+k.n+(+k.min?' (≥ '+(t==='busy'?fmtT(k.min):riel(k.min))+')':'')}</span>`; }).join('')).join('')+`<span>📝 ប្រឡង ≥ ${K.exam.min}%</span>`; })()}</div>
     <p class="note">ជំហាន៖ ប្រព័ន្ធស្នើ → <b>✅ អនុម័ត</b> (ផ្ទៀងផ្ទាត់) → <b>📤 ផ្ញើ</b> → សិស្សទើបឃើញ • ប័ណ្ណដែលផ្ញើ រក្សាទុកជារៀងរហូត លុះត្រាគ្រូ <b>🗑 ដកហូត</b></p></div>
   <div class="panel"><div class="ct-sh"><h3 class="sec">🔔 សំណើថ្មី — ត្រូវអនុម័ត (${sug.length})</h3>${sug.length?`<button class="btn teal sm" onclick="Cert.okAll()">✅ អនុម័តទាំងអស់</button>`:''}</div>
